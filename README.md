@@ -1,4 +1,17 @@
-# Docs MCP Server: Your AI's Up-to-Date Documentation Expert
+# Scrapegoat: PostgreSQL-Powered Documentation Server
+
+> **⚠️ NOTICE: Work in Progress**
+>
+> Scrapegoat is a PostgreSQL-powered fork of [arabold/docs-mcp-server](https://github.com/arabold/docs-mcp-server). Built for enterprise deployments requiring production-grade scalability and performance.
+>
+> **Status:** Phase 1 Complete (Foundation & Setup)
+> - ✅ SQLite dependencies removed
+> - ✅ PostgreSQL/pgvector integration prepared
+> - ✅ Codebase compiles with stubbed implementations
+> - 🚧 PostgreSQL implementation in progress (Phases 2-3)
+> - ⚠️ **Not yet functional** - requires completion of database implementation
+>
+> For the stable SQLite version, please use the [original repository](https://github.com/arabold/docs-mcp-server).
 
 AI coding assistants often struggle with outdated documentation and hallucinations. The **Docs MCP Server** solves this by providing a personal, always-current knowledge base for your AI. It **indexes 3rd party documentation** from various sources (websites, GitHub, npm, PyPI, local files) and offers powerful, version-aware search tools via the Model Context Protocol (MCP).
 
