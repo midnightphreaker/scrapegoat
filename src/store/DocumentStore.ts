@@ -352,87 +352,224 @@ export class DocumentStore {
   /**
    * Resolves a library name and version string to version_id.
    * Creates library and version records if they don't exist.
-   * PostgreSQL implementation pending in Phase 3.
    */
   async resolveVersionId(library: string, version: string): Promise<number> {
-    throw new StoreError("PostgreSQL implementation pending (Phase 3)");
+    try {
+      // 1. Get or create library
+      const libraryResult = await this.pool.query(
+        `INSERT INTO libraries (name) VALUES ($1)
+         ON CONFLICT (name) DO UPDATE SET name = EXCLUDED.name
+         RETURNING id`,
+        [library],
+      );
+      const libraryId = libraryResult.rows[0].id;
+
+      // 2. Get or create version (normalized name)
+      const normalizedVersion = normalizeVersionName(version);
+      const versionResult = await this.pool.query(
+        `INSERT INTO versions (library_id, name, status)
+         VALUES ($1, $2, 'not_indexed')
+         ON CONFLICT (library_id, name) DO UPDATE SET library_id = EXCLUDED.library_id
+         RETURNING id`,
+        [libraryId, normalizedVersion],
+      );
+
+      return versionResult.rows[0].id;
+    } catch (error) {
+      throw new StoreError(
+        `Failed to resolve version ID for ${library}:${version}`,
+        error,
+      );
+    }
   }
 
   /**
    * Retrieves all unique versions for a specific library
-   * PostgreSQL implementation pending in Phase 3.
    */
   async queryUniqueVersions(library: string): Promise<string[]> {
-    throw new StoreError("PostgreSQL implementation pending (Phase 3)");
+    try {
+      const result = await this.pool.query(
+        `SELECT v.name
+         FROM versions v
+         INNER JOIN libraries l ON v.library_id = l.id
+         WHERE l.name = $1
+         ORDER BY v.created_at DESC`,
+        [library],
+      );
+
+      return result.rows.map((row) => denormalizeVersionName(row.name));
+    } catch (error) {
+      throw new StoreError(`Failed to query versions for library ${library}`, error);
+    }
   }
 
   /**
    * Updates the status of a version record in the database.
-   * PostgreSQL implementation pending in Phase 3.
    */
   async updateVersionStatus(
     versionId: number,
     status: VersionStatus,
     errorMessage?: string,
   ): Promise<void> {
-    throw new StoreError("PostgreSQL implementation pending (Phase 3)");
+    try {
+      await this.pool.query(
+        `UPDATE versions
+         SET status = $1, error_message = $2, updated_at = CURRENT_TIMESTAMP
+         WHERE id = $3`,
+        [status, errorMessage || null, versionId],
+      );
+    } catch (error) {
+      throw new StoreError(
+        `Failed to update version status for version ${versionId}`,
+        error,
+      );
+    }
   }
 
   /**
    * Updates the progress counters for a version being indexed.
-   * PostgreSQL implementation pending in Phase 3.
    */
   async updateVersionProgress(
     versionId: number,
     pages: number,
     maxPages: number,
   ): Promise<void> {
-    throw new StoreError("PostgreSQL implementation pending (Phase 3)");
+    try {
+      await this.pool.query(
+        `UPDATE versions
+         SET progress_pages = $1, progress_max_pages = $2, updated_at = CURRENT_TIMESTAMP
+         WHERE id = $3`,
+        [pages, maxPages, versionId],
+      );
+    } catch (error) {
+      throw new StoreError(
+        `Failed to update version progress for version ${versionId}`,
+        error,
+      );
+    }
   }
 
   /**
    * Retrieves versions by their status.
-   * PostgreSQL implementation pending in Phase 3.
    */
   async getVersionsByStatus(statuses: VersionStatus[]): Promise<DbVersionWithLibrary[]> {
-    throw new StoreError("PostgreSQL implementation pending (Phase 3)");
+    try {
+      if (statuses.length === 0) {
+        return [];
+      }
+
+      const result = await this.pool.query(
+        `SELECT v.*, l.name as library_name
+         FROM versions v
+         INNER JOIN libraries l ON v.library_id = l.id
+         WHERE v.status = ANY($1)
+         ORDER BY v.updated_at DESC`,
+        [statuses],
+      );
+
+      return result.rows as DbVersionWithLibrary[];
+    } catch (error) {
+      throw new StoreError("Failed to query versions by status", error);
+    }
   }
 
   /**
    * Stores scraper options for a version to enable reproducible indexing.
-   * PostgreSQL implementation pending in Phase 3.
    */
   async storeScraperOptions(versionId: number, options: ScraperOptions): Promise<void> {
-    throw new StoreError("PostgreSQL implementation pending (Phase 3)");
+    try {
+      await this.pool.query(
+        `UPDATE versions
+         SET scraper_options = $1, updated_at = CURRENT_TIMESTAMP
+         WHERE id = $2`,
+        [JSON.stringify(options), versionId],
+      );
+    } catch (error) {
+      throw new StoreError(
+        `Failed to store scraper options for version ${versionId}`,
+        error,
+      );
+    }
   }
 
   /**
    * Retrieves stored scraping configuration (source URL and options) for a version.
-   * PostgreSQL implementation pending in Phase 3.
    */
   async getScraperOptions(versionId: number): Promise<StoredScraperOptions | null> {
-    throw new StoreError("PostgreSQL implementation pending (Phase 3)");
+    try {
+      const result = await this.pool.query(
+        `SELECT source_url, scraper_options
+         FROM versions
+         WHERE id = $1`,
+        [versionId],
+      );
+
+      if (result.rows.length === 0) {
+        return null;
+      }
+
+      const row = result.rows[0];
+      return {
+        sourceUrl: row.source_url,
+        options: row.scraper_options ? JSON.parse(row.scraper_options) : null,
+      };
+    } catch (error) {
+      throw new StoreError(
+        `Failed to get scraper options for version ${versionId}`,
+        error,
+      );
+    }
   }
 
   /**
    * Finds versions that were indexed from the same source URL.
-   * PostgreSQL implementation pending in Phase 3.
    */
   async findVersionsBySourceUrl(url: string): Promise<DbVersionWithLibrary[]> {
-    throw new StoreError("PostgreSQL implementation pending (Phase 3)");
+    try {
+      const result = await this.pool.query(
+        `SELECT v.*, l.name as library_name
+         FROM versions v
+         INNER JOIN libraries l ON v.library_id = l.id
+         WHERE v.source_url = $1
+         ORDER BY v.created_at DESC`,
+        [url],
+      );
+
+      return result.rows as DbVersionWithLibrary[];
+    } catch (error) {
+      throw new StoreError(`Failed to find versions by source URL: ${url}`, error);
+    }
   }
 
   /**
    * Verifies existence of documents for a specific library version
-   * PostgreSQL implementation pending in Phase 3.
    */
   async checkDocumentExists(library: string, version: string): Promise<boolean> {
-    throw new StoreError("PostgreSQL implementation pending (Phase 3)");
+    try {
+      const normalizedVersion = normalizeVersionName(version);
+      const result = await this.pool.query(
+        `SELECT EXISTS (
+           SELECT 1
+           FROM documents d
+           INNER JOIN pages p ON d.page_id = p.id
+           INNER JOIN versions v ON p.version_id = v.id
+           INNER JOIN libraries l ON v.library_id = l.id
+           WHERE l.name = $1 AND v.name = $2
+         ) as exists`,
+        [library, normalizedVersion],
+      );
+
+      return result.rows[0].exists;
+    } catch (error) {
+      throw new StoreError(
+        `Failed to check document existence for ${library}:${version}`,
+        error,
+      );
+    }
   }
 
   /**
    * Retrieves a mapping of all libraries to their available versions with details.
-   * PostgreSQL implementation pending in Phase 3.
    */
   async queryLibraryVersions(): Promise<
     Map<
@@ -450,45 +587,199 @@ export class DocumentStore {
       }>
     >
   > {
-    throw new StoreError("PostgreSQL implementation pending (Phase 3)");
+    try {
+      const result = await this.pool.query(`
+        SELECT
+          l.name as library_name,
+          v.id as version_id,
+          v.name as version_name,
+          v.status,
+          v.progress_pages,
+          v.progress_max_pages,
+          v.source_url,
+          v.updated_at as indexed_at,
+          COUNT(DISTINCT d.id) as document_count,
+          COUNT(DISTINCT p.url) as unique_url_count
+        FROM libraries l
+        INNER JOIN versions v ON l.id = v.library_id
+        LEFT JOIN pages p ON v.id = p.version_id
+        LEFT JOIN documents d ON p.id = d.page_id
+        GROUP BY l.name, v.id, v.name, v.status, v.progress_pages, v.progress_max_pages, v.source_url, v.updated_at
+        ORDER BY l.name, v.created_at DESC
+      `);
+
+      const libraryMap = new Map<string, Array<any>>();
+
+      for (const row of result.rows) {
+        const libraryName = row.library_name;
+        if (!libraryMap.has(libraryName)) {
+          libraryMap.set(libraryName, []);
+        }
+
+        libraryMap.get(libraryName)!.push({
+          version: denormalizeVersionName(row.version_name),
+          versionId: row.version_id,
+          status: row.status,
+          progressPages: row.progress_pages,
+          progressMaxPages: row.progress_max_pages,
+          sourceUrl: row.source_url,
+          documentCount: Number(row.document_count),
+          uniqueUrlCount: Number(row.unique_url_count),
+          indexedAt: row.indexed_at,
+        });
+      }
+
+      return libraryMap;
+    } catch (error) {
+      throw new StoreError("Failed to query library versions", error);
+    }
   }
 
   /**
    * Stores documents with library and version metadata, generating embeddings
    * for vector similarity search. Uses pgvector for vector storage.
-   * PostgreSQL implementation pending in Phase 3.
    */
   async addDocuments(
     library: string,
     version: string,
     documents: Document[],
   ): Promise<void> {
-    throw new StoreError("PostgreSQL implementation pending (Phase 3)");
+    if (documents.length === 0) {
+      return;
+    }
+
+    try {
+      // 1. Resolve version_id
+      const versionId = await this.resolveVersionId(library, version);
+
+      // 2. Group documents by URL
+      const docsByUrl = new Map<string, Document[]>();
+      for (const doc of documents) {
+        const url = (doc.metadata as DocumentMetadata).url || "";
+        if (!docsByUrl.has(url)) {
+          docsByUrl.set(url, []);
+        }
+        docsByUrl.get(url)!.push(doc);
+      }
+
+      // 3. Process each URL's documents
+      for (const [url, urlDocs] of docsByUrl.entries()) {
+        // Get metadata from first document
+        const firstMeta = urlDocs[0].metadata as DocumentMetadata;
+
+        // Create or update page record (UPSERT)
+        const pageResult = await this.pool.query(
+          `INSERT INTO pages (version_id, url, title, etag, last_modified, content_type)
+           VALUES ($1, $2, $3, $4, $5, $6)
+           ON CONFLICT (version_id, url) DO UPDATE SET
+             title = EXCLUDED.title,
+             etag = EXCLUDED.etag,
+             last_modified = EXCLUDED.last_modified,
+             content_type = EXCLUDED.content_type
+           RETURNING id`,
+          [
+            versionId,
+            url,
+            firstMeta.title || null,
+            firstMeta.etag || null,
+            firstMeta.last_modified || null,
+            firstMeta.content_type || null,
+          ],
+        );
+        const pageId = pageResult.rows[0].id;
+
+        // 4. Generate embeddings if enabled
+        let embeddings: number[][] | null = null;
+        if (this.isVectorSearchEnabled) {
+          const texts = urlDocs.map((doc) => doc.pageContent);
+
+          // Batch embedding generation
+          embeddings = await this.embeddings.embedDocuments(texts);
+
+          // Pad embeddings to fixed dimension
+          embeddings = embeddings.map((emb) => this.padVector(emb));
+        }
+
+        // 5. Delete existing documents for this page
+        await this.pool.query("DELETE FROM documents WHERE page_id = $1", [pageId]);
+
+        // 6. Insert new documents
+        for (let i = 0; i < urlDocs.length; i++) {
+          const doc = urlDocs[i];
+          const embedding = embeddings ? embeddings[i] : null;
+          const embeddingStr = embedding ? `[${embedding.join(",")}]` : null;
+
+          await this.pool.query(
+            `INSERT INTO documents (page_id, content, embedding, metadata, sort_order)
+             VALUES ($1, $2, $3::vector, $4, $5)`,
+            [pageId, doc.pageContent, embeddingStr, JSON.stringify(doc.metadata), i],
+          );
+        }
+      }
+
+      logger.debug(`Stored ${documents.length} documents for ${library}:${version}`);
+    } catch (error) {
+      throw new StoreError(`Failed to add documents for ${library}:${version}`, error);
+    }
   }
 
   /**
    * Removes documents matching specified library and version
-   * PostgreSQL implementation pending in Phase 3.
    */
   async deleteDocuments(library: string, version: string): Promise<number> {
-    throw new StoreError("PostgreSQL implementation pending (Phase 3)");
+    try {
+      const normalizedVersion = normalizeVersionName(version);
+      const result = await this.pool.query(
+        `DELETE FROM documents
+         WHERE page_id IN (
+           SELECT p.id
+           FROM pages p
+           INNER JOIN versions v ON p.version_id = v.id
+           INNER JOIN libraries l ON v.library_id = l.id
+           WHERE l.name = $1 AND v.name = $2
+         )`,
+        [library, normalizedVersion],
+      );
+
+      return result.rowCount || 0;
+    } catch (error) {
+      throw new StoreError(`Failed to delete documents for ${library}:${version}`, error);
+    }
   }
 
   /**
    * Removes documents for a specific URL within a library and version
-   * PostgreSQL implementation pending in Phase 3.
    */
   async deleteDocumentsByUrl(
     library: string,
     version: string,
     url: string,
   ): Promise<number> {
-    throw new StoreError("PostgreSQL implementation pending (Phase 3)");
+    try {
+      const normalizedVersion = normalizeVersionName(version);
+      const result = await this.pool.query(
+        `DELETE FROM documents
+         WHERE page_id IN (
+           SELECT p.id
+           FROM pages p
+           INNER JOIN versions v ON p.version_id = v.id
+           INNER JOIN libraries l ON v.library_id = l.id
+           WHERE l.name = $1 AND v.name = $2 AND p.url = $3
+         )`,
+        [library, normalizedVersion, url],
+      );
+
+      return result.rowCount || 0;
+    } catch (error) {
+      throw new StoreError(
+        `Failed to delete documents for ${library}:${version} URL: ${url}`,
+        error,
+      );
+    }
   }
 
   /**
    * Completely removes a library version and all associated documents.
-   * PostgreSQL implementation pending in Phase 3.
    */
   async removeVersion(
     library: string,
@@ -499,20 +790,84 @@ export class DocumentStore {
     versionDeleted: boolean;
     libraryDeleted: boolean;
   }> {
-    throw new StoreError("PostgreSQL implementation pending (Phase 3)");
+    try {
+      const normalizedVersion = normalizeVersionName(version);
+
+      // 1. Count documents to be deleted
+      const countResult = await this.pool.query(
+        `SELECT COUNT(*) as count
+         FROM documents d
+         INNER JOIN pages p ON d.page_id = p.id
+         INNER JOIN versions v ON p.version_id = v.id
+         INNER JOIN libraries l ON v.library_id = l.id
+         WHERE l.name = $1 AND v.name = $2`,
+        [library, normalizedVersion],
+      );
+      const documentsDeleted = Number(countResult.rows[0].count);
+
+      // 2. Delete version (CASCADE will delete pages and documents)
+      const versionDeleteResult = await this.pool.query(
+        `DELETE FROM versions
+         WHERE id IN (
+           SELECT v.id
+           FROM versions v
+           INNER JOIN libraries l ON v.library_id = l.id
+           WHERE l.name = $1 AND v.name = $2
+         )`,
+        [library, normalizedVersion],
+      );
+      const versionDeleted = (versionDeleteResult.rowCount || 0) > 0;
+
+      // 3. Optionally delete library if it has no versions left
+      let libraryDeleted = false;
+      if (removeLibraryIfEmpty && versionDeleted) {
+        const libraryDeleteResult = await this.pool.query(
+          `DELETE FROM libraries
+           WHERE name = $1
+           AND NOT EXISTS (
+             SELECT 1 FROM versions WHERE library_id = libraries.id
+           )`,
+          [library],
+        );
+        libraryDeleted = (libraryDeleteResult.rowCount || 0) > 0;
+      }
+
+      return {
+        documentsDeleted,
+        versionDeleted,
+        libraryDeleted,
+      };
+    } catch (error) {
+      throw new StoreError(`Failed to remove version ${library}:${version}`, error);
+    }
   }
 
   /**
    * Retrieves a document by its ID.
-   * PostgreSQL implementation pending in Phase 3.
    */
   async getById(id: string): Promise<Document | null> {
-    throw new StoreError("PostgreSQL implementation pending (Phase 3)");
+    try {
+      const result = await this.pool.query(
+        `SELECT d.id, d.content, d.metadata, p.url, p.title, p.content_type
+         FROM documents d
+         INNER JOIN pages p ON d.page_id = p.id
+         WHERE d.id = $1`,
+        [id],
+      );
+
+      if (result.rows.length === 0) {
+        return null;
+      }
+
+      const row = result.rows[0];
+      return mapDbDocumentToDocument(row as DbJoinedDocument);
+    } catch (error) {
+      throw new StoreError(`Failed to get document by ID: ${id}`, error);
+    }
   }
 
   /**
    * Finds documents matching a text query using hybrid search (pgvector + FTS).
-   * PostgreSQL implementation pending in Phase 3.
    */
   async findByContent(
     library: string,
@@ -520,12 +875,92 @@ export class DocumentStore {
     query: string,
     limit: number,
   ): Promise<Document[]> {
-    throw new StoreError("PostgreSQL implementation pending (Phase 3)");
+    try {
+      const normalizedVersion = normalizeVersionName(version);
+      const escapedQuery = this.escapeFtsQuery(query);
+
+      // Generate query embedding if vector search is enabled
+      let queryEmbedding: number[] | null = null;
+      if (this.isVectorSearchEnabled) {
+        queryEmbedding = await this.embeddings.embedQuery(query);
+        queryEmbedding = this.padVector(queryEmbedding);
+      }
+
+      // Perform hybrid search with RRF (Reciprocal Rank Fusion)
+      const vectorResults: RawSearchResult[] = [];
+      const ftsResults: RawSearchResult[] = [];
+
+      // Vector search
+      if (queryEmbedding) {
+        const vecResult = await this.pool.query(
+          `SELECT d.id, d.content, d.metadata, d.sort_order,
+                  p.url, p.title, p.content_type,
+                  1 - (d.embedding <=> $1::vector) as vec_score
+           FROM documents d
+           INNER JOIN pages p ON d.page_id = p.id
+           INNER JOIN versions v ON p.version_id = v.id
+           INNER JOIN libraries l ON v.library_id = l.id
+           WHERE l.name = $2 AND v.name = $3 AND d.embedding IS NOT NULL
+           ORDER BY d.embedding <=> $1::vector
+           LIMIT $4`,
+          [
+            `[${queryEmbedding.join(",")}]`,
+            library,
+            normalizedVersion,
+            limit * VECTOR_SEARCH_MULTIPLIER,
+          ],
+        );
+        vectorResults.push(...vecResult.rows);
+      }
+
+      // Full-text search
+      const ftsResult = await this.pool.query(
+        `SELECT d.id, d.content, d.metadata, d.sort_order,
+                p.url, p.title, p.content_type,
+                ts_rank(to_tsvector('english', d.content), to_tsquery('english', $1)) as fts_score
+         FROM documents d
+         INNER JOIN pages p ON d.page_id = p.id
+         INNER JOIN versions v ON p.version_id = v.id
+         INNER JOIN libraries l ON v.library_id = l.id
+         WHERE l.name = $2 AND v.name = $3
+           AND to_tsvector('english', d.content) @@ to_tsquery('english', $1)
+         ORDER BY fts_score DESC
+         LIMIT $4`,
+        [escapedQuery, library, normalizedVersion, limit * SEARCH_OVERFETCH_FACTOR],
+      );
+      ftsResults.push(...ftsResult.rows);
+
+      // Merge and rank results using RRF
+      const allResults = new Map<number, RawSearchResult>();
+      for (const result of [...vectorResults, ...ftsResults]) {
+        const id = Number(result.id);
+        if (allResults.has(id)) {
+          // Merge scores
+          const existing = allResults.get(id)!;
+          existing.vec_score = existing.vec_score || result.vec_score;
+          existing.fts_score = existing.fts_score || result.fts_score;
+        } else {
+          allResults.set(id, result);
+        }
+      }
+
+      // Assign ranks and calculate RRF scores
+      const rankedResults = this.assignRanks(Array.from(allResults.values()));
+
+      // Sort by RRF score and limit
+      const topResults = rankedResults
+        .sort((a, b) => b.rrf_score - a.rrf_score)
+        .slice(0, limit);
+
+      // Convert to Document objects
+      return topResults.map((row) => mapDbDocumentToDocument(row as DbJoinedDocument));
+    } catch (error) {
+      throw new StoreError(`Failed to search documents for ${library}:${version}`, error);
+    }
   }
 
   /**
    * Finds child chunks of a given document based on path hierarchy.
-   * PostgreSQL implementation pending in Phase 3.
    */
   async findChildChunks(
     library: string,
@@ -533,12 +968,54 @@ export class DocumentStore {
     id: string,
     limit: number,
   ): Promise<Document[]> {
-    throw new StoreError("PostgreSQL implementation pending (Phase 3)");
+    try {
+      const normalizedVersion = normalizeVersionName(version);
+
+      // Get the parent document's path
+      const parentResult = await this.pool.query(
+        `SELECT d.metadata
+         FROM documents d
+         INNER JOIN pages p ON d.page_id = p.id
+         INNER JOIN versions v ON p.version_id = v.id
+         INNER JOIN libraries l ON v.library_id = l.id
+         WHERE l.name = $1 AND v.name = $2 AND d.id = $3`,
+        [library, normalizedVersion, id],
+      );
+
+      if (parentResult.rows.length === 0) {
+        return [];
+      }
+
+      const parentMetadata = JSON.parse(parentResult.rows[0].metadata);
+      const parentPath = parentMetadata.path || "";
+
+      // Find child documents where path starts with parent path + "/"
+      const result = await this.pool.query(
+        `SELECT d.id, d.content, d.metadata, d.sort_order,
+                p.url, p.title, p.content_type
+         FROM documents d
+         INNER JOIN pages p ON d.page_id = p.id
+         INNER JOIN versions v ON p.version_id = v.id
+         INNER JOIN libraries l ON v.library_id = l.id
+         WHERE l.name = $1 AND v.name = $2
+           AND d.id != $3
+           AND (d.metadata)::jsonb->>'path' LIKE $4
+         ORDER BY (d.metadata)::jsonb->>'path', d.sort_order
+         LIMIT $5`,
+        [library, normalizedVersion, id, `${parentPath}/%`, limit],
+      );
+
+      return result.rows.map((row) => mapDbDocumentToDocument(row as DbJoinedDocument));
+    } catch (error) {
+      throw new StoreError(
+        `Failed to find child chunks for ${library}:${version}`,
+        error,
+      );
+    }
   }
 
   /**
    * Finds preceding sibling chunks of a given document.
-   * PostgreSQL implementation pending in Phase 3.
    */
   async findPrecedingSiblingChunks(
     library: string,
@@ -546,12 +1023,57 @@ export class DocumentStore {
     id: string,
     limit: number,
   ): Promise<Document[]> {
-    throw new StoreError("PostgreSQL implementation pending (Phase 3)");
+    try {
+      const normalizedVersion = normalizeVersionName(version);
+
+      // Get current document's path and chunk_id
+      const currentResult = await this.pool.query(
+        `SELECT d.metadata, p.url
+         FROM documents d
+         INNER JOIN pages p ON d.page_id = p.id
+         INNER JOIN versions v ON p.version_id = v.id
+         INNER JOIN libraries l ON v.library_id = l.id
+         WHERE l.name = $1 AND v.name = $2 AND d.id = $3`,
+        [library, normalizedVersion, id],
+      );
+
+      if (currentResult.rows.length === 0) {
+        return [];
+      }
+
+      const currentMetadata = JSON.parse(currentResult.rows[0].metadata);
+      const currentPath = currentMetadata.path || "";
+      const currentChunkId = currentMetadata.chunk_id || 0;
+      const currentUrl = currentResult.rows[0].url;
+
+      // Find siblings with same path/url but lower chunk_id
+      const result = await this.pool.query(
+        `SELECT d.id, d.content, d.metadata, d.sort_order,
+                p.url, p.title, p.content_type
+         FROM documents d
+         INNER JOIN pages p ON d.page_id = p.id
+         INNER JOIN versions v ON p.version_id = v.id
+         INNER JOIN libraries l ON v.library_id = l.id
+         WHERE l.name = $1 AND v.name = $2
+           AND p.url = $3
+           AND (d.metadata)::jsonb->>'path' = $4
+           AND CAST((d.metadata)::jsonb->>'chunk_id' AS INTEGER) < $5
+         ORDER BY CAST((d.metadata)::jsonb->>'chunk_id' AS INTEGER) DESC
+         LIMIT $6`,
+        [library, normalizedVersion, currentUrl, currentPath, currentChunkId, limit],
+      );
+
+      return result.rows.map((row) => mapDbDocumentToDocument(row as DbJoinedDocument));
+    } catch (error) {
+      throw new StoreError(
+        `Failed to find preceding siblings for ${library}:${version}`,
+        error,
+      );
+    }
   }
 
   /**
    * Finds subsequent sibling chunks of a given document.
-   * PostgreSQL implementation pending in Phase 3.
    */
   async findSubsequentSiblingChunks(
     library: string,
@@ -559,42 +1081,183 @@ export class DocumentStore {
     id: string,
     limit: number,
   ): Promise<Document[]> {
-    throw new StoreError("PostgreSQL implementation pending (Phase 3)");
+    try {
+      const normalizedVersion = normalizeVersionName(version);
+
+      // Get current document's path and chunk_id
+      const currentResult = await this.pool.query(
+        `SELECT d.metadata, p.url
+         FROM documents d
+         INNER JOIN pages p ON d.page_id = p.id
+         INNER JOIN versions v ON p.version_id = v.id
+         INNER JOIN libraries l ON v.library_id = l.id
+         WHERE l.name = $1 AND v.name = $2 AND d.id = $3`,
+        [library, normalizedVersion, id],
+      );
+
+      if (currentResult.rows.length === 0) {
+        return [];
+      }
+
+      const currentMetadata = JSON.parse(currentResult.rows[0].metadata);
+      const currentPath = currentMetadata.path || "";
+      const currentChunkId = currentMetadata.chunk_id || 0;
+      const currentUrl = currentResult.rows[0].url;
+
+      // Find siblings with same path/url but higher chunk_id
+      const result = await this.pool.query(
+        `SELECT d.id, d.content, d.metadata, d.sort_order,
+                p.url, p.title, p.content_type
+         FROM documents d
+         INNER JOIN pages p ON d.page_id = p.id
+         INNER JOIN versions v ON p.version_id = v.id
+         INNER JOIN libraries l ON v.library_id = l.id
+         WHERE l.name = $1 AND v.name = $2
+           AND p.url = $3
+           AND (d.metadata)::jsonb->>'path' = $4
+           AND CAST((d.metadata)::jsonb->>'chunk_id' AS INTEGER) > $5
+         ORDER BY CAST((d.metadata)::jsonb->>'chunk_id' AS INTEGER) ASC
+         LIMIT $6`,
+        [library, normalizedVersion, currentUrl, currentPath, currentChunkId, limit],
+      );
+
+      return result.rows.map((row) => mapDbDocumentToDocument(row as DbJoinedDocument));
+    } catch (error) {
+      throw new StoreError(
+        `Failed to find subsequent siblings for ${library}:${version}`,
+        error,
+      );
+    }
   }
 
   /**
    * Finds the parent chunk of a given document.
-   * PostgreSQL implementation pending in Phase 3.
    */
   async findParentChunk(
     library: string,
     version: string,
     id: string,
   ): Promise<Document | null> {
-    throw new StoreError("PostgreSQL implementation pending (Phase 3)");
+    try {
+      const normalizedVersion = normalizeVersionName(version);
+
+      // Get current document's path
+      const currentResult = await this.pool.query(
+        `SELECT d.metadata, p.url
+         FROM documents d
+         INNER JOIN pages p ON d.page_id = p.id
+         INNER JOIN versions v ON p.version_id = v.id
+         INNER JOIN libraries l ON v.library_id = l.id
+         WHERE l.name = $1 AND v.name = $2 AND d.id = $3`,
+        [library, normalizedVersion, id],
+      );
+
+      if (currentResult.rows.length === 0) {
+        return null;
+      }
+
+      const currentMetadata = JSON.parse(currentResult.rows[0].metadata);
+      const currentPath = currentMetadata.path || "";
+
+      // Calculate parent path (remove last segment)
+      const pathParts = currentPath.split("/").filter((part: string) => part.length > 0);
+      if (pathParts.length === 0) {
+        return null; // No parent
+      }
+
+      pathParts.pop(); // Remove last segment
+      const parentPath = pathParts.join("/");
+
+      // Find parent document with exact parent path
+      const result = await this.pool.query(
+        `SELECT d.id, d.content, d.metadata, d.sort_order,
+                p.url, p.title, p.content_type
+         FROM documents d
+         INNER JOIN pages p ON d.page_id = p.id
+         INNER JOIN versions v ON p.version_id = v.id
+         INNER JOIN libraries l ON v.library_id = l.id
+         WHERE l.name = $1 AND v.name = $2
+           AND (d.metadata)::jsonb->>'path' = $3
+         LIMIT 1`,
+        [library, normalizedVersion, parentPath],
+      );
+
+      if (result.rows.length === 0) {
+        return null;
+      }
+
+      return mapDbDocumentToDocument(result.rows[0] as DbJoinedDocument);
+    } catch (error) {
+      throw new StoreError(
+        `Failed to find parent chunk for ${library}:${version}`,
+        error,
+      );
+    }
   }
 
   /**
    * Fetches multiple documents by their IDs in a single call.
-   * PostgreSQL implementation pending in Phase 3.
    */
   async findChunksByIds(
     library: string,
     version: string,
     ids: string[],
   ): Promise<Document[]> {
-    throw new StoreError("PostgreSQL implementation pending (Phase 3)");
+    if (ids.length === 0) {
+      return [];
+    }
+
+    try {
+      const normalizedVersion = normalizeVersionName(version);
+      const result = await this.pool.query(
+        `SELECT d.id, d.content, d.metadata, d.sort_order,
+                p.url, p.title, p.content_type
+         FROM documents d
+         INNER JOIN pages p ON d.page_id = p.id
+         INNER JOIN versions v ON p.version_id = v.id
+         INNER JOIN libraries l ON v.library_id = l.id
+         WHERE l.name = $1 AND v.name = $2 AND d.id = ANY($3)
+         ORDER BY d.sort_order`,
+        [library, normalizedVersion, ids],
+      );
+
+      return result.rows.map((row) => mapDbDocumentToDocument(row as DbJoinedDocument));
+    } catch (error) {
+      throw new StoreError(
+        `Failed to find chunks by IDs for ${library}:${version}`,
+        error,
+      );
+    }
   }
 
   /**
    * Fetches all document chunks for a specific URL within a library and version.
-   * PostgreSQL implementation pending in Phase 3.
    */
   async findChunksByUrl(
     library: string,
     version: string,
     url: string,
   ): Promise<Document[]> {
-    throw new StoreError("PostgreSQL implementation pending (Phase 3)");
+    try {
+      const normalizedVersion = normalizeVersionName(version);
+      const result = await this.pool.query(
+        `SELECT d.id, d.content, d.metadata, d.sort_order,
+                p.url, p.title, p.content_type
+         FROM documents d
+         INNER JOIN pages p ON d.page_id = p.id
+         INNER JOIN versions v ON p.version_id = v.id
+         INNER JOIN libraries l ON v.library_id = l.id
+         WHERE l.name = $1 AND v.name = $2 AND p.url = $3
+         ORDER BY d.sort_order`,
+        [library, normalizedVersion, url],
+      );
+
+      return result.rows.map((row) => mapDbDocumentToDocument(row as DbJoinedDocument));
+    } catch (error) {
+      throw new StoreError(
+        `Failed to find chunks by URL for ${library}:${version} URL: ${url}`,
+        error,
+      );
+    }
   }
 }
