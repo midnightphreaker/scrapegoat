@@ -9,7 +9,7 @@
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "https://gitlab.den.lan/pub/scrapegoat.git"
+    "url": "http://gitlab.den.lan/pub/scrapegoat.git"
   },
   "files": [
     "dist",
