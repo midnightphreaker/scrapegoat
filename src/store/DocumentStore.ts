@@ -1,7 +1,6 @@
 import type { Document } from "@langchain/core/documents";
 import type { Embeddings } from "@langchain/core/embeddings";
-// PostgreSQL imports will be added in Phase 3
-// import { Pool, type PoolClient } from "pg";
+import type { Pool } from "pg";
 import semver from "semver";
 import type { ScraperOptions } from "../scraper/types";
 import type { DocumentMetadata } from "../types";
@@ -14,8 +13,7 @@ import {
   VECTOR_SEARCH_MULTIPLIER,
 } from "../utils/config";
 import { logger } from "../utils/logger";
-// applyMigrations will be reimplemented for PostgreSQL in Phase 2
-// import { applyMigrations } from "./applyMigrations";
+import { applyMigrations } from "./applyMigrations";
 import { EmbeddingConfig, type EmbeddingModelConfig } from "./embeddings/EmbeddingConfig";
 import {
   areCredentialsAvailable,
@@ -24,6 +22,7 @@ import {
   UnsupportedProviderError,
 } from "./embeddings/EmbeddingFactory";
 import { ConnectionError, DimensionError, StoreError } from "./errors";
+import { PostgresConnection } from "./PostgresConnection";
 import type { StoredScraperOptions } from "./types";
 import {
   type DbDocument,
@@ -64,8 +63,8 @@ interface RankedResult extends RawSearchResult {
  * NOTE: This is a PostgreSQL fork. SQLite support has been completely removed.
  */
 export class DocumentStore {
-  // PostgreSQL connection will be implemented in Phase 3
-  // private readonly pool: Pool;
+  private readonly connection: PostgresConnection;
+  private readonly pool: Pool;
   private embeddings!: Embeddings;
   private readonly dbDimension: number = VECTOR_DIMENSION;
   private modelDimension!: number;
@@ -127,15 +126,14 @@ export class DocumentStore {
       throw new StoreError("Missing required PostgreSQL connection string");
     }
 
-    // PostgreSQL connection will be established in Phase 3
-    // this.pool = new Pool({ connectionString });
+    // Create PostgreSQL connection
+    this.connection = new PostgresConnection(connectionString);
+    this.pool = this.connection.getPool();
 
     // Store embedding config for later initialization
     this.embeddingConfig = embeddingConfig;
 
-    logger.warn(
-      "⚠️ DocumentStore initialized but PostgreSQL implementation is pending (Phase 3)",
-    );
+    logger.debug("DocumentStore created with PostgreSQL connection");
   }
 
   /**
@@ -281,20 +279,49 @@ export class DocumentStore {
 
   /**
    * Initializes database connection and ensures readiness
-   * PostgreSQL-specific implementation will be added in Phase 2-3
    */
   async initialize(): Promise<void> {
     try {
-      // Phase 2-3: PostgreSQL connection and migration implementation
-      // 1. Create connection pool
-      // 2. Check pgvector extension
-      // 3. Run migrations
-      // 4. Initialize embeddings
+      logger.info("🔧 Initializing DocumentStore with PostgreSQL...");
 
+      // 1. Test database connectivity
+      logger.debug("Testing PostgreSQL connection...");
+      await this.connection.testConnection();
+
+      // 2. Check and install pgvector extension
+      logger.debug("Checking pgvector extension...");
+      const { installed } = await this.connection.checkPgvectorExtension();
+
+      if (!installed) {
+        logger.info("Installing pgvector extension...");
+        await this.connection.installPgvectorExtension();
+      }
+
+      // 3. Check permissions
+      logger.debug("Checking database permissions...");
+      const permissions = await this.connection.checkPermissions();
+
+      if (!permissions.canCreateTables) {
+        throw new StoreError(
+          "❌ Insufficient database permissions. Cannot create tables.\n" +
+            "   Please grant the following permissions:\n" +
+            "   GRANT CREATE ON SCHEMA public TO your_user;\n" +
+            "   GRANT ALL ON ALL TABLES IN SCHEMA public TO your_user;",
+        );
+      }
+
+      // 4. Run database migrations
+      logger.debug("Running database migrations...");
+      await applyMigrations(this.pool);
+
+      // 5. Initialize embeddings client
+      logger.debug("Initializing embeddings...");
       await this.initializeEmbeddings();
 
-      throw new StoreError(
-        "PostgreSQL implementation pending (Phase 2-3). SQLite has been removed.",
+      // Log pool statistics
+      const stats = this.connection.getPoolStats();
+      logger.info(
+        `✅ DocumentStore initialized successfully (pool: ${stats.total} total, ${stats.idle} idle)`,
       );
     } catch (error) {
       // Re-throw StoreError, ModelConfigurationError, and UnsupportedProviderError directly
@@ -313,9 +340,13 @@ export class DocumentStore {
    * Gracefully closes database connections
    */
   async shutdown(): Promise<void> {
-    // PostgreSQL pool shutdown will be implemented in Phase 3
-    // await this.pool.end();
-    logger.debug("DocumentStore shutdown (PostgreSQL implementation pending)");
+    try {
+      await this.connection.close();
+      logger.info("DocumentStore shutdown complete");
+    } catch (error) {
+      logger.error(`Error during DocumentStore shutdown: ${error}`);
+      throw error;
+    }
   }
 
   /**
