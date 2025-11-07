@@ -2,6 +2,10 @@
  * Default configuration values for the scraping pipeline and server
  */
 
+/** Default PostgreSQL connection string (can be overridden via DATABASE_URL env var) */
+export const DEFAULT_DATABASE_URL =
+  process.env.DATABASE_URL || "postgresql://localhost:5432/scrapegoat";
+
 /** Maximum number of pages to scrape in a single job */
 export const DEFAULT_MAX_PAGES = 1000;
 

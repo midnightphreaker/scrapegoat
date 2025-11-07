@@ -44,7 +44,7 @@ export interface DbJoinedDocument extends DbDocument {
 }
 
 /**
- * Utility type for handling SQLite query results that may be undefined
+ * Utility type for handling PostgreSQL query results that may be undefined
  */
 export type DbQueryResult<T> = T | undefined;
 

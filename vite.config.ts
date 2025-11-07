@@ -56,9 +56,7 @@ export default defineConfig({
         // Explicitly externalize potentially problematic packages if needed
         'fingerprint-generator',
         'header-generator',
-        'better-sqlite3', // Often needs to be external due to native bindings
         'playwright', // Playwright should definitely be external
-        'sqlite-vec', // Likely involves native bindings
       ],
       
       output: {

@@ -49,18 +49,25 @@ export class DocumentManagementService {
   }
 
   constructor(
-    storePath: string,
+    storePathOrConnectionString: string,
     embeddingConfig?: EmbeddingModelConfig | null,
     pipelineConfig?: PipelineConfiguration,
   ) {
-    const dbDir = storePath;
-    const dbPath = path.join(dbDir, "documents.db");
+    // Detect if parameter is a PostgreSQL connection string or legacy file path
+    const isPostgresUrl =
+      storePathOrConnectionString.startsWith("postgresql://") ||
+      storePathOrConnectionString.startsWith("postgres://");
 
-    logger.debug(`Using database directory: ${dbDir}`);
+    // If it's a Postgres URL, use it directly. Otherwise, use default PostgreSQL URL.
+    const connectionString = isPostgresUrl
+      ? storePathOrConnectionString
+      : process.env.DATABASE_URL || "postgresql://localhost:5432/scrapegoat";
 
-    // Directory creation is handled by the centralized path resolution
+    logger.debug(
+      `Using PostgreSQL connection: ${connectionString.replace(/:[^:@]+@/, ":***@")}`,
+    );
 
-    this.store = new DocumentStore(dbPath, embeddingConfig);
+    this.store = new DocumentStore(connectionString, embeddingConfig);
     this.documentRetriever = new DocumentRetrieverService(this.store);
 
     // Initialize content pipelines for different content types including universal TextPipeline fallback
