@@ -1,6 +1,8 @@
 import { ScrapeMode } from "../../scraper/types";
 import Alert from "./Alert";
 import Tooltip from "./Tooltip";
+import FetcherSelector from "./Fetcher/FetcherSelector";
+import Crawl4AIOptions from "./Fetcher/Crawl4AIOptions";
 
 interface ScrapeFormContentProps {
   defaultExcludePatterns?: string[];
@@ -30,6 +32,11 @@ const ScrapeFormContent = ({
         url: '',
         hasPath: false,
         headers: [],
+        fetcher: 'auto',
+        enableScreenshot: false,
+        enableMedia: false,
+        enableLinks: false,
+        fetcherHelp: '',
         checkUrlPath() {
           try {
             const url = new URL(this.url);
@@ -37,8 +44,18 @@ const ScrapeFormContent = ({
           } catch (e) {
             this.hasPath = false;
           }
+        },
+        updateFetcherHelp() {
+          const helps = {
+            auto: 'Automatically selects the best fetcher for the URL',
+            http: 'Fast HTTP-only fetching, no JavaScript execution',
+            browser: 'Full browser with JavaScript support, slower',
+            crawl4ai: 'AI-optimized markdown with optional screenshots and media'
+          };
+          this.fetcherHelp = helps[this.fetcher] || '';
         }
       }"
+      x-init="updateFetcherHelp()"
       >
         <div>
           <div class="flex items-center">
@@ -124,6 +141,12 @@ const ScrapeFormContent = ({
             class="mt-0.5 block w-full max-w-sm px-2 py-1 border border-gray-300 dark:border-[#3c3c3c] rounded-md shadow-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm bg-white dark:bg-[#181818] text-gray-900 dark:text-white"
           />
         </div>
+
+        {/* Fetcher Selection */}
+        <FetcherSelector />
+
+        {/* Crawl4AI Options (shown when Crawl4AI is selected) */}
+        <Crawl4AIOptions />
 
         {/* Consider using Flowbite Accordion here */}
         <details class="bg-gray-50 dark:bg-[#181818] p-2 rounded-md">
