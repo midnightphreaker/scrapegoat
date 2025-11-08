@@ -740,3 +740,52 @@ The Playwright removal refactoring is **complete and ready for merge**. All phas
 **Commit**: `fix(issue-2): remove ScrapeMode from web routes`
 
 ---
+
+## [2025-11-09 14:45:00] - Issue #1 FIXED: Implement Missing Crawl4AI Options
+
+**Priority**: CRITICAL (broken functionality)
+
+**Problem**: Web UI exposes 9 Crawl4AI options but only 4 were implemented in backend. Users could set options that had NO EFFECT.
+
+**Missing Options**:
+- waitFor (CSS selector)
+- waitForTimeout (hardcoded incorrectly)
+- customJs (custom JavaScript execution)
+- cacheMode (hardcoded to "enabled", should default to "fresh")
+- headers (custom HTTP headers)
+
+**Files Modified**:
+
+1. `src/scraper/fetcher/crawl4ai/types.ts`
+   - Added "fresh" to CacheMode type union
+   - Added headers field to Crawl4AIRequest interface
+
+2. `src/scraper/fetcher/crawl4ai/Crawl4AIFetcher.ts`
+   - Updated crawl4aiConfig object to include ALL 9 options with proper defaults:
+     - cacheMode: Uses `options?.crawl4ai?.cacheMode ?? "fresh"` (was hardcoded "enabled")
+     - waitFor: Now passed from `options?.crawl4ai?.waitFor`
+     - waitForTimeout: Uses `options?.crawl4ai?.waitForTimeout ?? 30000` (was using global timeout)
+     - customJs: Now passed from `options?.crawl4ai?.customJs`
+   - Added headers to Crawl4AIRequest: `headers: options?.crawl4ai?.headers`
+   - Added screenshotMode mapping: "fullpage" → "full" for Crawl4AI compatibility
+   - Added comprehensive comments explaining hardcoded values (useFitMarkdown, removeOverlays)
+
+**Default Values Applied** (per CURRENT_PLAN.md Section 0):
+- cacheMode: 'fresh' (always get latest documentation)
+- waitForTimeout: 30000ms (30 seconds)
+- waitFor: undefined (no wait selector)
+- customJs: undefined (no custom JavaScript)
+- headers: undefined (no custom headers)
+- useFitMarkdown: true (hardcoded - BM25-filtered markdown)
+- removeOverlays: true (hardcoded - auto-remove popups)
+
+**Verification**:
+- Ran `npm run build` - compilation succeeded
+- All 9 Crawl4AI options now properly passed to backend
+- Options 6-13 from Section 0 fully implemented
+
+**Status**: ✅ FIXED and VERIFIED
+
+**Commit**: `fix(issue-1): implement missing Crawl4AI options in backend`
+
+---

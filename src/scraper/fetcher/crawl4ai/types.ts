@@ -8,7 +8,7 @@ import type { LinkItem, MediaItem } from "../types";
 /**
  * Cache mode options for Crawl4AI
  */
-export type CacheMode = "enabled" | "disabled" | "bypass";
+export type CacheMode = "enabled" | "disabled" | "bypass" | "fresh";
 
 /**
  * Screenshot mode options
@@ -45,6 +45,7 @@ export interface Crawl4AIConfig {
 export interface Crawl4AIRequest {
   url: string;
   config?: Crawl4AIConfig;
+  headers?: Record<string, string>;
 }
 
 /**
