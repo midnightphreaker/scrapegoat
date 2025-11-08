@@ -1,3 +1,79 @@
+# [2.0.0](https://github.com/denmaster/scrapegoat/compare/v1.26.2...v2.0.0) (2025-11-09)
+
+## BREAKING CHANGES
+
+### Removed Playwright Dependency
+
+- **Playwright dependency removed** (~300MB with browsers)
+- **Consolidated on Crawl4AI** as sole browser automation provider
+- **Removed ScrapeMode enum** - use `fetcher` parameter instead
+- **Removed 'browser' fetcher type** - use 'crawl4ai' instead
+
+### API Changes
+
+#### Removed: `ScrapeMode` enum
+```typescript
+// Before (v1.x)
+import { ScrapeMode } from './scraper/types';
+const options = { scrapeMode: ScrapeMode.Playwright };
+
+// After (v2.0.0)
+const options = { fetcher: 'crawl4ai' };
+```
+
+#### Removed: `scrapeMode` parameter
+The `scrapeMode` parameter has been completely removed from all APIs and CLI commands.
+
+#### Deprecated: `fetcher: 'browser'`
+The `'browser'` fetcher type redirects to `'crawl4ai'` with a deprecation warning. Update to `fetcher: 'crawl4ai'`.
+
+### Added
+
+- **Complete Crawl4AI configuration options** in Web UI:
+  - **Content Enhancement**: `enableScreenshot` (default: true), `screenshotMode` ('viewport' | 'fullpage', default: 'fullpage'), `enableMedia` (default: true), `enableLinks` (default: true)
+  - **Advanced Settings**: `waitFor` (CSS selector), `waitForTimeout` (default: 30000ms), `customJs` (custom JavaScript execution), `cacheMode` ('fresh' | 'enabled' | 'disabled' | 'bypass', default: 'fresh'), `headers` (custom HTTP headers as JSON)
+- **Database migration 013**: Updates `fetcher_type = 'browser'` to `'crawl4ai'` in pages table
+- **Backward compatibility**: Automatic redirection from `fetcher: 'browser'` to `'crawl4ai'` with deprecation warning
+
+### Changed
+
+- **HtmlPipeline simplified**: Always uses standard middleware stack (no longer conditionally uses Playwright middleware)
+- **AutoDetectFetcher updated**: Removes BrowserFetcher, uses Crawl4AI for JavaScript-heavy sites
+- **CLI commands updated**: `--scrape-mode` flag removed, use `--fetcher` instead
+- **Type system updated**: `FetcherType` no longer includes 'browser', `ScrapeMode` enum removed
+
+### Removed
+
+- **BrowserFetcher class** (142 lines) - Playwright-based browser automation
+- **HtmlPlaywrightMiddleware** (831 lines) - In-process Playwright rendering
+- **HtmlPlaywrightMiddleware.test.ts** (~500 lines) - Test coverage for removed middleware
+- **ScrapeMode enum** - Use `fetcher` parameter with string literals instead
+- **Environment variables**:
+  - `PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH` - no longer used
+  - `PLAYWRIGHT_LAUNCH_ARGS` - no longer used
+- **Playwright installation utilities**:
+  - `ensurePlaywrightBrowsersInstalled()` function removed from CLI utils
+
+### Performance
+
+- **node_modules size reduced by 65MB** (11% reduction)
+- **Faster compilation** without Playwright types
+- **No browser installation required** - Crawl4AI handles browsers in Docker
+
+### Migration
+
+See [MIGRATION.md](MIGRATION.md) for complete migration guide from v1.x to v2.0.0.
+
+**Quick migration:**
+1. Replace `ScrapeMode.Playwright` → `fetcher: 'crawl4ai'`
+2. Replace `ScrapeMode.Fetch` → `fetcher: 'http'`
+3. Replace `ScrapeMode.Auto` → `fetcher: 'auto'` or omit (default)
+4. Replace `fetcher: 'browser'` → `fetcher: 'crawl4ai'`
+5. Update CLI: `--scrape-mode playwright` → `--fetcher crawl4ai`
+6. Run database migration 013
+
+---
+
 ## [1.26.2](https://github.com/denmaster/scrapegoat/compare/v1.26.1...v1.26.2) (2025-10-11)
 
 
