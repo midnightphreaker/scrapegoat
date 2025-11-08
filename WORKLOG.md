@@ -44,3 +44,38 @@ This log tracks all changes made during the comprehensive refactoring to remove 
 **Commit Message**: `refactor(phase1): remove ScrapeMode enum and browser fetcher type, update Crawl4AI options`
 
 ---
+
+## [2025-11-09 07:04:39] - Phase 2 Complete: Core Fetcher Logic
+
+**Files Modified**:
+1. `src/scraper/fetcher/AutoDetectFetcher.ts`
+   - Removed BrowserFetcher import
+   - Removed browserFetcher instance variable
+   - Removed 'browser' case from fetch() switch statement
+   - Added backward compatibility redirect in determineFetcherType():
+     - Detects when fetcher='browser' is passed (as string)
+     - Logs deprecation warning
+     - Redirects to 'crawl4ai'
+   - Updated challenge fallback in autoDetect():
+     - Changed from browserFetcher.fetch() to crawl4aiFetcher.fetch()
+     - Updated log message: "falling back to Crawl4AI"
+   - Updated close() method to remove browserFetcher.close()
+   - Removed 'browser' case from canFetcherHandleSource()
+   - Removed 'browser' case from getExpectedProtocol()
+   - Updated JSDoc comments to reflect removal of browser fetcher
+
+2. `src/scraper/fetcher/index.ts`
+   - Removed BrowserFetcher export
+
+**Files Deleted**:
+1. `src/scraper/fetcher/BrowserFetcher.ts` (142 lines removed)
+   - Removed Playwright-based browser automation
+   - Functionality replaced by Crawl4AI
+
+**Verification**: All BrowserFetcher references removed from fetcher layer
+
+**Next Steps**: Phase 3 - Pipeline Middleware (remove HtmlPlaywrightMiddleware, update HtmlPipeline)
+
+**Commit Message**: `refactor(phase2): remove BrowserFetcher and update AutoDetectFetcher to use Crawl4AI`
+
+---
