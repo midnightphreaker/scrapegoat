@@ -1,6 +1,55 @@
 /**
+ * Available fetcher types for content retrieval
+ */
+export type FetcherType = "auto" | "http" | "browser" | "crawl4ai" | "file";
+
+/**
+ * Media item extracted from page
+ */
+export interface MediaItem {
+  type: "image" | "video" | "audio";
+  url: string;
+  alt?: string;
+  width?: number;
+  height?: number;
+}
+
+/**
+ * Link extracted from page
+ */
+export interface LinkItem {
+  url: string;
+  text: string;
+  rel?: string;
+}
+
+/**
+ * Extended page metadata
+ */
+export interface PageMetadata {
+  media?: MediaItem[];
+  links?: LinkItem[];
+  [key: string]: unknown; // Allow other metadata
+}
+
+/**
+ * Crawl4AI configuration options
+ */
+export interface Crawl4AIOptions {
+  /** Enable screenshot capture */
+  enableScreenshot?: boolean;
+  /** Screenshot mode: viewport or full page */
+  screenshotMode?: "viewport" | "full";
+  /** Enable media extraction */
+  enableMedia?: boolean;
+  /** Enable link extraction */
+  enableLinks?: boolean;
+}
+
+/**
  * Raw content fetched from a source before processing.
  * Includes metadata about the content for proper processing.
+ * Now includes optional enhanced features from Crawl4AI.
  */
 export interface RawContent {
   /** Raw content as string or buffer */
@@ -20,6 +69,14 @@ export interface RawContent {
   encoding?: string;
   /** Original source location */
   source: string;
+  /** Optional screenshot (base64 or buffer) */
+  screenshot?: string | Buffer;
+  /** Optional extracted media items */
+  media?: MediaItem[];
+  /** Optional extracted links */
+  links?: LinkItem[];
+  /** Fetcher type used to retrieve this content */
+  fetcherType?: FetcherType;
 }
 
 /**
@@ -39,10 +96,20 @@ export interface FetchOptions {
   /** Whether to follow HTTP redirects (3xx responses) */
   followRedirects?: boolean;
   /**
+   * Explicit fetcher selection.
+   * Default: 'auto' (auto-detection based on URL and challenges)
+   *
+   * Priority: fetcher > useCrawl4AI > auto-detection
+   */
+  fetcher?: FetcherType;
+  /**
+   * @deprecated Use fetcher: 'crawl4ai' instead.
    * Whether to use Crawl4AI for content fetching.
    * When true, AutoDetectFetcher will select Crawl4AIFetcher.
    */
   useCrawl4AI?: boolean;
+  /** Crawl4AI-specific options */
+  crawl4ai?: Crawl4AIOptions;
 }
 
 /**

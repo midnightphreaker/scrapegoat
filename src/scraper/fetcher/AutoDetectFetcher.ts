@@ -4,14 +4,16 @@ import { BrowserFetcher } from "./BrowserFetcher";
 import { Crawl4AIFetcher } from "./crawl4ai/Crawl4AIFetcher";
 import { FileFetcher } from "./FileFetcher";
 import { HttpFetcher } from "./HttpFetcher";
-import type { ContentFetcher, FetchOptions, RawContent } from "./types";
+import type { ContentFetcher, FetcherType, FetchOptions, RawContent } from "./types";
 
 /**
  * AutoDetectFetcher automatically selects the appropriate fetcher based on URL type
  * and handles fallbacks for challenge detection.
  *
- * This eliminates the need for consumers to manage multiple fetcher instances
- * and implement fallback logic themselves.
+ * Supports explicit fetcher selection via the `fetcher` option parameter, or
+ * falls back to auto-detection if not specified.
+ *
+ * Priority: fetcher option > useCrawl4AI flag > auto-detection
  */
 export class AutoDetectFetcher implements ContentFetcher {
   private readonly httpFetcher = new HttpFetcher();
@@ -34,26 +36,123 @@ export class AutoDetectFetcher implements ContentFetcher {
 
   /**
    * Fetch content from the source, automatically selecting the appropriate fetcher
-   * and handling fallbacks when challenges are detected.
+   * based on explicit options or auto-detection.
+   *
+   * Supports explicit fetcher selection via options.fetcher:
+   * - 'auto': Use auto-detection (default)
+   * - 'http': Force HTTP fetcher
+   * - 'browser': Force browser fetcher
+   * - 'crawl4ai': Force Crawl4AI fetcher
+   * - 'file': Force file fetcher
    */
   async fetch(source: string, options?: FetchOptions): Promise<RawContent> {
-    // For file:// URLs, use FileFetcher directly
+    const fetcherType = this.determineFetcherType(source, options);
+
+    // Route to appropriate fetcher
+    switch (fetcherType) {
+      case "file":
+        logger.debug(`Using FileFetcher for: ${source}`);
+        return this.fileFetcher.fetch(source, options);
+
+      case "http":
+        logger.debug(`Using HttpFetcher (explicit) for: ${source}`);
+        return this.httpFetcher.fetch(source, options);
+
+      case "browser":
+        logger.debug(`Using BrowserFetcher (explicit) for: ${source}`);
+        return this.browserFetcher.fetch(source, options);
+
+      case "crawl4ai":
+        logger.debug(`Using Crawl4AIFetcher (explicit) for: ${source}`);
+        return this.crawl4aiFetcher.fetch(source, options);
+
+      case "auto":
+        return this.autoDetect(source, options);
+
+      default:
+        throw new Error(`Unknown fetcher type: ${fetcherType}`);
+    }
+  }
+
+  /**
+   * Determine which fetcher to use based on options and URL.
+   * Priority: explicit fetcher > useCrawl4AI flag > auto-detection
+   */
+  private determineFetcherType(source: string, options?: FetchOptions): FetcherType {
+    // Priority 1: Explicit fetcher parameter
+    if (options?.fetcher) {
+      // Validate that fetcher can handle this URL
+      if (!this.canFetcherHandleSource(options.fetcher, source)) {
+        throw new Error(
+          `Fetcher '${options.fetcher}' cannot handle URL: ${source}. ` +
+            `Expected ${this.getExpectedProtocol(options.fetcher)} URL. ` +
+            `Use 'auto' or choose a compatible fetcher.`,
+        );
+      }
+      return options.fetcher;
+    }
+
+    // Priority 2: Backward compatibility with useCrawl4AI flag
+    if (options?.useCrawl4AI === true) {
+      return "crawl4ai";
+    }
+
+    // Priority 3: Auto-detection
+    return "auto";
+  }
+
+  /**
+   * Check if a specific fetcher can handle the given source URL
+   */
+  private canFetcherHandleSource(fetcher: FetcherType, source: string): boolean {
+    switch (fetcher) {
+      case "auto":
+        return true; // Auto can handle anything
+      case "file":
+        return this.fileFetcher.canFetch(source);
+      case "http":
+        return this.httpFetcher.canFetch(source);
+      case "browser":
+        return this.browserFetcher.canFetch(source);
+      case "crawl4ai":
+        return this.crawl4aiFetcher.canFetch(source);
+      default:
+        return false;
+    }
+  }
+
+  /**
+   * Get expected protocol for a fetcher type (for error messages)
+   */
+  private getExpectedProtocol(fetcher: FetcherType): string {
+    switch (fetcher) {
+      case "file":
+        return "file://";
+      case "http":
+      case "browser":
+      case "crawl4ai":
+        return "http:// or https://";
+      case "auto":
+        return "any";
+      default:
+        return "unknown";
+    }
+  }
+
+  /**
+   * Auto-detect the appropriate fetcher based on URL and fallback logic
+   */
+  private async autoDetect(source: string, options?: FetchOptions): Promise<RawContent> {
+    // For file:// URLs, use FileFetcher
     if (this.fileFetcher.canFetch(source)) {
-      logger.debug(`Using FileFetcher for: ${source}`);
+      logger.debug(`Auto-detected FileFetcher for: ${source}`);
       return this.fileFetcher.fetch(source, options);
     }
 
-    // For HTTP(S) URLs, check for Crawl4AI preference first
+    // For HTTP(S) URLs, try HttpFetcher first, fallback to BrowserFetcher on challenge
     if (this.httpFetcher.canFetch(source)) {
-      // Priority 1: Use Crawl4AI if explicitly requested
-      if (options?.useCrawl4AI) {
-        logger.debug(`Using Crawl4AIFetcher for: ${source}`);
-        return this.crawl4aiFetcher.fetch(source, options);
-      }
-
-      // Priority 2: Try HttpFetcher first, fallback to BrowserFetcher on challenge
       try {
-        logger.debug(`Using HttpFetcher for: ${source}`);
+        logger.debug(`Auto-detected HttpFetcher for: ${source}`);
         return await this.httpFetcher.fetch(source, options);
       } catch (error) {
         if (error instanceof ChallengeError) {

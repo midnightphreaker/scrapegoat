@@ -56,6 +56,20 @@ export interface ScrapeToolOptions {
      * Keys are header names, values are header values.
      */
     headers?: Record<string, string>;
+    /**
+     * Explicit fetcher selection: 'auto', 'http', 'browser', 'crawl4ai', or 'file'.
+     * @default 'auto'
+     */
+    fetcher?: "auto" | "http" | "browser" | "crawl4ai" | "file";
+    /**
+     * Crawl4AI-specific options
+     */
+    crawl4ai?: {
+      enableScreenshot?: boolean;
+      screenshotMode?: "viewport" | "full";
+      enableMedia?: boolean;
+      enableLinks?: boolean;
+    };
   };
   /** If false, returns jobId immediately without waiting. Defaults to true. */
   waitForCompletion?: boolean;
@@ -146,6 +160,8 @@ export class ScrapeTool {
       includePatterns: scraperOptions?.includePatterns,
       excludePatterns: scraperOptions?.excludePatterns,
       headers: scraperOptions?.headers, // <-- propagate headers
+      fetcher: scraperOptions?.fetcher, // <-- propagate fetcher selection
+      crawl4ai: scraperOptions?.crawl4ai, // <-- propagate crawl4ai options
     });
 
     // Conditionally wait for completion

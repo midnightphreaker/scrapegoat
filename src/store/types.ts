@@ -115,10 +115,27 @@ export interface VersionScraperOptions {
   headers?: Record<string, string>;
 
   /**
+   * Explicit fetcher selection: 'auto', 'http', 'browser', 'crawl4ai', or 'file'.
+   * Stored for reproducibility and audit trail.
+   */
+  fetcher?: "auto" | "http" | "browser" | "crawl4ai" | "file";
+
+  /**
+   * @deprecated Use fetcher: 'crawl4ai' instead.
    * Whether Crawl4AI was used for content fetching.
    * Stored for reproducibility and audit trail.
    */
   useCrawl4AI?: boolean;
+
+  /**
+   * Crawl4AI-specific options
+   */
+  crawl4ai?: {
+    enableScreenshot?: boolean;
+    screenshotMode?: "viewport" | "full";
+    enableMedia?: boolean;
+    enableLinks?: boolean;
+  };
 }
 
 /**
