@@ -704,3 +704,39 @@ The Playwright removal refactoring is **complete and ready for merge**. All phas
 - Release as v2.0.0
 
 ---
+
+## [2025-11-09 14:30:00] - Code Review Issue Fixes Started
+
+**Context**: Comprehensive code review identified 5 critical issues and 1 security concern that must be fixed before merge. See ISSUES.md for complete details.
+
+**Current Status**: Fixing issues in priority order
+
+---
+
+## [2025-11-09 14:35:00] - Issue #2 FIXED: Remove ScrapeMode from new.tsx
+
+**Priority**: CRITICAL (blocks compilation)
+
+**Problem**: src/web/routes/jobs/new.tsx still imported and used the removed ScrapeMode enum, causing TypeScript compilation errors.
+
+**Files Modified**:
+- `src/web/routes/jobs/new.tsx`
+  - Line 3: Removed import statement `import { ScrapeMode } from "../../../scraper/types";`
+  - Line 38: Removed `scrapeMode?: ScrapeMode;` from RequestBody interface
+  - Line 105: Removed `scrapeMode: body.scrapeMode,` from scrapeTool options
+
+**Changes Made**:
+1. Removed ScrapeMode import
+2. Removed scrapeMode field from RequestBody type definition
+3. Removed scrapeMode from scrapeOptions object passed to scrapeTool
+
+**Verification**:
+- Ran `npm run build` - TypeScript compilation succeeded with no errors
+- Web UI form submission no longer references removed ScrapeMode enum
+- Build output: 111 modules transformed (web), 170 modules (SSR), no errors
+
+**Status**: ✅ FIXED and VERIFIED
+
+**Commit**: `fix(issue-2): remove ScrapeMode from web routes`
+
+---
