@@ -50,9 +50,14 @@ export class Crawl4AIFetcher implements ContentFetcher {
   /**
    * Fetch content from the source using Crawl4AI service.
    *
+   * Supports enhanced features when enabled via options.crawl4ai:
+   * - Screenshot capture (viewport or full page)
+   * - Media extraction (images, videos, audio)
+   * - Link extraction and categorization
+   *
    * @param source - The URL to fetch
-   * @param options - Fetch options (timeout, signal, etc.)
-   * @returns RawContent with markdown content
+   * @param options - Fetch options (timeout, signal, crawl4ai config)
+   * @returns RawContent with markdown content and optional enhanced data
    */
   async fetch(source: string, options?: FetchOptions): Promise<RawContent> {
     try {
@@ -72,13 +77,25 @@ export class Crawl4AIFetcher implements ContentFetcher {
         );
       }
 
+      // Check environment variables for global defaults
+      const envScreenshots = process.env.CRAWL4AI_ENABLE_SCREENSHOTS === "true";
+      const envMedia = process.env.CRAWL4AI_ENABLE_MEDIA === "true";
+      const envLinks = process.env.CRAWL4AI_ENABLE_LINKS === "true";
+      const envScreenshotMode = process.env.CRAWL4AI_SCREENSHOT_MODE || "viewport";
+
+      // Merge options: explicit options > environment defaults > false
+      const enableScreenshot = options?.crawl4ai?.enableScreenshot ?? envScreenshots;
+      const screenshotMode = options?.crawl4ai?.screenshotMode ?? envScreenshotMode;
+      const enableMedia = options?.crawl4ai?.enableMedia ?? envMedia;
+      const enableLinks = options?.crawl4ai?.enableLinks ?? envLinks;
+
       // Build Crawl4AI request
       const crawl4aiConfig: Crawl4AIConfig = {
         cacheMode: "enabled",
         useFitMarkdown: true, // Use BM25-filtered markdown for better quality
         removeOverlays: true,
-        screenshot: false,
-        extractMedia: false,
+        screenshot: enableScreenshot ? screenshotMode : false,
+        extractMedia: enableMedia,
         waitForTimeout: options?.timeout || CRAWL4AI_TIMEOUT,
       };
 
@@ -87,7 +104,17 @@ export class Crawl4AIFetcher implements ContentFetcher {
         config: crawl4aiConfig,
       };
 
-      logger.debug(`Fetching ${source} via Crawl4AI service...`);
+      const featuresLog = [
+        enableScreenshot && `screenshot(${screenshotMode})`,
+        enableMedia && "media",
+        enableLinks && "links",
+      ]
+        .filter(Boolean)
+        .join(", ");
+
+      logger.debug(
+        `Fetching ${source} via Crawl4AI service${featuresLog ? ` with ${featuresLog}` : ""}...`,
+      );
 
       // Make request to Crawl4AI service
       const response = await this.client.crawl(request, {
@@ -123,14 +150,57 @@ export class Crawl4AIFetcher implements ContentFetcher {
         `Crawl4AI fetch successful: ${source} -> ${finalUrl} (${markdown.length} chars, ${data.metadata.crawlTime.toFixed(2)}s)`,
       );
 
-      // Return as RawContent with markdown mime type
-      return {
+      // Build enhanced RawContent with optional features
+      const rawContent: RawContent = {
         content: Buffer.from(markdown, "utf-8"),
         mimeType: "text/markdown",
         charset: "utf-8",
         encoding: undefined,
         source: finalUrl,
+        fetcherType: "crawl4ai",
       };
+
+      // Add screenshot if captured
+      if (enableScreenshot && data.screenshot) {
+        rawContent.screenshot = data.screenshot;
+        logger.debug(
+          `Screenshot captured: ${typeof data.screenshot === "string" ? "base64" : "buffer"} (${screenshotMode} mode)`,
+        );
+      }
+
+      // Add media if extracted
+      if (
+        enableMedia &&
+        data.media &&
+        Array.isArray(data.media) &&
+        data.media.length > 0
+      ) {
+        rawContent.media = data.media.map((item: any) => ({
+          type: item.type || "image",
+          url: item.url || item.src,
+          alt: item.alt,
+          width: item.width,
+          height: item.height,
+        }));
+        logger.debug(`Extracted ${rawContent.media.length} media items`);
+      }
+
+      // Add links if extracted (Crawl4AI always extracts links, we just control storage)
+      if (
+        enableLinks &&
+        data.links &&
+        Array.isArray(data.links) &&
+        data.links.length > 0
+      ) {
+        rawContent.links = data.links.map((link: any) => ({
+          url: link.url || link.href,
+          text: link.text || link.title || "",
+          rel: link.rel,
+        }));
+        logger.debug(`Extracted ${rawContent.links.length} links`);
+      }
+
+      return rawContent;
     } catch (error) {
       // Handle cancellation
       if (options?.signal?.aborted) {
