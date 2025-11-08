@@ -1,6 +1,7 @@
 import { ChallengeError } from "../../utils/errors";
 import { logger } from "../../utils/logger";
 import { BrowserFetcher } from "./BrowserFetcher";
+import { Crawl4AIFetcher } from "./crawl4ai/Crawl4AIFetcher";
 import { FileFetcher } from "./FileFetcher";
 import { HttpFetcher } from "./HttpFetcher";
 import type { ContentFetcher, FetchOptions, RawContent } from "./types";
@@ -16,6 +17,7 @@ export class AutoDetectFetcher implements ContentFetcher {
   private readonly httpFetcher = new HttpFetcher();
   private readonly browserFetcher = new BrowserFetcher();
   private readonly fileFetcher = new FileFetcher();
+  private readonly crawl4aiFetcher = new Crawl4AIFetcher();
 
   /**
    * Check if this fetcher can handle the given source.
@@ -25,7 +27,8 @@ export class AutoDetectFetcher implements ContentFetcher {
     return (
       this.httpFetcher.canFetch(source) ||
       this.browserFetcher.canFetch(source) ||
-      this.fileFetcher.canFetch(source)
+      this.fileFetcher.canFetch(source) ||
+      this.crawl4aiFetcher.canFetch(source)
     );
   }
 
@@ -40,8 +43,15 @@ export class AutoDetectFetcher implements ContentFetcher {
       return this.fileFetcher.fetch(source, options);
     }
 
-    // For HTTP(S) URLs, try HttpFetcher first, fallback to BrowserFetcher on challenge
+    // For HTTP(S) URLs, check for Crawl4AI preference first
     if (this.httpFetcher.canFetch(source)) {
+      // Priority 1: Use Crawl4AI if explicitly requested
+      if (options?.useCrawl4AI) {
+        logger.debug(`Using Crawl4AIFetcher for: ${source}`);
+        return this.crawl4aiFetcher.fetch(source, options);
+      }
+
+      // Priority 2: Try HttpFetcher first, fallback to BrowserFetcher on challenge
       try {
         logger.debug(`Using HttpFetcher for: ${source}`);
         return await this.httpFetcher.fetch(source, options);
@@ -66,6 +76,7 @@ export class AutoDetectFetcher implements ContentFetcher {
   async close(): Promise<void> {
     await Promise.allSettled([
       this.browserFetcher.close(),
+      this.crawl4aiFetcher.close(),
       // HttpFetcher and FileFetcher don't need explicit cleanup
     ]);
   }

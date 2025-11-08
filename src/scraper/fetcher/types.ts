@@ -38,6 +38,11 @@ export interface FetchOptions {
   signal?: AbortSignal;
   /** Whether to follow HTTP redirects (3xx responses) */
   followRedirects?: boolean;
+  /**
+   * Whether to use Crawl4AI for content fetching.
+   * When true, AutoDetectFetcher will select Crawl4AIFetcher.
+   */
+  useCrawl4AI?: boolean;
 }
 
 /**
