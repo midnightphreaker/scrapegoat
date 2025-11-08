@@ -113,6 +113,74 @@ export class SemanticMarkdownSplitter implements DocumentSplitter {
   }
 
   /**
+   * Recursively extracts all elements from a container, flattening nested structures
+   * while preserving document order. This handles cases where content is wrapped
+   * in container elements like <div>, <article>, or <section>.
+   *
+   * This is crucial for handling documentation from CMS platforms, modern web frameworks,
+   * and documentation generators (like Red Hat/Ansible docs) that wrap content in
+   * semantic or generic container elements.
+   *
+   * Example transformation:
+   * <body>
+   *   <div class="content">
+   *     <h1>Title</h1>
+   *     <p>Text</p>
+   *   </div>
+   * </body>
+   *
+   * Returns: [h1, p] (flattened array for processing)
+   *
+   * @param element - The parent element to flatten
+   * @returns Array of semantic elements (headings, paragraphs, code blocks, tables, etc.)
+   */
+  private flattenElements(element: Element): Element[] {
+    const flattened: Element[] = [];
+
+    for (const child of Array.from(element.children)) {
+      // If this is a generic container element with no semantic meaning, recurse into it
+      if (this.isGenericContainer(child)) {
+        flattened.push(...this.flattenElements(child));
+      } else {
+        // Keep semantic elements (headings, paragraphs, pre, table, etc.)
+        flattened.push(child);
+      }
+    }
+
+    return flattened;
+  }
+
+  /**
+   * Checks if an element is a generic container that should be unwrapped during
+   * DOM traversal. Container elements are structural wrappers that don't carry
+   * semantic meaning for documentation chunking.
+   *
+   * Container tags to unwrap:
+   * - DIV: Generic container
+   * - ARTICLE: HTML5 semantic container (often used as wrapper)
+   * - SECTION: HTML5 semantic container (often used as wrapper)
+   * - MAIN: HTML5 main content container
+   * - ASIDE: HTML5 aside content
+   * - NAV: Navigation container
+   *
+   * Semantic elements that are NOT unwrapped:
+   * - H1-H6: Headings (define sections)
+   * - P: Paragraphs (text content)
+   * - PRE: Code blocks
+   * - TABLE: Tables
+   * - UL/OL/LI: Lists
+   * - BLOCKQUOTE: Quotes
+   * - etc.
+   *
+   * @param element - The element to check
+   * @returns true if element is a generic container that should be unwrapped
+   */
+  private isGenericContainer(element: Element): boolean {
+    const containerTags = ["DIV", "ARTICLE", "SECTION", "MAIN", "ASIDE", "NAV"];
+    return containerTags.includes(element.tagName);
+  }
+
+  /**
    * Step 1: Split document into sections based on H1-H6 headings,
    * as well as code blocks and tables.
    */
@@ -126,8 +194,15 @@ export class SemanticMarkdownSplitter implements DocumentSplitter {
     const sections: DocumentSection[] = [];
     const stack: DocumentSection[] = [currentSection];
 
-    // Process each child of the body
-    for (const element of Array.from(body.children)) {
+    // Flatten nested container elements to handle content wrapped in divs, articles, etc.
+    // This allows us to process content that may be wrapped in container elements
+    // (common in CMS-generated content, documentation platforms, etc.)
+    const elements = this.flattenElements(body);
+
+    logger.debug(`Processing ${elements.length} flattened elements from DOM`);
+
+    // Process each element (now works with both flat and nested structures)
+    for (const element of elements) {
       const headingMatch = element.tagName.match(/H([1-6])/);
 
       if (headingMatch) {
