@@ -153,7 +153,7 @@ const Layout = ({ title, version, children }: LayoutProps) => {
           `}
         </style>
       </head>
-      <body class="flex min-h-screen flex-col overflow-x-hidden bg-stone-50 antialiased">
+      <body class="flex min-h-screen flex-col overflow-x-hidden antialiased" style="background-color: #003300;">
         {/* Full-width header with ScrapeGoat branding */}
         <header
           class="sticky top-0 z-50 bg-white border-b border-gray-200 shadow-sm"
