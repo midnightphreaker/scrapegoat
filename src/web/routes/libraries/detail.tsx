@@ -113,7 +113,7 @@ export function registerLibraryDetailRoutes(
         // Return error message on catch
         reply.type("text/html; charset=utf-8");
         return (
-          <p class="text-red-500 dark:text-red-400 italic">
+          <p class="text-red-500 italic">
             An unexpected error occurred during the search.
           </p>
         );

@@ -26,7 +26,7 @@ const JobItem = ({ job }: JobItemProps) => {
       job.status === PipelineJobStatus.RUNNING;
 
   return (
-    <div class="block p-3 bg-gray-50 rounded-lg border border-gray-200">
+    <div class="block p-3 bg-white rounded-lg border border-gray-200 shadow-sm">
       <div class="flex items-start justify-between">
         <div class="flex-1">
           <p class="text-sm font-medium text-gray-900">

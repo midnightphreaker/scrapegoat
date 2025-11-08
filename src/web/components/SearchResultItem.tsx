@@ -56,7 +56,7 @@ const SearchResultItem = async ({ result }: SearchResultItemProps) => {
   }
 
   return (
-    <div class="block px-4 py-2 bg-white rounded-lg shadow-sm border border-gray-300 mb-2">
+    <div class="block px-4 py-2 bg-white rounded-lg shadow-sm border border-gray-200 mb-2">
       <div class="text-sm text-gray-600 mb-1 flex items-center gap-2">
         <a
           href={result.url}

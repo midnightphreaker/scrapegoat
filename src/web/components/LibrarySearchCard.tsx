@@ -15,7 +15,7 @@ interface LibrarySearchCardProps {
  */
 const LibrarySearchCard = ({ library }: LibrarySearchCardProps) => {
   return (
-    <div class="block p-4 bg-white rounded-lg shadow-sm border border-gray-300 mb-4">
+    <div class="block p-4 bg-white rounded-lg shadow-sm border border-gray-200 mb-4">
       <h2 class="text-xl font-semibold mb-2 text-gray-900" safe>
         Search {library.name} Documentation
       </h2>
@@ -28,7 +28,7 @@ const LibrarySearchCard = ({ library }: LibrarySearchCardProps) => {
       >
         <select
           name="version"
-          class="w-40 bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-accent-500 focus:border-accent-500 block p-2.5"
+          class="w-40 bg-white border border-gray-200 text-gray-900 text-sm rounded-lg focus:ring-primary-600 focus:border-primary-600 block p-2.5 transition-colors duration-150"
         >
           <option value="">Latest</option> {/* Default to latest */}
           {library.versions.map((version) => (
@@ -42,11 +42,11 @@ const LibrarySearchCard = ({ library }: LibrarySearchCardProps) => {
           name="query"
           placeholder="Search query..."
           required
-          class="flex-grow bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-accent-500 focus:border-accent-500 block p-2.5"
+          class="flex-grow bg-white border border-gray-200 text-gray-900 text-sm rounded-lg focus:ring-primary-600 focus:border-primary-600 block p-2.5 transition-colors duration-150"
         />
         <button
           type="submit"
-          class="text-white bg-accent-700 hover:bg-accent-800 focus:ring-4 focus:outline-none focus:ring-accent-300 font-medium rounded-lg text-sm px-5 py-2.5 text-center relative"
+          class="text-white bg-primary-600 hover:bg-primary-700 focus:ring-4 focus:outline-none focus:ring-primary-600 font-medium rounded-lg text-sm px-5 py-2.5 text-center relative transition-colors duration-150"
         >
           <span class="search-text">Search</span>
           {/* Spinner for HTMX loading - shown via htmx-indicator class on parent */}

@@ -15,7 +15,7 @@ const ScreenshotViewer = ({ pageId, screenshotPath }: ScreenshotViewerProps) => 
   const screenshotUrl = `/api/pages/${pageId}/screenshot`;
 
   return (
-    <div class="mt-6 p-4 bg-white rounded-lg shadow border border-gray-300">
+    <div class="mt-6 p-4 bg-white rounded-lg shadow-sm border border-gray-200">
       <h3 class="text-lg font-semibold text-gray-900 mb-3">
         Page Screenshot
       </h3>
@@ -31,7 +31,7 @@ const ScreenshotViewer = ({ pageId, screenshotPath }: ScreenshotViewerProps) => 
         href={screenshotUrl}
         target="_blank"
         rel="noopener noreferrer"
-        class="inline-block mt-3 text-sm text-pink-500 hover:text-pink-600 hover:underline"
+        class="inline-block mt-3 text-sm text-primary-600 hover:text-primary-700 hover:underline transition-colors duration-150"
       >
         Open in new tab →
       </a>

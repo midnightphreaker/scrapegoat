@@ -14,14 +14,14 @@ export function registerIndexRoute(server: FastifyInstance) {
       (
         <Layout title="ScrapeGoat">
           {/* Job Queue Section */}
-          <section class="mb-6 p-6 bg-white rounded-lg shadow-sm dark:bg-[#242424] border border-gray-200 dark:border-[#3c3c3c]">
+          <section class="mb-6 p-6 bg-white rounded-lg shadow-sm border border-gray-200">
             <div class="flex items-center justify-between mb-4">
-              <h2 class="text-xl font-semibold text-gray-800 dark:text-white">
+              <h2 class="text-xl font-semibold text-gray-800">
                 Job Queue
               </h2>
               <button
                 type="button"
-                class="text-sm px-4 py-2 text-gray-800 bg-stone-50 border border-gray-200 rounded-lg hover:bg-stone-100 focus:ring-2 focus:outline-none focus:ring-primary-600 dark:bg-gray-700 dark:text-gray-300 dark:border-gray-600 dark:hover:bg-gray-600 dark:focus:ring-primary-600 transition-colors duration-150 font-medium"
+                class="text-sm px-4 py-2 text-gray-800 bg-stone-50 border border-gray-200 rounded-lg hover:bg-stone-100 focus:ring-2 focus:outline-none focus:ring-primary-600 transition-colors duration-150 font-medium"
                 title="Clear all completed, cancelled, and failed jobs"
                 hx-post="/web/jobs/clear-completed"
                 hx-trigger="click"
@@ -35,9 +35,9 @@ export function registerIndexRoute(server: FastifyInstance) {
             <div id="job-queue" hx-get="/web/jobs" hx-trigger="load, every 1s">
               {/* Initial loading state */}
               <div class="animate-pulse">
-                <div class="h-[0.8em] bg-gray-200 rounded-full dark:bg-gray-700 w-48 mb-4" />
-                <div class="h-[0.8em] bg-gray-200 rounded-full dark:bg-gray-700 w-full mb-2.5" />
-                <div class="h-[0.8em] bg-gray-200 rounded-full dark:bg-gray-700 w-full mb-2.5" />
+                <div class="h-[0.8em] bg-gray-200 rounded-full w-48 mb-4" />
+                <div class="h-[0.8em] bg-gray-200 rounded-full w-full mb-2.5" />
+                <div class="h-[0.8em] bg-gray-200 rounded-full w-full mb-2.5" />
               </div>
             </div>
           </section>
@@ -46,16 +46,16 @@ export function registerIndexRoute(server: FastifyInstance) {
             {/* Container for the add job form, loaded via HTMX */}
             <div id="addJobForm" hx-get="/web/jobs/new" hx-trigger="load">
               {/* Initial loading state (optional, could just be empty) */}
-              <div class="p-6 bg-white rounded-lg shadow dark:bg-[#181818] animate-pulse">
-                <div class="h-6 bg-gray-200 rounded-full dark:bg-gray-700 w-1/3 mb-4" />
-                <div class="h-[0.8em] bg-gray-200 rounded-full dark:bg-gray-700 w-full mb-2.5" />
-                <div class="h-[0.8em] bg-gray-200 rounded-full dark:bg-gray-700 w-full mb-2.5" />
+              <div class="p-6 bg-white rounded-lg shadow-sm border border-gray-200 animate-pulse">
+                <div class="h-6 bg-gray-200 rounded-full w-1/3 mb-4" />
+                <div class="h-[0.8em] bg-gray-200 rounded-full w-full mb-2.5" />
+                <div class="h-[0.8em] bg-gray-200 rounded-full w-full mb-2.5" />
               </div>
             </div>
           </section>
           {/* Indexed Documentation Section */}
           <div>
-            <h2 class="text-xl font-semibold mb-4 text-gray-800 dark:text-white">
+            <h2 class="text-xl font-semibold mb-4 text-gray-800">
               Indexed Documentation
             </h2>
             <div
@@ -64,9 +64,9 @@ export function registerIndexRoute(server: FastifyInstance) {
               hx-trigger="load, every 10s"
             >
               <div class="animate-pulse">
-                <div class="h-[0.8em] bg-gray-200 rounded-full dark:bg-gray-700 w-48 mb-4" />
-                <div class="h-[0.8em] bg-gray-200 rounded-full dark:bg-gray-700 w-full mb-2.5" />
-                <div class="h-[0.8em] bg-gray-200 rounded-full dark:bg-gray-700 w-full mb-2.5" />
+                <div class="h-[0.8em] bg-gray-200 rounded-full w-48 mb-4" />
+                <div class="h-[0.8em] bg-gray-200 rounded-full w-full mb-2.5" />
+                <div class="h-[0.8em] bg-gray-200 rounded-full w-full mb-2.5" />
               </div>
             </div>
           </div>

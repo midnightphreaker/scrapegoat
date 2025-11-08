@@ -25,7 +25,7 @@ interface ServiceStatusCardProps {
 const ServiceStatusCard = ({ health }: ServiceStatusCardProps) => {
   return (
     <div
-      class="mt-4 p-4 bg-white rounded-lg shadow border border-gray-300"
+      class="mt-4 p-4 bg-white rounded-lg shadow-sm border border-gray-200"
       hx-get="/api/health/all"
       hx-trigger="load, every 30s"
       hx-swap="outerHTML"
@@ -64,16 +64,16 @@ const ServiceStatusCard = ({ health }: ServiceStatusCardProps) => {
       ) : (
         <div class="space-y-2">
           <div class="animate-pulse flex items-center gap-2">
-            <div class="w-3 h-3 bg-gray-300 rounded-full" />
-            <div class="h-4 bg-gray-300 rounded w-32" />
+            <div class="w-3 h-3 bg-gray-200 rounded-full" />
+            <div class="h-4 bg-gray-200 rounded w-32" />
           </div>
           <div class="animate-pulse flex items-center gap-2">
-            <div class="w-3 h-3 bg-gray-300 rounded-full" />
-            <div class="h-4 bg-gray-300 rounded w-32" />
+            <div class="w-3 h-3 bg-gray-200 rounded-full" />
+            <div class="h-4 bg-gray-200 rounded w-32" />
           </div>
           <div class="animate-pulse flex items-center gap-2">
-            <div class="w-3 h-3 bg-gray-300 rounded-full" />
-            <div class="h-4 bg-gray-300 rounded w-32" />
+            <div class="w-3 h-3 bg-gray-200 rounded-full" />
+            <div class="h-4 bg-gray-200 rounded w-32" />
           </div>
         </div>
       )}

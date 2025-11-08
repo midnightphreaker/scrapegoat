@@ -24,7 +24,7 @@ const MediaGallery = ({ media }: MediaGalleryProps) => {
   const audios = media.filter((m) => m.type === "audio");
 
   return (
-    <div class="mt-6 p-4 bg-white rounded-lg shadow border border-gray-300">
+    <div class="mt-6 p-4 bg-white rounded-lg shadow-sm border border-gray-200">
       <h3 class="text-lg font-semibold text-gray-900 mb-3">
         Extracted Media
       </h3>
@@ -71,7 +71,7 @@ const MediaGallery = ({ media }: MediaGalleryProps) => {
                   href={video.url}
                   target="_blank"
                   rel="noopener noreferrer"
-                  class="text-pink-500 hover:text-pink-600 hover:underline break-all"
+                  class="text-primary-600 hover:text-primary-700 hover:underline break-all transition-colors duration-150"
                 >
                   {video.url}
                 </a>
@@ -94,7 +94,7 @@ const MediaGallery = ({ media }: MediaGalleryProps) => {
                   href={audio.url}
                   target="_blank"
                   rel="noopener noreferrer"
-                  class="text-pink-500 hover:text-pink-600 hover:underline break-all"
+                  class="text-primary-600 hover:text-primary-700 hover:underline break-all transition-colors duration-150"
                 >
                   {audio.url}
                 </a>
