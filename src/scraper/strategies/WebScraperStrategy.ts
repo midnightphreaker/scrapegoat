@@ -53,11 +53,12 @@ export class WebScraperStrategy extends BaseScraperStrategy {
     const { url } = item;
 
     try {
-      // Define fetch options, passing signal, followRedirects, and headers
+      // Define fetch options, passing signal, followRedirects, headers, and useCrawl4AI
       const fetchOptions = {
         signal,
         followRedirects: options.followRedirects,
         headers: options.headers, // Forward custom headers
+        useCrawl4AI: options.useCrawl4AI, // Forward Crawl4AI preference
       };
 
       // Use AutoDetectFetcher which handles fallbacks automatically

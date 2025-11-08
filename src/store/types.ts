@@ -113,6 +113,12 @@ export interface VersionScraperOptions {
   // Processing options
   scrapeMode?: ScrapeMode;
   headers?: Record<string, string>;
+
+  /**
+   * Whether Crawl4AI was used for content fetching.
+   * Stored for reproducibility and audit trail.
+   */
+  useCrawl4AI?: boolean;
 }
 
 /**

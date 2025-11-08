@@ -76,6 +76,13 @@ export interface ScraperOptions {
    * Keys are header names, values are header values.
    */
   headers?: Record<string, string>;
+  /**
+   * Whether to use Crawl4AI for content fetching.
+   * Crawl4AI provides JavaScript rendering, anti-bot bypass, and BM25-filtered markdown.
+   * Note: Slower than standard HTTP fetching, but produces higher quality content.
+   * @default false
+   */
+  useCrawl4AI?: boolean;
 }
 
 /**
