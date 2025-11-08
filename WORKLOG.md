@@ -285,3 +285,79 @@ Phase 6 successfully implements all Crawl4AI options per Section 0 of CURRENT_PL
 **Commit Message**: `refactor(phase6): update web UI - remove browser/ScrapeMode, add complete Crawl4AI options`
 
 ---
+
+## [2025-11-09 07:25:53] - Phase 7 Complete: Test Suite Updates
+
+**Test Files Modified**: 12 files total
+
+1. `src/tools/FetchUrlTool.test.ts`
+   - Removed ScrapeMode import
+   - Replaced all `scrapeMode: ScrapeMode.Fetch` with `fetcher: 'http'`
+   - Updated 10 test cases with new fetcher property
+
+2. `src/tools/ScrapeTool.test.ts`
+   - Removed ScrapeMode import
+   - Replaced `scrapeMode: ScrapeMode.Auto` with `fetcher: 'auto'`
+   - Updated pipeline execution test
+
+3. `src/scraper/strategies/GitHubWikiScraperStrategy.test.ts`
+   - Removed ScrapeMode import
+   - Updated test "should force HTTP fetcher for consistent behavior"
+   - Changed test from checking ScrapeMode.Playwright override to checking fetcher='crawl4ai' override
+   - Updated expect() assertions to check `fetcher: 'http'` instead of `scrapeMode: 'fetch'`
+
+4. `src/scraper/strategies/WebScraperStrategy.test.ts`
+   - Removed ScrapeMode import
+   - Replaced `scrapeMode: ScrapeMode.Fetch` with `fetcher: 'http'`
+   - Updated 2 test cases
+
+5. `src/scraper/pipelines/HtmlPipeline.charset.test.ts`
+   - Removed ScrapeMode import
+   - Replaced all 3 occurrences of `scrapeMode: ScrapeMode.Fetch` with `fetcher: 'http'`
+
+6. `src/scraper/pipelines/HtmlPipeline.test.ts`
+   - Removed ScrapeMode import
+   - Replaced `scrapeMode: ScrapeMode.Fetch` with `fetcher: 'http'`
+
+7. `src/scraper/pipelines/MarkdownPipeline.test.ts`
+   - Removed ScrapeMode import
+   - Replaced all occurrences of `scrapeMode: ScrapeMode.Fetch` with `fetcher: 'http'`
+   - Fixed missed occurrence at line 250 (had different indentation)
+
+8. `src/scraper/pipelines/PipelineFactory.integration.test.ts`
+   - Removed ScrapeMode import (replaced with comment)
+   - Replaced all occurrences of `scrapeMode: ScrapeMode.Fetch` with `fetcher: 'http'`
+
+9. `src/scraper/pipelines/SourceCodePipeline.test.ts`
+   - Removed ScrapeMode import (replaced with comment)
+   - Replaced `scrapeMode: ScrapeMode.Auto` with `fetcher: 'auto'`
+
+10. `src/scraper/pipelines/TextPipeline.test.ts`
+    - Removed ScrapeMode import (replaced with comment)
+    - Replaced `scrapeMode: ScrapeMode.Auto` with `fetcher: 'auto'`
+
+11. `src/cli/commands/fetchUrl.test.ts`
+    - Replaced `scrapeMode: "auto" as any` with `fetcher: "auto"`
+
+12. `src/cli/commands/scrape.test.ts`
+    - Replaced `scrapeMode: "auto" as any` with `fetcher: "auto"`
+
+**Verification**:
+- Ran full test suite: `npm test`
+- Test Results: 1122 passed, 77 failed (1199 total)
+- **All ScrapeMode-related test failures fixed**
+- Remaining 77 failures are unrelated (PostgreSQL connection issues in integration tests)
+- Verified no remaining ScrapeMode references in test files: `grep -r "ScrapeMode\." src --include="*.test.ts"` returns empty
+
+**Implementation Summary**:
+- ✅ Removed all ScrapeMode enum imports from test files
+- ✅ Updated all test cases to use new fetcher property
+- ✅ Maintained test behavior and assertions
+- ✅ Tests compile and run successfully
+- ✅ Zero ScrapeMode-related test failures
+
+**Next Steps**: Phase 8 - Dependency Cleanup (remove playwright from package.json)
+
+**Commit Message**: `test: update all test files to use fetcher property instead of ScrapeMode enum`
+
+---
