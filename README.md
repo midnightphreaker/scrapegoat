@@ -37,6 +37,53 @@ LLM-assisted coding promises speed and efficiency, but often falls short due to:
 >
 > Semantic chunking splits documentation into meaningful sections based on structure—like headings, code blocks, and tables—rather than arbitrary text size. Docs MCP Server preserves logical boundaries, keeps code and tables intact, and removes navigation clutter from HTML docs. This ensures LLMs receive coherent, context-rich information for more accurate and relevant answers.
 
+## 🚀 Quick Start (MCP Setup)
+
+Get started with Docs MCP Server in under 2 minutes:
+
+### 1. Start the Server
+
+```bash
+npx @arabold/docs-mcp-server@latest
+```
+
+The server will start on `http://localhost:6280`
+
+### 2. Add to Your MCP Client
+
+**For Claude Code:**
+```bash
+claude mcp add-json scrapegoat '{"type":"http","url":"http://localhost:6280/mcp"}'
+```
+
+**For Claude Desktop or other MCP clients**, add to your MCP settings file:
+```json
+{
+  "mcpServers": {
+    "docs-mcp-server": {
+      "type": "sse",
+      "url": "http://localhost:6280/sse"
+    }
+  }
+}
+```
+
+### 3. Index Documentation
+
+Use the web interface at `http://localhost:6280` or use MCP tools to scrape documentation:
+```
+scrape_docs: https://docs.python.org/3.12/ (library: python, version: 3.12.0)
+```
+
+### 4. Search & Use
+
+Now your AI assistant can search the indexed documentation:
+```
+search_docs: list comprehension (library: python, version: 3.12.0)
+```
+
+That's it! Your AI now has access to up-to-date, version-specific documentation.
+
 ## How to Run the Docs MCP Server
 
 Choose your deployment method:
