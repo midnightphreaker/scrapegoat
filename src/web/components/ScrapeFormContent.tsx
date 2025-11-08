@@ -9,7 +9,8 @@ interface ScrapeFormContentProps {
 
 /**
  * Renders the form fields for queuing a new scrape job.
- * Includes basic fields (URL, Library, Version) and advanced options.
+ * Includes basic fields (URL, Library, Version) and collapsible advanced options.
+ * Updated with Context7 design system.
  */
 const ScrapeFormContent = ({
   defaultExcludePatterns,
@@ -18,21 +19,22 @@ const ScrapeFormContent = ({
   const defaultExcludePatternsText = defaultExcludePatterns?.join("\n") || "";
 
   return (
-    <div class="mt-4 p-4 bg-white dark:bg-[#242424] rounded-lg shadow border border-gray-300 dark:border-[#3c3c3c]">
-      <h3 class="text-xl font-semibold text-gray-900 dark:text-white mb-2">
+    <div class="mt-4 p-6 bg-white dark:bg-[#242424] rounded-lg shadow-sm border border-gray-200 dark:border-[#3c3c3c]">
+      <h3 class="text-xl font-semibold text-gray-800 dark:text-white mb-4">
         Queue New Scrape Job
       </h3>
       <form
         hx-post="/web/jobs/scrape"
         hx-target="#job-response"
         hx-swap="innerHTML"
-        class="space-y-2"
+        class="space-y-4"
         x-data="{
         url: '',
         hasPath: false,
         headers: [],
         fetcher: 'auto',
         fetcherHelp: '',
+        showAdvanced: false,
         checkUrlPath() {
           try {
             const url = new URL(this.url);
@@ -52,11 +54,14 @@ const ScrapeFormContent = ({
       }"
       x-init="updateFetcherHelp()"
       >
+        {/* === ALWAYS VISIBLE FIELDS === */}
+
+        {/* URL Field */}
         <div>
-          <div class="flex items-center">
+          <div class="flex items-center mb-2">
             <label
               for="url"
-              class="block text-sm font-medium text-gray-700 dark:text-gray-300"
+              class="block text-sm font-medium text-gray-800 dark:text-gray-300"
             >
               URL
             </label>
@@ -85,12 +90,13 @@ const ScrapeFormContent = ({
             x-model="url"
             x-on:input="checkUrlPath"
             x-on:paste="$nextTick(() => checkUrlPath())"
-            class="mt-0.5 block w-full px-2 py-1 border border-gray-300 dark:border-[#3c3c3c] rounded-md shadow-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm bg-white dark:bg-[#181818] text-gray-900 dark:text-white"
+            class="block w-full px-3 py-2 border border-gray-200 dark:border-[#3c3c3c] rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-primary-600 focus:border-primary-600 text-sm bg-white dark:bg-[#181818] text-gray-800 dark:text-white transition-colors duration-150"
+            placeholder="https://docs.example.com"
           />
           <div
             x-show="hasPath && !(url.startsWith('file://'))"
             x-cloak
-            x-transition:enter="transition ease-out duration-300"
+            x-transition:enter="transition ease-out duration-150"
             x-transition:enter-start="opacity-0 transform -translate-y-2"
             x-transition:enter-end="opacity-100 transform translate-y-0"
             class="mt-2"
@@ -101,11 +107,13 @@ const ScrapeFormContent = ({
             />
           </div>
         </div>
+
+        {/* Library Name Field */}
         <div>
-          <div class="flex items-center">
+          <div class="flex items-center mb-2">
             <label
               for="library"
-              class="block text-sm font-medium text-gray-700 dark:text-gray-300"
+              class="block text-sm font-medium text-gray-800 dark:text-gray-300"
             >
               Library Name
             </label>
@@ -116,14 +124,17 @@ const ScrapeFormContent = ({
             name="library"
             id="library"
             required
-            class="mt-0.5 block w-full px-2 py-1 border border-gray-300 dark:border-[#3c3c3c] rounded-md shadow-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm bg-white dark:bg-[#181818] text-gray-900 dark:text-white"
+            class="block w-full px-3 py-2 border border-gray-200 dark:border-[#3c3c3c] rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-primary-600 focus:border-primary-600 text-sm bg-white dark:bg-[#181818] text-gray-800 dark:text-white transition-colors duration-150"
+            placeholder="react"
           />
         </div>
+
+        {/* Version Field */}
         <div>
-          <div class="flex items-center">
+          <div class="flex items-center mb-2">
             <label
               for="version"
-              class="block text-sm font-medium text-gray-700 dark:text-gray-300"
+              class="block text-sm font-medium text-gray-800 dark:text-gray-300"
             >
               Version (optional)
             </label>
@@ -133,27 +144,55 @@ const ScrapeFormContent = ({
             type="text"
             name="version"
             id="version"
-            class="mt-0.5 block w-full max-w-sm px-2 py-1 border border-gray-300 dark:border-[#3c3c3c] rounded-md shadow-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm bg-white dark:bg-[#181818] text-gray-900 dark:text-white"
+            class="block w-full max-w-sm px-3 py-2 border border-gray-200 dark:border-[#3c3c3c] rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-primary-600 focus:border-primary-600 text-sm bg-white dark:bg-[#181818] text-gray-800 dark:text-white transition-colors duration-150"
+            placeholder="18.2.0"
           />
         </div>
 
-        {/* Fetcher Selection */}
-        <FetcherSelector />
+        {/* === ADVANCED OPTIONS (COLLAPSIBLE) === */}
+        <div class="border-t border-gray-200 dark:border-[#3c3c3c] pt-4">
+          {/* Advanced Options Toggle Button */}
+          <button
+            type="button"
+            x-on:click="showAdvanced = !showAdvanced"
+            class="flex items-center gap-2 w-full text-left text-sm font-medium text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200 transition-colors duration-150"
+          >
+            <svg
+              x-bind:class="{'rotate-180': showAdvanced}"
+              class="w-5 h-5 transition-transform duration-150 ease-in-out text-gray-500"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+            </svg>
+            <span>Advanced Options</span>
+          </button>
 
-        {/* Crawl4AI Options (shown when Crawl4AI is selected) */}
-        <Crawl4AIOptions />
+          {/* Collapsible Panel */}
+          <div
+            x-show="showAdvanced"
+            x-transition:enter="transition ease-out duration-150"
+            x-transition:enter-start="opacity-0 -translate-y-2"
+            x-transition:enter-end="opacity-100 translate-y-0"
+            x-transition:leave="transition ease-in duration-150"
+            x-transition:leave-start="opacity-100 translate-y-0"
+            x-transition:leave-end="opacity-0 -translate-y-2"
+            x-cloak
+            class="mt-4 space-y-4 p-4 bg-stone-50 dark:bg-[#181818] rounded-lg border border-gray-200 dark:border-[#3c3c3c]"
+          >
+            {/* Fetcher Selection - NOW INSIDE Advanced Options */}
+            <FetcherSelector />
 
-        {/* Consider using Flowbite Accordion here */}
-        <details class="bg-gray-50 dark:bg-[#181818] p-2 rounded-md">
-          <summary class="cursor-pointer text-sm font-medium text-gray-600 dark:text-gray-400">
-            Advanced Options
-          </summary>
-          <div class="mt-2 space-y-2" x-data="{ headers: [] }">
+            {/* Crawl4AI Options - NOW INSIDE Advanced Options */}
+            <Crawl4AIOptions />
+
+            {/* Max Pages */}
             <div>
-              <div class="flex items-center">
+              <div class="flex items-center mb-2">
                 <label
                   for="maxPages"
-                  class="block text-sm font-medium text-gray-700 dark:text-gray-300"
+                  class="block text-sm font-medium text-gray-800 dark:text-gray-300"
                 >
                   Max Pages
                 </label>
@@ -165,14 +204,16 @@ const ScrapeFormContent = ({
                 id="maxPages"
                 min="1"
                 placeholder="1000"
-                class="mt-0.5 block w-full max-w-sm px-2 py-1 border border-gray-300 dark:border-[#3c3c3c] rounded-md shadow-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm bg-white dark:bg-[#181818] text-gray-900 dark:text-white"
+                class="block w-full max-w-sm px-3 py-2 border border-gray-200 dark:border-[#3c3c3c] rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-primary-600 focus:border-primary-600 text-sm bg-white dark:bg-[#181818] text-gray-800 dark:text-white transition-colors duration-150"
               />
             </div>
+
+            {/* Max Depth */}
             <div>
-              <div class="flex items-center">
+              <div class="flex items-center mb-2">
                 <label
                   for="maxDepth"
-                  class="block text-sm font-medium text-gray-700 dark:text-gray-300"
+                  class="block text-sm font-medium text-gray-800 dark:text-gray-300"
                 >
                   Max Depth
                 </label>
@@ -184,14 +225,16 @@ const ScrapeFormContent = ({
                 id="maxDepth"
                 min="0"
                 placeholder="3"
-                class="mt-0.5 block w-full max-w-sm px-2 py-1 border border-gray-300 dark:border-[#3c3c3c] rounded-md shadow-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm bg-white dark:bg-[#181818] text-gray-900 dark:text-white"
+                class="block w-full max-w-sm px-3 py-2 border border-gray-200 dark:border-[#3c3c3c] rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-primary-600 focus:border-primary-600 text-sm bg-white dark:bg-[#181818] text-gray-800 dark:text-white transition-colors duration-150"
               />
             </div>
+
+            {/* Scope */}
             <div>
-              <div class="flex items-center">
+              <div class="flex items-center mb-2">
                 <label
                   for="scope"
-                  class="block text-sm font-medium text-gray-700 dark:text-gray-300"
+                  class="block text-sm font-medium text-gray-800 dark:text-gray-300"
                 >
                   Scope
                 </label>
@@ -219,7 +262,7 @@ const ScrapeFormContent = ({
               <select
                 name="scope"
                 id="scope"
-                class="mt-0.5 block w-full max-w-sm pl-2 pr-10 py-1 text-base border border-gray-300 dark:border-[#3c3c3c] focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm rounded-md bg-white dark:bg-[#181818] text-gray-900 dark:text-white"
+                class="block w-full max-w-sm px-3 py-2 text-sm border border-gray-200 dark:border-[#3c3c3c] rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-primary-600 focus:border-primary-600 bg-white dark:bg-[#181818] text-gray-800 dark:text-white transition-colors duration-150"
               >
                 <option value="subpages" selected>
                   Subpages (Default)
@@ -228,11 +271,13 @@ const ScrapeFormContent = ({
                 <option value="domain">Domain</option>
               </select>
             </div>
+
+            {/* Include Patterns */}
             <div>
-              <div class="flex items-center">
+              <div class="flex items-center mb-2">
                 <label
                   for="includePatterns"
-                  class="block text-sm font-medium text-gray-700 dark:text-gray-300"
+                  class="block text-sm font-medium text-gray-800 dark:text-gray-300"
                 >
                   Include Patterns
                 </label>
@@ -243,14 +288,16 @@ const ScrapeFormContent = ({
                 id="includePatterns"
                 rows="2"
                 placeholder="e.g. docs/* or /api\/v1.*/"
-                class="mt-0.5 block w-full max-w-sm px-2 py-1 border border-gray-300 dark:border-[#3c3c3c] rounded-md shadow-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm bg-white dark:bg-[#181818] text-gray-900 dark:text-white"
+                class="block w-full max-w-sm px-3 py-2 border border-gray-200 dark:border-[#3c3c3c] rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-primary-600 focus:border-primary-600 text-sm bg-white dark:bg-[#181818] text-gray-800 dark:text-white transition-colors duration-150 font-mono"
               ></textarea>
             </div>
+
+            {/* Exclude Patterns */}
             <div>
-              <div class="flex items-center">
+              <div class="flex items-center mb-2">
                 <label
                   for="excludePatterns"
-                  class="block text-sm font-medium text-gray-700 dark:text-gray-300"
+                  class="block text-sm font-medium text-gray-800 dark:text-gray-300"
                 >
                   Exclude Patterns
                 </label>
@@ -261,7 +308,7 @@ const ScrapeFormContent = ({
                 id="excludePatterns"
                 rows="5"
                 safe
-                class="mt-0.5 block w-full max-w-sm px-2 py-1 border border-gray-300 dark:border-[#3c3c3c] rounded-md shadow-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm bg-white dark:bg-[#181818] text-gray-900 dark:text-white font-mono text-xs"
+                class="block w-full max-w-sm px-3 py-2 border border-gray-200 dark:border-[#3c3c3c] rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-primary-600 focus:border-primary-600 text-sm bg-white dark:bg-[#181818] text-gray-800 dark:text-white transition-colors duration-150 font-mono text-xs"
               >
                 {defaultExcludePatternsText}
               </textarea>
@@ -270,9 +317,11 @@ const ScrapeFormContent = ({
                 exclude nothing.
               </p>
             </div>
+
+            {/* Custom HTTP Headers */}
             <div>
-              <div class="flex items-center mb-1">
-                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">
+              <div class="flex items-center mb-2">
+                <label class="block text-sm font-medium text-gray-800 dark:text-gray-300">
                   Custom HTTP Headers
                 </label>
                 <Tooltip text="Add custom HTTP headers (e.g., for authentication). These will be sent with every HTTP request." />
@@ -280,25 +329,25 @@ const ScrapeFormContent = ({
               <div>
                 {/* AlpineJS dynamic header rows */}
                 <template x-for="(header, idx) in headers">
-                  <div class="flex space-x-2 mb-1">
+                  <div class="flex space-x-2 mb-2">
                     <input
                       type="text"
-                      class="w-1/3 px-2 py-1 border border-gray-300 dark:border-[#3c3c3c] rounded-md bg-white dark:bg-[#181818] text-gray-900 dark:text-white text-xs"
+                      class="w-1/3 px-3 py-2 border border-gray-200 dark:border-[#3c3c3c] rounded-lg bg-white dark:bg-[#181818] text-gray-800 dark:text-white text-sm transition-colors duration-150"
                       placeholder="Header Name"
                       x-model="header.name"
                       required
                     />
-                    <span class="text-gray-500">:</span>
+                    <span class="text-gray-500 flex items-center">:</span>
                     <input
                       type="text"
-                      class="w-1/2 px-2 py-1 border border-gray-300 dark:border-[#3c3c3c] rounded-md bg-white dark:bg-[#181818] text-gray-900 dark:text-white text-xs"
+                      class="w-1/2 px-3 py-2 border border-gray-200 dark:border-[#3c3c3c] rounded-lg bg-white dark:bg-[#181818] text-gray-800 dark:text-white text-sm transition-colors duration-150"
                       placeholder="Header Value"
                       x-model="header.value"
                       required
                     />
                     <button
                       type="button"
-                      class="text-red-500 hover:text-red-700 text-xs"
+                      class="px-3 py-2 text-red-600 hover:text-red-700 dark:text-red-400 dark:hover:text-red-300 text-sm font-medium transition-colors duration-150"
                       x-on:click="headers.splice(idx, 1)"
                     >
                       Remove
@@ -312,57 +361,62 @@ const ScrapeFormContent = ({
                 </template>
                 <button
                   type="button"
-                  class="mt-1 px-2 py-0.5 bg-primary-100 dark:bg-primary-900 text-primary-700 dark:text-primary-200 rounded text-xs"
+                  class="mt-2 px-3 py-1.5 bg-primary-50 dark:bg-primary-900 text-primary-700 dark:text-primary-200 rounded-lg text-sm font-medium hover:bg-primary-100 dark:hover:bg-primary-800 transition-colors duration-150"
                   x-on:click="headers.push({ name: '', value: '' })"
                 >
                   + Add Header
                 </button>
               </div>
             </div>
+
+            {/* Follow Redirects */}
             <div class="flex items-center">
               <input
                 id="followRedirects"
                 name="followRedirects"
                 type="checkbox"
                 checked
-                class="h-4 w-4 text-primary-600 focus:ring-primary-500 border-gray-300 dark:border-[#3c3c3c] rounded bg-white dark:bg-[#181818]"
+                class="h-4 w-4 text-primary-600 focus:ring-primary-600 border-gray-200 dark:border-[#3c3c3c] rounded bg-white dark:bg-[#181818] transition-colors duration-150"
               />
               <label
                 for="followRedirects"
-                class="ml-1 block text-sm text-gray-900 dark:text-gray-300"
+                class="ml-2 block text-sm text-gray-800 dark:text-gray-300"
               >
                 Follow Redirects
               </label>
             </div>
+
+            {/* Ignore Errors */}
             <div class="flex items-center">
               <input
                 id="ignoreErrors"
                 name="ignoreErrors"
                 type="checkbox"
                 checked
-                class="h-4 w-4 text-primary-600 focus:ring-primary-500 border-gray-300 dark:border-[#3c3c3c] rounded bg-white dark:bg-[#181818]"
+                class="h-4 w-4 text-primary-600 focus:ring-primary-600 border-gray-200 dark:border-[#3c3c3c] rounded bg-white dark:bg-[#181818] transition-colors duration-150"
               />
               <label
                 for="ignoreErrors"
-                class="ml-1 block text-sm text-gray-900 dark:text-gray-300"
+                class="ml-2 block text-sm text-gray-800 dark:text-gray-300"
               >
                 Ignore Errors During Scraping
               </label>
             </div>
           </div>
-        </details>
+        </div>
 
-        <div>
+        {/* Submit Button */}
+        <div class="pt-2">
           <button
             type="submit"
-            class="w-full flex justify-center py-1.5 px-3 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-primary-600 hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500"
+            class="w-full flex justify-center py-2.5 px-4 border border-transparent rounded-lg shadow-sm text-sm font-medium text-white bg-primary-600 hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-600 transition-colors duration-150"
           >
             Queue Job
           </button>
         </div>
       </form>
       {/* Target div for HTMX response */}
-      <div id="job-response" class="mt-2 text-sm"></div>
+      <div id="job-response" class="mt-4 text-sm"></div>
 
       {/* Script to handle HTMX error responses */}
       <script>

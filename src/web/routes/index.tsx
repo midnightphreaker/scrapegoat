@@ -14,14 +14,14 @@ export function registerIndexRoute(server: FastifyInstance) {
       (
         <Layout title="ScrapeGoat">
           {/* Job Queue Section */}
-          <section class="mb-4 p-4 bg-white rounded-lg shadow dark:bg-[#181818] border border-gray-300 dark:border-[#3c3c3c]">
-            <div class="flex items-center justify-between mb-2">
-              <h2 class="text-xl font-semibold text-gray-900 dark:text-white">
+          <section class="mb-6 p-6 bg-white rounded-lg shadow-sm dark:bg-[#242424] border border-gray-200 dark:border-[#3c3c3c]">
+            <div class="flex items-center justify-between mb-4">
+              <h2 class="text-xl font-semibold text-gray-800 dark:text-white">
                 Job Queue
               </h2>
               <button
                 type="button"
-                class="text-xs px-3 py-1.5 text-gray-700 bg-gray-100 border border-gray-300 rounded-lg hover:bg-gray-200 focus:ring-4 focus:outline-none focus:ring-gray-100 dark:bg-gray-600 dark:text-gray-300 dark:border-gray-500 dark:hover:bg-gray-700 dark:focus:ring-gray-700 transition-colors duration-150"
+                class="text-sm px-4 py-2 text-gray-800 bg-stone-50 border border-gray-200 rounded-lg hover:bg-stone-100 focus:ring-2 focus:outline-none focus:ring-primary-600 dark:bg-gray-700 dark:text-gray-300 dark:border-gray-600 dark:hover:bg-gray-600 dark:focus:ring-primary-600 transition-colors duration-150 font-medium"
                 title="Clear all completed, cancelled, and failed jobs"
                 hx-post="/web/jobs/clear-completed"
                 hx-trigger="click"
@@ -55,7 +55,7 @@ export function registerIndexRoute(server: FastifyInstance) {
           </section>
           {/* Indexed Documentation Section */}
           <div>
-            <h2 class="text-xl font-semibold mb-2 text-gray-900 dark:text-white">
+            <h2 class="text-xl font-semibold mb-4 text-gray-800 dark:text-white">
               Indexed Documentation
             </h2>
             <div

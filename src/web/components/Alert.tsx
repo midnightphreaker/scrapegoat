@@ -96,14 +96,14 @@ const Alert = ({ type, title, message }: AlertProps) => {
 
   return (
     <div
-      class={`flex items-center p-4 mb-4 text-sm border rounded-lg ${colorClasses}`}
+      class={`flex items-center p-4 mb-4 text-sm border rounded-lg shadow-sm ${colorClasses}`}
       role="alert"
     >
       {iconSvg}
       <span class="sr-only">Info</span>
       <div>
         {displayTitle ? (
-          <span class="font-medium" safe>
+          <span class="font-semibold" safe>
             {displayTitle}
           </span>
         ) : null}{" "}

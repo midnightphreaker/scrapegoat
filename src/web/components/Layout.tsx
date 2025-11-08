@@ -153,10 +153,10 @@ const Layout = ({ title, version, children }: LayoutProps) => {
           `}
         </style>
       </head>
-      <body class="bg-gray-50 dark:bg-[#181818]">
+      <body class="flex min-h-screen flex-col overflow-x-hidden bg-stone-50 dark:bg-[#181818] antialiased">
         {/* Full-width header with ScrapeGoat branding */}
         <header
-          class="bg-white border-b border-gray-200 dark:bg-[#242424] dark:border-[#3c3c3c]"
+          class="sticky top-0 z-50 bg-white border-b border-gray-200 dark:bg-[#242424] dark:border-[#3c3c3c] shadow-sm"
           x-data={versionInitializer}
           x-init="queueCheck()"
         >
@@ -166,7 +166,7 @@ const Layout = ({ title, version, children }: LayoutProps) => {
               <div class="flex items-center gap-3">
                 <a
                   href="/"
-                  class="text-2xl font-bold text-gray-900 dark:text-white hover:text-primary-500 dark:hover:text-primary-400 transition-colors font-brand"
+                  class="text-2xl font-bold text-gray-800 dark:text-white hover:text-primary-600 dark:hover:text-primary-400 transition-colors duration-150 font-brand"
                 >
                   <span class="text-primary-600 dark:text-primary-400">Scrape</span>
                   <span class="text-accent-600 dark:text-accent-400">Goat</span>
@@ -210,7 +210,7 @@ const Layout = ({ title, version, children }: LayoutProps) => {
               <div class="flex items-center justify-center gap-2">
                 <a
                   href="/"
-                  class="text-2xl font-bold text-gray-900 dark:text-white hover:text-primary-500 dark:hover:text-primary-400 transition-colors font-brand"
+                  class="text-2xl font-bold text-gray-800 dark:text-white hover:text-primary-600 dark:hover:text-primary-400 transition-colors duration-150 font-brand"
                 >
                   <span class="text-primary-600 dark:text-primary-400">Scrape</span>
                   <span class="text-accent-600 dark:text-accent-400">Goat</span>
@@ -252,9 +252,9 @@ const Layout = ({ title, version, children }: LayoutProps) => {
           </div>
         </header>
 
-        <div class="container max-w-2xl mx-auto px-4 py-6">
-          <main>{children}</main>
-        </div>
+        <main class="flex-1 container max-w-2xl mx-auto px-4 py-6 sm:px-6 lg:px-8">
+          {children}
+        </main>
 
         {/* Bundled JS (includes Flowbite, HTMX, AlpineJS, and initialization) */}
         <script type="module" src="/assets/main.js"></script>
