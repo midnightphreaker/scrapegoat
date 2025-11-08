@@ -16,6 +16,24 @@ export interface PageMetadata {
   etag?: string;
   lastModified?: string;
   contentType?: string;
+  /** Path to screenshot file (e.g., /screenshots/react/18.0.0/abc123.png) */
+  screenshotPath?: string;
+  /** Which fetcher was used: 'auto', 'http', 'browser', 'crawl4ai', 'file' */
+  fetcherType?: string;
+  /** Crawl4AI extracted media items */
+  media?: Array<{
+    type: "image" | "video" | "audio";
+    url: string;
+    alt?: string;
+    width?: number;
+    height?: number;
+  }>;
+  /** Crawl4AI extracted links */
+  links?: Array<{
+    url: string;
+    text: string;
+    rel?: string;
+  }>;
 }
 
 /**

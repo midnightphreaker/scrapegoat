@@ -81,11 +81,14 @@ export class Crawl4AIFetcher implements ContentFetcher {
       const envScreenshots = process.env.CRAWL4AI_ENABLE_SCREENSHOTS === "true";
       const envMedia = process.env.CRAWL4AI_ENABLE_MEDIA === "true";
       const envLinks = process.env.CRAWL4AI_ENABLE_LINKS === "true";
-      const envScreenshotMode = process.env.CRAWL4AI_SCREENSHOT_MODE || "viewport";
+      const envScreenshotMode = (process.env.CRAWL4AI_SCREENSHOT_MODE || "viewport") as
+        | "viewport"
+        | "full";
 
       // Merge options: explicit options > environment defaults > false
       const enableScreenshot = options?.crawl4ai?.enableScreenshot ?? envScreenshots;
-      const screenshotMode = options?.crawl4ai?.screenshotMode ?? envScreenshotMode;
+      const screenshotMode: "viewport" | "full" =
+        options?.crawl4ai?.screenshotMode ?? envScreenshotMode;
       const enableMedia = options?.crawl4ai?.enableMedia ?? envMedia;
       const enableLinks = options?.crawl4ai?.enableLinks ?? envLinks;
 
