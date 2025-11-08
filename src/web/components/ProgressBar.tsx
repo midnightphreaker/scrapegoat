@@ -47,7 +47,7 @@ const ProgressBar = ({ progress, showText = true }: ProgressBarProps) => {
           <span safe>{getProgressText()}</span>
         </div>
       )}
-      <div class="w-full bg-gray-200 rounded-full h-2 dark:bg-gray-700">
+      <div class="w-full bg-gray-200 rounded-full h-2 dark:bg-[#3c3c3c]">
         {isIndeterminate ? (
           // Indeterminate progress bar with animation
           <div

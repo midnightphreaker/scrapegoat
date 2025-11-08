@@ -76,7 +76,7 @@ const JobItem = ({ job }: JobItemProps) => {
                     ? "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300"
                     : job.error
                       ? "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-300"
-                      : "bg-accent-100 text-accent-800 dark:bg-accent-900 dark:text-accent-300"
+                      : "bg-primary-100 text-primary-800 dark:bg-primary-900 dark:text-primary-300"
                 }`}
               >
                 {job.status}
