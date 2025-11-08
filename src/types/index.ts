@@ -18,7 +18,7 @@ export interface PageMetadata {
   contentType?: string;
   /** Path to screenshot file (e.g., /screenshots/react/18.0.0/abc123.png) */
   screenshotPath?: string;
-  /** Which fetcher was used: 'auto', 'http', 'browser', 'crawl4ai', 'file' */
+  /** Which fetcher was used: 'auto', 'http', 'crawl4ai', 'file' */
   fetcherType?: string;
   /** Crawl4AI extracted media items */
   media?: Array<{
