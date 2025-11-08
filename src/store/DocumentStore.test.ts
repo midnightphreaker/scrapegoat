@@ -745,8 +745,8 @@ describe("DocumentStore - Common Functionality", () => {
           params.push(targetUrl);
         }
 
-        const client = (store as any).client;
-        const result = await client.query(query, params);
+        const pool = (store as any).pool;
+        const result = await pool.query(query, params);
         return parseInt(result.rows[0].count, 10);
       }
 

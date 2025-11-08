@@ -355,17 +355,18 @@ export class DocumentStore {
    */
   async resolveVersionId(library: string, version: string): Promise<number> {
     try {
-      // 1. Get or create library
+      // 1. Get or create library (normalize to lowercase for case-insensitive matching)
+      const normalizedLibrary = library.toLowerCase();
       const libraryResult = await this.pool.query(
         `INSERT INTO libraries (name) VALUES ($1)
          ON CONFLICT (name) DO UPDATE SET name = EXCLUDED.name
          RETURNING id`,
-        [library],
+        [normalizedLibrary],
       );
       const libraryId = libraryResult.rows[0].id;
 
-      // 2. Get or create version (normalized name)
-      const normalizedVersion = normalizeVersionName(version);
+      // 2. Get or create version (normalize version name to lowercase for case-insensitive matching)
+      const normalizedVersion = normalizeVersionName(version).toLowerCase();
       const versionResult = await this.pool.query(
         `INSERT INTO versions (library_id, name, status)
          VALUES ($1, $2, 'not_indexed')
@@ -392,7 +393,7 @@ export class DocumentStore {
         `SELECT v.name
          FROM versions v
          INNER JOIN libraries l ON v.library_id = l.id
-         WHERE l.name = $1
+         WHERE LOWER(l.name) = LOWER($1)
          ORDER BY v.created_at DESC`,
         [library],
       );
@@ -554,7 +555,7 @@ export class DocumentStore {
            INNER JOIN pages p ON d.page_id = p.id
            INNER JOIN versions v ON p.version_id = v.id
            INNER JOIN libraries l ON v.library_id = l.id
-           WHERE l.name = $1 AND v.name = $2
+           WHERE LOWER(l.name) = LOWER($1) AND LOWER(v.name) = LOWER($2)
          ) as exists`,
         [library, normalizedVersion],
       );
@@ -736,7 +737,7 @@ export class DocumentStore {
            FROM pages p
            INNER JOIN versions v ON p.version_id = v.id
            INNER JOIN libraries l ON v.library_id = l.id
-           WHERE l.name = $1 AND v.name = $2
+           WHERE LOWER(l.name) = LOWER($1) AND LOWER(v.name) = LOWER($2)
          )`,
         [library, normalizedVersion],
       );
@@ -877,7 +878,7 @@ export class DocumentStore {
   ): Promise<Document[]> {
     try {
       const normalizedVersion = normalizeVersionName(version);
-      const escapedQuery = this.escapeFtsQuery(query);
+      // Use plain query text - plainto_tsquery() will handle escaping
 
       // Generate query embedding if vector search is enabled
       let queryEmbedding: number[] | null = null;
@@ -900,7 +901,7 @@ export class DocumentStore {
            INNER JOIN pages p ON d.page_id = p.id
            INNER JOIN versions v ON p.version_id = v.id
            INNER JOIN libraries l ON v.library_id = l.id
-           WHERE l.name = $2 AND v.name = $3 AND d.embedding IS NOT NULL
+           WHERE LOWER(l.name) = LOWER($2) AND LOWER(v.name) = LOWER($3) AND d.embedding IS NOT NULL
            ORDER BY d.embedding <=> $1::vector
            LIMIT $4`,
           [
@@ -913,20 +914,20 @@ export class DocumentStore {
         vectorResults.push(...vecResult.rows);
       }
 
-      // Full-text search
+      // Full-text search using plainto_tsquery for safe plain text queries
       const ftsResult = await this.pool.query(
         `SELECT d.id, d.content, d.metadata, d.sort_order,
                 p.url, p.title, p.content_type,
-                ts_rank(to_tsvector('english', d.content), to_tsquery('english', $1)) as fts_score
+                ts_rank(to_tsvector('english', d.content), plainto_tsquery('english', $1)) as fts_score
          FROM documents d
          INNER JOIN pages p ON d.page_id = p.id
          INNER JOIN versions v ON p.version_id = v.id
          INNER JOIN libraries l ON v.library_id = l.id
-         WHERE l.name = $2 AND v.name = $3
-           AND to_tsvector('english', d.content) @@ to_tsquery('english', $1)
+         WHERE LOWER(l.name) = LOWER($2) AND LOWER(v.name) = LOWER($3)
+           AND to_tsvector('english', d.content) @@ plainto_tsquery('english', $1)
          ORDER BY fts_score DESC
          LIMIT $4`,
-        [escapedQuery, library, normalizedVersion, limit * SEARCH_OVERFETCH_FACTOR],
+        [query, library, normalizedVersion, limit * SEARCH_OVERFETCH_FACTOR],
       );
       ftsResults.push(...ftsResult.rows);
 
@@ -952,8 +953,20 @@ export class DocumentStore {
         .sort((a, b) => b.rrf_score - a.rrf_score)
         .slice(0, limit);
 
-      // Convert to Document objects
-      return topResults.map((row) => mapDbDocumentToDocument(row as DbJoinedDocument));
+      // Convert to Document objects with search metadata
+      return topResults.map((row) => {
+        const doc = mapDbDocumentToDocument(row as DbJoinedDocument);
+        // Add search-specific metadata
+        doc.metadata.id = String(row.id);
+        doc.metadata.score = row.rrf_score;
+        if (row.vec_rank !== undefined) {
+          doc.metadata.vec_rank = row.vec_rank;
+        }
+        if (row.fts_rank !== undefined) {
+          doc.metadata.fts_rank = row.fts_rank;
+        }
+        return doc;
+      });
     } catch (error) {
       throw new StoreError(`Failed to search documents for ${library}:${version}`, error);
     }
