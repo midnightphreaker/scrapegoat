@@ -668,15 +668,29 @@ export class DocumentStore {
         // Get metadata from first document
         const firstMeta = urlDocs[0].metadata as DocumentMetadata;
 
+        // Prepare page metadata (media/links from Crawl4AI)
+        const pageMetadata: Record<string, unknown> = {};
+        if (firstMeta.media) {
+          pageMetadata.media = firstMeta.media;
+        }
+        if (firstMeta.links) {
+          pageMetadata.links = firstMeta.links;
+        }
+        const pageMetadataStr =
+          Object.keys(pageMetadata).length > 0 ? JSON.stringify(pageMetadata) : null;
+
         // Create or update page record (UPSERT)
         const pageResult = await this.pool.query(
-          `INSERT INTO pages (version_id, url, title, etag, last_modified, content_type)
-           VALUES ($1, $2, $3, $4, $5, $6)
+          `INSERT INTO pages (version_id, url, title, etag, last_modified, content_type, screenshot_path, fetcher_type, metadata)
+           VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
            ON CONFLICT (version_id, url) DO UPDATE SET
              title = EXCLUDED.title,
              etag = EXCLUDED.etag,
              last_modified = EXCLUDED.last_modified,
-             content_type = EXCLUDED.content_type
+             content_type = EXCLUDED.content_type,
+             screenshot_path = EXCLUDED.screenshot_path,
+             fetcher_type = EXCLUDED.fetcher_type,
+             metadata = EXCLUDED.metadata
            RETURNING id`,
           [
             versionId,
@@ -685,6 +699,9 @@ export class DocumentStore {
             firstMeta.etag || null,
             firstMeta.last_modified || null,
             firstMeta.content_type || null,
+            firstMeta.screenshotPath || null,
+            firstMeta.fetcherType || null,
+            pageMetadataStr,
           ],
         );
         const pageId = pageResult.rows[0].id;

@@ -75,7 +75,9 @@ export async function loadScreenshot(path: string): Promise<Buffer> {
   try {
     return await readFile(fullPath);
   } catch (error) {
-    logger.warn(`Failed to load screenshot ${fullPath}:`, error);
+    logger.warn(
+      `Failed to load screenshot ${fullPath}: ${error instanceof Error ? error.message : String(error)}`,
+    );
     throw new Error(`Screenshot not found: ${path}`);
   }
 }
@@ -92,7 +94,9 @@ export async function deleteScreenshot(path: string): Promise<void> {
     await unlink(fullPath);
     logger.debug(`Deleted screenshot: ${fullPath}`);
   } catch (error) {
-    logger.warn(`Failed to delete screenshot ${fullPath}:`, error);
+    logger.warn(
+      `Failed to delete screenshot ${fullPath}: ${error instanceof Error ? error.message : String(error)}`,
+    );
     // Don't throw - deletion failure is not critical
   }
 }

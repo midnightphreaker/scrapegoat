@@ -3,6 +3,8 @@
  * These types mirror the Python Pydantic models in services/crawl4ai/app/models.py
  */
 
+import type { LinkItem, MediaItem } from "../types";
+
 /**
  * Cache mode options for Crawl4AI
  */
@@ -43,26 +45,6 @@ export interface Crawl4AIConfig {
 export interface Crawl4AIRequest {
   url: string;
   config?: Crawl4AIConfig;
-}
-
-/**
- * Media item extracted from page
- */
-export interface MediaItem {
-  type: "image" | "video" | "audio";
-  url: string;
-  alt?: string;
-  width?: number;
-  height?: number;
-}
-
-/**
- * Link extracted from page
- */
-export interface LinkItem {
-  url: string;
-  text: string;
-  rel?: string;
 }
 
 /**
