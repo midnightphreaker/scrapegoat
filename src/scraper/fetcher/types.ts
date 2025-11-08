@@ -1,7 +1,8 @@
 /**
  * Available fetcher types for content retrieval
+ * Note: 'browser' has been removed - use 'crawl4ai' instead
  */
-export type FetcherType = "auto" | "http" | "browser" | "crawl4ai" | "file";
+export type FetcherType = "auto" | "http" | "crawl4ai" | "file";
 
 /**
  * Media item extracted from page
@@ -34,16 +35,30 @@ export interface PageMetadata {
 
 /**
  * Crawl4AI configuration options
+ * These options control enhanced content extraction features provided by Crawl4AI
  */
 export interface Crawl4AIOptions {
-  /** Enable screenshot capture */
+  // Content Enhancement (options 6-8)
+  /** Enable screenshot capture (default: true) */
   enableScreenshot?: boolean;
-  /** Screenshot mode: viewport or full page */
-  screenshotMode?: "viewport" | "full";
-  /** Enable media extraction */
+  /** Screenshot mode: viewport or full page (default: 'fullpage') */
+  screenshotMode?: "viewport" | "fullpage";
+  /** Enable media extraction (images/videos/audio with metadata) (default: true) */
   enableMedia?: boolean;
-  /** Enable link extraction */
+  /** Enable link extraction with context (default: true) */
   enableLinks?: boolean;
+
+  // Advanced Scraping (options 9-13)
+  /** CSS selector to wait for before capture (default: '') */
+  waitFor?: string;
+  /** Maximum wait time for dynamic content in milliseconds (default: 30000) */
+  waitForTimeout?: number;
+  /** Custom JavaScript to execute before capture (default: '') */
+  customJs?: string;
+  /** Control Crawl4AI internal caching (default: 'fresh') */
+  cacheMode?: "enabled" | "disabled" | "bypass" | "fresh";
+  /** Custom HTTP headers for requests (default: {}) */
+  headers?: Record<string, string>;
 }
 
 /**
