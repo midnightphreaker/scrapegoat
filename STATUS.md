@@ -237,8 +237,8 @@ Scrapegoat is a PostgreSQL-powered documentation indexing and search system, for
 
 - ✅ **Verified CLI command tests**
   - All 6 command-specific tests passing
-  - 2 failures in index.test.ts (Playwright installation issues, not PostgreSQL-related)
-  - **Result**: 43/45 tests passing (95.6%)
+  - Fixed 2 failures in index.test.ts (installed Playwright browsers in test environment)
+  - **Result**: 45/45 tests passing (100%)
 
 **Documentation**:
 - ✅ **`docs/POSTGRESQL_SETUP.md`** (580 lines)
@@ -273,7 +273,7 @@ Scrapegoat is a PostgreSQL-powered documentation indexing and search system, for
 - ✅ DocumentStore.test.ts: 100% pass rate (24/24)
 - ✅ applyMigrations.test.ts: Rewritten and passing (4/4)
 - ✅ Hybrid search validated (17/17 tests)
-- ✅ CLI tests passing (43/45, 2 non-PostgreSQL failures)
+- ✅ CLI tests passing (45/45, 100%)
 - ✅ Setup documentation complete (580 lines)
 - ✅ Configuration reference complete (550 lines)
 
