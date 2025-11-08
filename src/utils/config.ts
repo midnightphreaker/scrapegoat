@@ -92,3 +92,22 @@ export const SEARCH_WEIGHT_FTS = 1.0;
  * Used to increase the number of vector search candidates retrieved.
  */
 export const VECTOR_SEARCH_MULTIPLIER = 10;
+
+/**
+ * Crawl4AI service base URL.
+ * Set via CRAWL4AI_SERVICE_URL environment variable.
+ */
+export const CRAWL4AI_SERVICE_URL =
+  process.env.CRAWL4AI_SERVICE_URL || "http://localhost:8001";
+
+/**
+ * Crawl4AI request timeout in milliseconds.
+ * Set via CRAWL4AI_TIMEOUT environment variable.
+ */
+export const CRAWL4AI_TIMEOUT = parseInt(process.env.CRAWL4AI_TIMEOUT || "30000", 10);
+
+/**
+ * Crawl4AI maximum retry attempts.
+ * Set via CRAWL4AI_MAX_RETRIES environment variable.
+ */
+export const CRAWL4AI_MAX_RETRIES = parseInt(process.env.CRAWL4AI_MAX_RETRIES || "3", 10);
