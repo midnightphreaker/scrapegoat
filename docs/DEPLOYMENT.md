@@ -48,6 +48,48 @@ Scrapegoat can be deployed in multiple configurations depending on your needs:
 └─────────────────┘
 ```
 
+### Production Reference Deployment
+
+**Den.Lan Infrastructure** - http://docs.den.lan
+
+A production deployment example using dedicated infrastructure:
+
+**Server Configuration:**
+- **Application Server**: docs.den.lan (10.1.1.27)
+  - Ubuntu LXC container
+  - Node.js 20.19.5 LTS
+  - Nginx reverse proxy (port 80 → 6280)
+  - Systemd service for auto-start
+
+- **Database Server**: postgres.den.lan (10.1.1.15)
+  - PostgreSQL 18 with pgvector 0.8.1
+  - Dedicated database: `scrapegoat`
+  - Dedicated user with restricted permissions
+
+- **Embedding Server**: embed.den.lan (10.1.1.61)
+  - Infinity v0.0.77
+  - Model: nomic-ai/nomic-embed-text-v1.5 (768 dimensions)
+  - Free unlimited embeddings
+
+**Benefits of this setup:**
+- ✅ Zero embedding costs (local Infinity server)
+- ✅ Dedicated PostgreSQL for better isolation and performance
+- ✅ Port 80 access via nginx for clean URLs
+- ✅ Systemd service ensures high availability
+- ✅ Enterprise-grade scalability and reliability
+
+**Configuration:**
+```bash
+DATABASE_URL=postgresql://scrapegoat_user:***@postgres.den.lan:5432/scrapegoat
+INFINITY_API_URL=http://embed.den.lan
+DOCS_MCP_EMBEDDING_MODEL=infinity:nomic-ai/nomic-embed-text-v1.5
+NODE_ENV=production
+PORT=6280
+HOST=0.0.0.0
+```
+
+See the deployment planning documentation in `projects/scrapegoat-deployment-planning/` for complete setup details.
+
 ---
 
 ## Prerequisites

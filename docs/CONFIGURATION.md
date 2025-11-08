@@ -714,6 +714,34 @@ docker run -d \
 
 ## Production Deployment
 
+### Production Reference Example
+
+**Den.Lan Infrastructure** (http://docs.den.lan):
+
+```bash
+# Database - Dedicated PostgreSQL server
+export DATABASE_URL="postgresql://scrapegoat_user:REDL62IPcLF4u9bYA0AqXNSgFxfxUy7d@postgres.den.lan:5432/scrapegoat"
+
+# Embeddings - Local Infinity server (zero cost)
+export INFINITY_API_URL="http://embed.den.lan"
+export DOCS_MCP_EMBEDDING_MODEL="infinity:nomic-ai/nomic-embed-text-v1.5"
+
+# Server configuration
+export NODE_ENV="production"
+export PORT="6280"
+export HOST="0.0.0.0"
+
+# Telemetry
+export TELEMETRY_ENABLED="false"
+```
+
+This production deployment provides:
+- Enterprise PostgreSQL with pgvector on dedicated server
+- Free unlimited embeddings via local Infinity server
+- Nginx reverse proxy for port 80 access
+- Systemd service for high availability
+- Zero external API costs
+
 ### Environment Variables Checklist
 
 Production-ready configuration:

@@ -116,6 +116,31 @@ open http://localhost:6280
 postgresql://username:password@hostname:port/database
 ```
 
+### Production Example
+
+**Den.Lan Infrastructure Setup:**
+
+Scrapegoat is deployed on **http://docs.den.lan** using:
+- **PostgreSQL**: postgres.den.lan:5432 (dedicated pgvector database)
+- **Embeddings**: embed.den.lan (Infinity server with nomic-ai/nomic-embed-text-v1.5)
+- **Web UI**: Port 80 (nginx reverse proxy to internal port 6280)
+
+```bash
+# Example production configuration
+DATABASE_URL=postgresql://scrapegoat_user:secure_password@postgres.den.lan:5432/scrapegoat
+INFINITY_API_URL=http://embed.den.lan
+DOCS_MCP_EMBEDDING_MODEL=infinity:nomic-ai/nomic-embed-text-v1.5
+NODE_ENV=production
+PORT=6280
+HOST=0.0.0.0
+```
+
+This setup provides:
+- ✅ Free unlimited embeddings (local Infinity server)
+- ✅ Enterprise PostgreSQL with pgvector
+- ✅ Production-ready with systemd service
+- ✅ Nginx reverse proxy for port 80 access
+
 For complete deployment options, see [Deployment Guide](docs/DEPLOYMENT.md).
 
 ## Standalone Server (Recommended)
