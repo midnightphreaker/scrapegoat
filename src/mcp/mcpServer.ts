@@ -66,11 +66,11 @@ export function createMcpServerInstance(
           .default(true)
           .describe("Follow HTTP redirects (3xx responses)."),
         fetcher: z
-          .enum(["auto", "http", "browser", "crawl4ai"])
+          .enum(["auto", "http", "crawl4ai"])
           .optional()
           .default("auto")
           .describe(
-            "Content fetcher to use: 'auto' (default, smart auto-detection), 'http' (fast HTTP-only), 'browser' (JavaScript support), or 'crawl4ai' (AI-optimized with enhanced features).",
+            "Content fetcher to use: 'auto' (default, smart auto-detection), 'http' (fast HTTP-only), or 'crawl4ai' (AI-optimized with enhanced features).",
           ),
         enableScreenshots: z
           .boolean()
