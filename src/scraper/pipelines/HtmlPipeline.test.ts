@@ -6,7 +6,7 @@ import { HtmlLinkExtractorMiddleware } from "../middleware/HtmlLinkExtractorMidd
 import { HtmlMetadataExtractorMiddleware } from "../middleware/HtmlMetadataExtractorMiddleware";
 import { HtmlSanitizerMiddleware } from "../middleware/HtmlSanitizerMiddleware";
 import { HtmlToMarkdownMiddleware } from "../middleware/HtmlToMarkdownMiddleware";
-import { ScrapeMode, type ScraperOptions } from "../types";
+import type { ScraperOptions } from "../types";
 import { HtmlPipeline } from "./HtmlPipeline";
 
 describe("HtmlPipeline", () => {
@@ -248,7 +248,7 @@ describe("HtmlPipeline", () => {
       url: "http://example.com",
       library: "example",
       version: "",
-      scrapeMode: ScrapeMode.Fetch,
+      fetcher: "http",
     });
 
     // Verify all middleware was called

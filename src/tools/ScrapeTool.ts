@@ -1,6 +1,6 @@
 import * as semver from "semver";
 import type { IPipeline } from "../pipeline/trpc/interfaces";
-import { ScrapeMode } from "../scraper/types";
+import type { Crawl4AIOptions } from "../scraper/fetcher/types";
 import {
   DEFAULT_MAX_CONCURRENCY,
   DEFAULT_MAX_DEPTH,
@@ -32,14 +32,6 @@ export interface ScrapeToolOptions {
     maxConcurrency?: number; // Note: Concurrency is now set when PipelineManager is created
     ignoreErrors?: boolean;
     /**
-     * Determines the HTML processing strategy.
-     * - 'fetch': Use a simple DOM parser (faster, less JS support).
-     * - 'playwright': Use a headless browser (slower, full JS support).
-     * - 'auto': Automatically select the best strategy (currently defaults to 'playwright').
-     * @default ScrapeMode.Auto
-     */
-    scrapeMode?: ScrapeMode;
-    /**
      * Patterns for including URLs during scraping. If not set, all are included by default.
      * Regex patterns must be wrapped in slashes, e.g. /pattern/.
      */
@@ -56,6 +48,15 @@ export interface ScrapeToolOptions {
      * Keys are header names, values are header values.
      */
     headers?: Record<string, string>;
+    /**
+     * Explicit fetcher selection: 'auto', 'http', 'crawl4ai', or 'file'.
+     * @default 'auto'
+     */
+    fetcher?: "auto" | "http" | "crawl4ai" | "file";
+    /**
+     * Crawl4AI-specific options
+     */
+    crawl4ai?: Crawl4AIOptions;
   };
   /** If false, returns jobId immediately without waiting. Defaults to true. */
   waitForCompletion?: boolean;
@@ -142,10 +143,11 @@ export class ScrapeTool {
       maxDepth: scraperOptions?.maxDepth ?? DEFAULT_MAX_DEPTH,
       maxConcurrency: scraperOptions?.maxConcurrency ?? DEFAULT_MAX_CONCURRENCY,
       ignoreErrors: scraperOptions?.ignoreErrors ?? true,
-      scrapeMode: scraperOptions?.scrapeMode ?? ScrapeMode.Auto, // Pass scrapeMode enum
       includePatterns: scraperOptions?.includePatterns,
       excludePatterns: scraperOptions?.excludePatterns,
       headers: scraperOptions?.headers, // <-- propagate headers
+      fetcher: scraperOptions?.fetcher, // <-- propagate fetcher selection
+      crawl4ai: scraperOptions?.crawl4ai, // <-- propagate crawl4ai options
     });
 
     // Conditionally wait for completion

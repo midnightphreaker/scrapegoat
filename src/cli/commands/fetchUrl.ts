@@ -4,19 +4,19 @@
 
 import type { Command } from "commander";
 import { AutoDetectFetcher } from "../../scraper/fetcher";
-import { ScrapeMode } from "../../scraper/types";
+import type { FetcherType } from "../../scraper/fetcher/types";
 import { analytics, TelemetryEvent } from "../../telemetry";
 import { FetchUrlTool } from "../../tools";
 import { parseHeaders } from "../utils";
 
 export async function fetchUrlAction(
   url: string,
-  options: { followRedirects: boolean; scrapeMode: ScrapeMode; header: string[] },
+  options: { followRedirects: boolean; fetcher?: FetcherType; header: string[] },
 ) {
   await analytics.track(TelemetryEvent.CLI_COMMAND, {
     command: "fetch-url",
     url,
-    scrapeMode: options.scrapeMode,
+    fetcher: options.fetcher,
     followRedirects: options.followRedirects,
     hasHeaders: options.header.length > 0,
   });
@@ -27,7 +27,7 @@ export async function fetchUrlAction(
   const content = await fetchUrlTool.execute({
     url,
     followRedirects: options.followRedirects,
-    scrapeMode: options.scrapeMode,
+    fetcher: options.fetcher,
     headers: Object.keys(headers).length > 0 ? headers : undefined,
   });
 
@@ -43,19 +43,16 @@ export function createFetchUrlCommand(program: Command): Command {
       "Disable following HTTP redirects (default: follow redirects)",
     )
     .option(
-      "--scrape-mode <mode>",
-      `HTML processing strategy: '${ScrapeMode.Fetch}', '${ScrapeMode.Playwright}', '${ScrapeMode.Auto}' (default)`,
-      (value: string): ScrapeMode => {
-        const validModes = Object.values(ScrapeMode);
-        if (!validModes.includes(value as ScrapeMode)) {
-          console.warn(
-            `Warning: Invalid scrape mode '${value}'. Using default '${ScrapeMode.Auto}'.`,
-          );
-          return ScrapeMode.Auto;
+      "--fetcher <type>",
+      "Explicit fetcher selection: 'auto', 'http', 'crawl4ai', or 'file' (default: auto)",
+      (value: string): FetcherType => {
+        const validFetchers: FetcherType[] = ["auto", "http", "crawl4ai", "file"];
+        if (!validFetchers.includes(value as FetcherType)) {
+          console.warn(`Warning: Invalid fetcher type '${value}'. Using default 'auto'.`);
+          return "auto";
         }
-        return value as ScrapeMode;
+        return value as FetcherType;
       },
-      ScrapeMode.Auto,
     )
     .option(
       "--header <name:value>",

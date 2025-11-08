@@ -2,10 +2,7 @@
  * Shared CLI utilities and helper functions.
  */
 
-import { execSync } from "node:child_process";
-import { existsSync } from "node:fs";
 import type { Command } from "commander";
-import { chromium } from "playwright";
 import type { AppServerConfig } from "../app";
 import type { AuthConfig } from "../auth/types";
 import type { IPipeline, PipelineOptions } from "../pipeline";
@@ -16,7 +13,6 @@ import {
   type EmbeddingModelConfig,
 } from "../store/embeddings/EmbeddingConfig";
 import { LogLevel, logger, setLogLevel } from "../utils/logger";
-import { getProjectRoot } from "../utils/paths";
 import type { GlobalOptions } from "./types";
 
 /**
@@ -41,45 +37,6 @@ export interface EmbeddingContext {
   aiEmbeddingProvider: string;
   aiEmbeddingModel: string;
   aiEmbeddingDimensions: number | null;
-}
-
-/**
- * Ensures that the Playwright browsers are installed, unless a system Chromium path is set.
- */
-export function ensurePlaywrightBrowsersInstalled(): void {
-  // If PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH is set, skip install
-  const chromiumEnvPath = process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH;
-  if (chromiumEnvPath && existsSync(chromiumEnvPath)) {
-    logger.debug(
-      `PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH is set to '${chromiumEnvPath}', skipping Playwright browser install.`,
-    );
-    return;
-  }
-  try {
-    // Dynamically require Playwright and check for Chromium browser
-    // eslint-disable-next-line @typescript-eslint/no-var-requires
-    const chromiumPath = chromium.executablePath();
-    if (!chromiumPath || !existsSync(chromiumPath)) {
-      throw new Error("Playwright Chromium browser not found");
-    }
-  } catch (_err) {
-    // Not installed or not found, attempt to install
-    logger.debug(
-      "Playwright browsers not found. Installing Chromium browser for dynamic scraping (this may take a minute)...",
-    );
-    try {
-      logger.debug("Installing Playwright Chromium browser...");
-      execSync("npm exec -y playwright install --no-shell --with-deps chromium", {
-        stdio: "ignore", // Suppress output
-        cwd: getProjectRoot(),
-      });
-    } catch (_installErr) {
-      console.error(
-        "❌ Failed to install Playwright browsers automatically. Please run:\n  npx playwright install --no-shell --with-deps chromium\nand try again.",
-      );
-      process.exit(1);
-    }
-  }
 }
 
 /**

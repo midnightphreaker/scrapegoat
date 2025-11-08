@@ -1,5 +1,6 @@
 import type { Document, ProgressCallback } from "../../types";
 import { logger } from "../../utils/logger";
+import { saveScreenshot } from "../../utils/screenshotStorage";
 import type { UrlNormalizerOptions } from "../../utils/url";
 import { AutoDetectFetcher } from "../fetcher";
 import type { RawContent } from "../fetcher/types";
@@ -53,15 +54,35 @@ export class WebScraperStrategy extends BaseScraperStrategy {
     const { url } = item;
 
     try {
-      // Define fetch options, passing signal, followRedirects, and headers
+      // Define fetch options, passing signal, followRedirects, headers, and useCrawl4AI
       const fetchOptions = {
         signal,
         followRedirects: options.followRedirects,
         headers: options.headers, // Forward custom headers
+        useCrawl4AI: options.useCrawl4AI, // Forward Crawl4AI preference
       };
 
       // Use AutoDetectFetcher which handles fallbacks automatically
       const rawContent: RawContent = await this.fetcher.fetch(url, fetchOptions);
+
+      // --- Save Screenshot (Phase 3B) ---
+      let screenshotPath: string | undefined;
+      if (rawContent.screenshot) {
+        try {
+          screenshotPath = await saveScreenshot({
+            library: options.library,
+            version: options.version,
+            url,
+            data: rawContent.screenshot,
+          });
+          logger.debug(`Screenshot saved: ${screenshotPath}`);
+        } catch (error) {
+          logger.warn(
+            `Failed to save screenshot for ${url}: ${error instanceof Error ? error.message : String(error)}`,
+          );
+          // Continue without screenshot - non-critical failure
+        }
+      }
 
       // --- Start Pipeline Processing ---
       let processed: ProcessedContent | undefined;
@@ -116,19 +137,27 @@ export class WebScraperStrategy extends BaseScraperStrategy {
         }
       });
 
+      // --- Build Enhanced Metadata (Phase 3B) ---
+      const enhancedMetadata = {
+        url,
+        title:
+          typeof processed.metadata.title === "string"
+            ? processed.metadata.title
+            : "Untitled",
+        library: options.library,
+        version: options.version,
+        ...processed.metadata,
+        // Add Phase 3B enhanced fields
+        ...(screenshotPath && { screenshotPath }),
+        ...(rawContent.fetcherType && { fetcherType: rawContent.fetcherType }),
+        ...(rawContent.media && { media: rawContent.media }),
+        ...(rawContent.links && { links: rawContent.links }),
+      };
+
       return {
         document: {
           content: processed.textContent,
-          metadata: {
-            url,
-            title:
-              typeof processed.metadata.title === "string"
-                ? processed.metadata.title
-                : "Untitled",
-            library: options.library,
-            version: options.version,
-            ...processed.metadata,
-          },
+          metadata: enhancedMetadata,
         } satisfies Document,
         links: filteredLinks,
         finalUrl: rawContent.source,
@@ -141,7 +170,7 @@ export class WebScraperStrategy extends BaseScraperStrategy {
   }
 
   /**
-   * Cleanup resources used by this strategy, specifically the pipeline browser instances and fetcher.
+   * Cleanup resources used by this strategy, specifically pipelines and fetcher instances.
    */
   async cleanup(): Promise<void> {
     await Promise.allSettled([

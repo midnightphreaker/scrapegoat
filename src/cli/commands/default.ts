@@ -16,7 +16,6 @@ import { registerGlobalServices } from "../main";
 import {
   createAppServerConfig,
   createPipelineWithCallbacks,
-  ensurePlaywrightBrowsersInstalled,
   parseAuthConfig,
   resolveEmbeddingContext,
   resolveProtocol,
@@ -144,9 +143,6 @@ export function createDefaultAction(program: Command): Command {
 
           // Get global options from the command itself (default action runs on root command)
           const globalOptions = program.opts();
-
-          // Ensure browsers are installed
-          ensurePlaywrightBrowsersInstalled();
 
           // Resolve embedding configuration for local execution (default action needs embeddings)
           const embeddingConfig = resolveEmbeddingContext(options.embeddingModel);

@@ -1,6 +1,5 @@
 import type { FastifyInstance, FastifyRequest } from "fastify";
 import type { ScrapeTool } from "../../../tools/ScrapeTool";
-import { ScrapeMode } from "../../../scraper/types";
 import { logger } from "../../../utils/logger";
 import ScrapeForm from "../../components/ScrapeForm";
 import Alert from "../../components/Alert";
@@ -35,7 +34,6 @@ export function registerNewJobRoutes(
           maxPages?: string;
           maxDepth?: string;
           scope?: "subpages" | "hostname" | "domain";
-          scrapeMode?: ScrapeMode;
           followRedirects?: "on" | undefined; // Checkbox value is 'on' if checked
           ignoreErrors?: "on" | undefined;
           includePatterns?: string;
@@ -102,7 +100,6 @@ export function registerNewJobRoutes(
               ? Number.parseInt(body.maxDepth, 10)
               : undefined,
             scope: body.scope,
-            scrapeMode: body.scrapeMode,
             // Checkboxes send 'on' when checked, otherwise undefined
             followRedirects: body.followRedirects === "on",
             ignoreErrors: body.ignoreErrors === "on",

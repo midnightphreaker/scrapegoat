@@ -30,7 +30,7 @@ describe("fetchUrlAction", () => {
   it("executes FetchUrlTool", async () => {
     await fetchUrlAction("https://example.com", {
       followRedirects: true,
-      scrapeMode: "auto" as any,
+      fetcher: "auto",
       header: [],
     });
     const { FetchUrlTool } = await import("../../tools");

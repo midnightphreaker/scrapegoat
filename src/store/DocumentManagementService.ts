@@ -8,7 +8,6 @@ import {
 } from "../scraper/pipelines/PipelineFactory";
 import type { ContentPipeline } from "../scraper/pipelines/types";
 import type { ScraperOptions } from "../scraper/types";
-import { ScrapeMode } from "../scraper/types";
 import type { ContentChunk } from "../splitter/types";
 import { analytics, extractHostname, TelemetryEvent } from "../telemetry";
 import { logger } from "../utils/logger";
@@ -429,7 +428,6 @@ export class DocumentManagementService {
         url: url,
         library: library,
         version: normalizedVersion,
-        scrapeMode: ScrapeMode.Fetch,
         ignoreErrors: false,
         maxConcurrency: 1,
       };

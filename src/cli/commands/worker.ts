@@ -14,7 +14,6 @@ import { registerGlobalServices } from "../main";
 import {
   createAppServerConfig,
   createPipelineWithCallbacks,
-  ensurePlaywrightBrowsersInstalled,
   resolveEmbeddingContext,
   validateHost,
   validatePort,
@@ -71,9 +70,6 @@ export function createWorkerCommand(program: Command): Command {
 
         try {
           logger.info(`🚀 Starting external pipeline worker on port ${port}`);
-
-          // Ensure browsers are installed for scraping
-          ensurePlaywrightBrowsersInstalled();
 
           // Resolve embedding configuration for worker (worker needs embeddings for indexing)
           const embeddingConfig = resolveEmbeddingContext(cmdOptions.embeddingModel);

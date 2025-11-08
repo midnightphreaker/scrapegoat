@@ -483,3 +483,391 @@ This JSON shows the package structure.
     expect(chunks[0].section.path).toEqual([]);
   });
 });
+
+describe("SemanticMarkdownSplitter - Wrapped Content Handling", () => {
+  it("should handle content wrapped in single div", async () => {
+    const splitter = new SemanticMarkdownSplitter(100, 5000);
+    const markdown = `<div class="content">
+
+# Heading 1
+
+Text content under heading 1.
+
+## Heading 2
+
+More text under heading 2.
+
+</div>`;
+
+    const result = await splitter.splitText(markdown);
+
+    // Should properly extract and chunk the content
+    expect(result.length).toBeGreaterThan(3);
+
+    // Verify headings are detected
+    expect(result.some((chunk) => chunk.content.includes("# Heading 1"))).toBe(true);
+    expect(result.some((chunk) => chunk.content.includes("## Heading 2"))).toBe(true);
+
+    // Verify section paths are correct
+    const heading1Chunks = result.filter((chunk) =>
+      chunk.section.path.includes("Heading 1"),
+    );
+    expect(heading1Chunks.length).toBeGreaterThan(0);
+
+    const heading2Chunks = result.filter((chunk) =>
+      chunk.section.path.includes("Heading 2"),
+    );
+    expect(heading2Chunks.length).toBeGreaterThan(0);
+  });
+
+  it("should handle content wrapped in article", async () => {
+    const splitter = new SemanticMarkdownSplitter(100, 5000);
+    const markdown = `<article>
+
+# Article Title
+
+Introduction text for the article.
+
+## Section 1
+
+Details about section 1.
+
+</article>`;
+
+    const result = await splitter.splitText(markdown);
+
+    expect(result.length).toBeGreaterThan(3);
+    expect(result.some((chunk) => chunk.content.includes("# Article Title"))).toBe(true);
+    expect(result.some((chunk) => chunk.content.includes("## Section 1"))).toBe(true);
+  });
+
+  it("should handle content wrapped in section", async () => {
+    const splitter = new SemanticMarkdownSplitter(100, 5000);
+    const markdown = `<section>
+
+# Section Title
+
+Content in section.
+
+## Subsection
+
+More content.
+
+</section>`;
+
+    const result = await splitter.splitText(markdown);
+
+    expect(result.length).toBeGreaterThan(3);
+    expect(result.some((chunk) => chunk.content.includes("# Section Title"))).toBe(true);
+    expect(result.some((chunk) => chunk.content.includes("## Subsection"))).toBe(true);
+  });
+
+  it("should handle deeply nested wrappers", async () => {
+    const splitter = new SemanticMarkdownSplitter(100, 5000);
+    const markdown = `<div class="outer">
+<article class="middle">
+<section class="inner">
+
+# Deep Heading
+
+Text in deeply nested structure.
+
+## Sub Heading
+
+More nested text.
+
+</section>
+</article>
+</div>`;
+
+    const result = await splitter.splitText(markdown);
+
+    // Should successfully extract content from deep nesting
+    expect(result.length).toBeGreaterThan(3);
+    expect(result.some((chunk) => chunk.content.includes("# Deep Heading"))).toBe(true);
+    expect(result.some((chunk) => chunk.content.includes("## Sub Heading"))).toBe(true);
+
+    // Verify section hierarchy is maintained
+    const deepHeadingChunk = result.find((chunk) =>
+      chunk.content.includes("# Deep Heading"),
+    );
+    expect(deepHeadingChunk?.section.path).toContain("Deep Heading");
+
+    const subHeadingChunk = result.find((chunk) =>
+      chunk.content.includes("## Sub Heading"),
+    );
+    expect(subHeadingChunk?.section.path).toContain("Sub Heading");
+    expect(subHeadingChunk?.section.path).toContain("Deep Heading");
+  });
+
+  it("should handle mixed wrapped and unwrapped content", async () => {
+    const splitter = new SemanticMarkdownSplitter(100, 5000);
+    const markdown = `
+# Top Level
+
+Some unwrapped text.
+
+<div class="wrapper">
+
+## Wrapped Section
+
+Text inside wrapper.
+
+</div>
+
+## Another Top Level
+
+More unwrapped text.
+`;
+
+    const result = await splitter.splitText(markdown);
+
+    expect(result.length).toBeGreaterThan(5);
+    expect(result.some((chunk) => chunk.content.includes("# Top Level"))).toBe(true);
+    expect(result.some((chunk) => chunk.content.includes("## Wrapped Section"))).toBe(
+      true,
+    );
+    expect(result.some((chunk) => chunk.content.includes("## Another Top Level"))).toBe(
+      true,
+    );
+  });
+
+  it("should maintain backward compatibility with flat structure", async () => {
+    const splitter = new SemanticMarkdownSplitter(100, 5000);
+    const markdown = `
+# Heading 1
+
+Text content.
+
+## Heading 2
+
+More text.
+
+### Heading 3
+
+Even more text.
+`;
+
+    const result = await splitter.splitText(markdown);
+
+    // Should work exactly as before for non-wrapped content
+    expect(result.length).toBeGreaterThan(5);
+
+    // Verify section paths
+    const h1Chunks = result.filter((chunk) => chunk.section.path.includes("Heading 1"));
+    expect(h1Chunks.length).toBeGreaterThan(0);
+
+    const h2Chunks = result.filter((chunk) => chunk.section.path.includes("Heading 2"));
+    expect(h2Chunks.length).toBeGreaterThan(0);
+
+    const h3Chunks = result.filter((chunk) => chunk.section.path.includes("Heading 3"));
+    expect(h3Chunks.length).toBeGreaterThan(0);
+
+    // Verify hierarchical paths
+    expect(h2Chunks[0].section.path).toEqual(["Heading 1", "Heading 2"]);
+    expect(h3Chunks[0].section.path).toEqual(["Heading 1", "Heading 2", "Heading 3"]);
+  });
+
+  it("should handle wrapped code blocks", async () => {
+    const splitter = new SemanticMarkdownSplitter(100, 5000);
+    const markdown = `<div>
+
+# Code Example
+
+Here's some code:
+
+\`\`\`javascript
+function hello() {
+  console.log("Hello, world!");
+}
+\`\`\`
+
+</div>`;
+
+    const result = await splitter.splitText(markdown);
+
+    expect(result.length).toBeGreaterThan(2);
+    expect(result.some((chunk) => chunk.types.includes("code"))).toBe(true);
+    expect(result.some((chunk) => chunk.content.includes("function hello()"))).toBe(true);
+  });
+
+  it("should handle wrapped tables", async () => {
+    const splitter = new SemanticMarkdownSplitter(100, 5000);
+    const markdown = `<div>
+
+# Table Example
+
+Here's a table:
+
+| Column 1 | Column 2 |
+|----------|----------|
+| Data 1   | Data 2   |
+
+</div>`;
+
+    const result = await splitter.splitText(markdown);
+
+    expect(result.length).toBeGreaterThan(2);
+    expect(result.some((chunk) => chunk.types.includes("table"))).toBe(true);
+    expect(result.some((chunk) => chunk.content.includes("Column 1"))).toBe(true);
+  });
+
+  it("should handle empty wrappers gracefully", async () => {
+    const splitter = new SemanticMarkdownSplitter(100, 5000);
+    const markdown = `
+<div></div>
+
+# Heading After Empty Wrapper
+
+Content here.
+`;
+
+    const result = await splitter.splitText(markdown);
+
+    expect(result.length).toBeGreaterThan(1);
+    expect(
+      result.some((chunk) => chunk.content.includes("# Heading After Empty Wrapper")),
+    ).toBe(true);
+  });
+
+  it("should handle wrapper with only whitespace", async () => {
+    const splitter = new SemanticMarkdownSplitter(100, 5000);
+    const markdown = `
+<div>
+
+
+</div>
+
+# Heading After Whitespace Wrapper
+
+Content here.
+`;
+
+    const result = await splitter.splitText(markdown);
+
+    expect(
+      result.some((chunk) =>
+        chunk.content.includes("# Heading After Whitespace Wrapper"),
+      ),
+    ).toBe(true);
+  });
+
+  it("should handle Ansible-style documentation structure", async () => {
+    // This simulates the actual structure that was causing the Ansible docs issue
+    const splitter = new SemanticMarkdownSplitter(500, 5000);
+    const markdown = `<div class="content">
+
+# Ansible Automation Platform Installation Guide
+
+This guide covers the installation process for Ansible Automation Platform.
+
+## Chapter 1: Prerequisites
+
+Before installing Ansible Automation Platform, ensure you have the following.
+
+### 1.1 System Requirements
+
+The following requirements must be met:
+
+- Red Hat Enterprise Linux 8 or later
+- 4 GB RAM minimum
+- 20 GB disk space
+
+### 1.2 Network Requirements
+
+Ensure proper network configuration.
+
+## Chapter 2: Installation
+
+Follow these steps to install Ansible Automation Platform.
+
+### 2.1 Download
+
+Download the installer from Red Hat Customer Portal.
+
+### 2.2 Installation Steps
+
+Run the installation script with the following command:
+
+\`\`\`bash
+./install.sh --inventory inventory.yml
+\`\`\`
+
+## Chapter 3: Verification
+
+Verify the installation was successful.
+
+</div>`;
+
+    const result = await splitter.splitText(markdown);
+
+    // Should produce many chunks, not just 1
+    expect(result.length).toBeGreaterThan(10);
+
+    // Verify all heading levels are detected
+    expect(
+      result.some((chunk) => chunk.content.includes("# Ansible Automation Platform")),
+    ).toBe(true);
+    expect(result.some((chunk) => chunk.content.includes("## Chapter 1"))).toBe(true);
+    expect(
+      result.some((chunk) => chunk.content.includes("### 1.1 System Requirements")),
+    ).toBe(true);
+    expect(result.some((chunk) => chunk.content.includes("## Chapter 2"))).toBe(true);
+    expect(result.some((chunk) => chunk.content.includes("## Chapter 3"))).toBe(true);
+
+    // Verify code block is detected
+    expect(result.some((chunk) => chunk.types.includes("code"))).toBe(true);
+
+    // Verify hierarchical section paths
+    const systemReqChunk = result.find((chunk) =>
+      chunk.content.includes("### 1.1 System Requirements"),
+    );
+    expect(systemReqChunk?.section.path).toContain("Chapter 1: Prerequisites");
+    expect(systemReqChunk?.section.path).toContain("1.1 System Requirements");
+  });
+
+  it("should handle multiple wrapper types in same document", async () => {
+    const splitter = new SemanticMarkdownSplitter(100, 5000);
+    const markdown = `
+<main>
+
+# Main Content
+
+<article>
+
+## Article Section
+
+<div>
+
+### Div Section
+
+Content in div.
+
+</div>
+
+</article>
+
+<aside>
+
+## Sidebar Content
+
+Sidebar text.
+
+</aside>
+
+</main>
+`;
+
+    const result = await splitter.splitText(markdown);
+
+    expect(result.length).toBeGreaterThan(5);
+    expect(result.some((chunk) => chunk.content.includes("# Main Content"))).toBe(true);
+    expect(result.some((chunk) => chunk.content.includes("## Article Section"))).toBe(
+      true,
+    );
+    expect(result.some((chunk) => chunk.content.includes("### Div Section"))).toBe(true);
+    expect(result.some((chunk) => chunk.content.includes("## Sidebar Content"))).toBe(
+      true,
+    );
+  });
+});

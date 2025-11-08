@@ -65,13 +65,46 @@ export function createMcpServerInstance(
           .optional()
           .default(true)
           .describe("Follow HTTP redirects (3xx responses)."),
+        fetcher: z
+          .enum(["auto", "http", "crawl4ai"])
+          .optional()
+          .default("auto")
+          .describe(
+            "Content fetcher to use: 'auto' (default, smart auto-detection), 'http' (fast HTTP-only), or 'crawl4ai' (AI-optimized with enhanced features).",
+          ),
+        enableScreenshots: z
+          .boolean()
+          .optional()
+          .describe("Enable screenshot capture when using Crawl4AI fetcher."),
+        enableMedia: z
+          .boolean()
+          .optional()
+          .describe(
+            "Enable media extraction (images, videos, audio) when using Crawl4AI fetcher.",
+          ),
+        enableLinks: z
+          .boolean()
+          .optional()
+          .describe("Enable link extraction when using Crawl4AI fetcher."),
       },
       {
         title: "Scrape New Library Documentation",
         destructiveHint: true, // replaces existing docs
         openWorldHint: true, // requires internet access
       },
-      async ({ url, library, version, maxPages, maxDepth, scope, followRedirects }) => {
+      async ({
+        url,
+        library,
+        version,
+        maxPages,
+        maxDepth,
+        scope,
+        followRedirects,
+        fetcher,
+        enableScreenshots,
+        enableMedia,
+        enableLinks,
+      }) => {
         // Track MCP tool usage
         analytics.track(TelemetryEvent.TOOL_USED, {
           tool: "scrape_docs",
@@ -82,6 +115,7 @@ export function createMcpServerInstance(
           maxPages,
           maxDepth,
           scope,
+          fetcher,
         });
 
         try {
@@ -97,6 +131,13 @@ export function createMcpServerInstance(
               maxDepth,
               scope,
               followRedirects,
+              fetcher: fetcher as "auto" | "http" | "crawl4ai", // Type assertion safe due to zod validation
+              crawl4ai: {
+                enableScreenshot: enableScreenshots,
+                screenshotMode: "viewport", // Default mode
+                enableMedia,
+                enableLinks,
+              },
             },
           });
 

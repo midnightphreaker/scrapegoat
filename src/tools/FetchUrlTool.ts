@@ -3,7 +3,6 @@ import { HtmlPipeline } from "../scraper/pipelines/HtmlPipeline";
 import { MarkdownPipeline } from "../scraper/pipelines/MarkdownPipeline";
 import { TextPipeline } from "../scraper/pipelines/TextPipeline";
 import type { ContentPipeline, ProcessedContent } from "../scraper/pipelines/types";
-import { ScrapeMode } from "../scraper/types";
 import { convertToString } from "../scraper/utils/buffer";
 import { resolveCharset } from "../scraper/utils/charset";
 import { logger } from "../utils/logger";
@@ -23,19 +22,16 @@ export interface FetchUrlToolOptions {
   followRedirects?: boolean;
 
   /**
-   * Determines the HTML processing strategy.
-   * - 'fetch': Use a simple DOM parser (faster, less JS support).
-   * - 'playwright': Use a headless browser (slower, full JS support).
-   * - 'auto': Automatically select the best strategy (currently defaults to 'playwright').
-   * @default ScrapeMode.Auto
-   */
-  scrapeMode?: ScrapeMode;
-
-  /**
    * Custom HTTP headers to send with the request (e.g., for authentication).
    * Keys are header names, values are header values.
    */
   headers?: Record<string, string>;
+
+  /**
+   * Explicit fetcher selection: 'auto', 'http', 'crawl4ai', or 'file'.
+   * @default 'auto'
+   */
+  fetcher?: "auto" | "http" | "crawl4ai" | "file";
 }
 
 /**
@@ -73,7 +69,7 @@ export class FetchUrlTool {
    * @throws {ToolError} If fetching or processing fails
    */
   async execute(options: FetchUrlToolOptions): Promise<string> {
-    const { url, scrapeMode = ScrapeMode.Auto, headers } = options;
+    const { url, headers, fetcher } = options;
 
     if (!this.fetcher.canFetch(url)) {
       throw new ValidationError(
@@ -89,6 +85,7 @@ export class FetchUrlTool {
         followRedirects: options.followRedirects ?? true,
         maxRetries: 3,
         headers, // propagate custom headers
+        fetcher, // propagate fetcher selection
       };
 
       // AutoDetectFetcher handles all fallback logic automatically
@@ -112,8 +109,8 @@ export class FetchUrlTool {
               followRedirects: options.followRedirects ?? true,
               excludeSelectors: undefined,
               ignoreErrors: false,
-              scrapeMode,
               headers, // propagate custom headers
+              fetcher, // propagate fetcher selection
             },
             this.fetcher,
           );
@@ -159,7 +156,7 @@ export class FetchUrlTool {
         this.constructor.name,
       );
     } finally {
-      // Cleanup all pipelines and fetcher to prevent resource leaks (e.g., browser instances)
+      // Cleanup all pipelines and fetcher to prevent resource leaks
       await Promise.allSettled([
         ...this.pipelines.map((pipeline) => pipeline.close()),
         this.fetcher.close(),

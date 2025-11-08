@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { Document } from "../../types";
 import type { ScraperOptions } from "../types";
-import { ScrapeMode } from "../types"; // Import ScrapeMode
+// Removed ScrapeMode import - now using fetcher property
 import { WebScraperStrategy } from "./WebScraperStrategy";
 
 // Mock dependencies
@@ -49,7 +49,7 @@ describe("WebScraperStrategy", () => {
       scope: "subpages",
       // Ensure followRedirects has a default for tests if needed by fetch mock checks
       followRedirects: true,
-      scrapeMode: ScrapeMode.Fetch, // Use enum member
+      fetcher: "http", // Use HTTP fetcher
     };
 
     // No need to mock prototype anymore
@@ -467,7 +467,7 @@ describe("WebScraperStrategy", () => {
     // This test focuses on the strategy's ability to process such URLs through the pipeline
     const urlWithCreds = "https://user:password@example.com/";
     options.url = urlWithCreds;
-    options.scrapeMode = ScrapeMode.Fetch; // Use fetch mode to avoid Playwright browser operations
+    options.fetcher = "http"; // Use HTTP fetcher
     const expectedMarkdown = "# Processed Content";
     const expectedTitle = "Test Page";
 

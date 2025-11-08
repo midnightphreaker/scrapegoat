@@ -6,7 +6,7 @@ import type { Command } from "commander";
 import { Option } from "commander";
 import type { PipelineOptions } from "../../pipeline";
 import type { IPipeline } from "../../pipeline/trpc/interfaces";
-import { ScrapeMode } from "../../scraper/types";
+import type { FetcherType } from "../../scraper/fetcher/types";
 import { createDocumentManagement } from "../../store";
 import type { IDocumentManagement } from "../../store/trpc/interfaces";
 import { analytics, TelemetryEvent } from "../../telemetry";
@@ -34,7 +34,7 @@ export async function scrapeAction(
     ignoreErrors: boolean;
     scope: string;
     followRedirects: boolean;
-    scrapeMode: ScrapeMode;
+    fetcher?: FetcherType;
     includePattern: string[];
     excludePattern: string[];
     header: string[];
@@ -52,7 +52,7 @@ export async function scrapeAction(
     maxDepth: Number.parseInt(options.maxDepth, 10),
     maxConcurrency: Number.parseInt(options.maxConcurrency, 10),
     scope: options.scope,
-    scrapeMode: options.scrapeMode,
+    fetcher: options.fetcher,
     followRedirects: options.followRedirects,
     hasHeaders: options.header.length > 0,
     hasIncludePatterns: options.includePattern.length > 0,
@@ -107,7 +107,7 @@ export async function scrapeAction(
         ignoreErrors: options.ignoreErrors,
         scope: options.scope as "subpages" | "hostname" | "domain",
         followRedirects: options.followRedirects,
-        scrapeMode: options.scrapeMode,
+        fetcher: options.fetcher,
         includePatterns:
           Array.isArray(options.includePattern) && options.includePattern.length > 0
             ? options.includePattern
@@ -178,19 +178,16 @@ export function createScrapeCommand(program: Command): Command {
       "Disable following HTTP redirects (default: follow redirects)",
     )
     .option(
-      "--scrape-mode <mode>",
-      `HTML processing strategy: '${ScrapeMode.Fetch}', '${ScrapeMode.Playwright}', '${ScrapeMode.Auto}' (default)`,
-      (value: string): ScrapeMode => {
-        const validModes = Object.values(ScrapeMode);
-        if (!validModes.includes(value as ScrapeMode)) {
-          console.warn(
-            `Warning: Invalid scrape mode '${value}'. Using default '${ScrapeMode.Auto}'.`,
-          );
-          return ScrapeMode.Auto;
+      "--fetcher <type>",
+      "Explicit fetcher selection: 'auto', 'http', 'crawl4ai', or 'file' (default: auto)",
+      (value: string): FetcherType => {
+        const validFetchers: FetcherType[] = ["auto", "http", "crawl4ai", "file"];
+        if (!validFetchers.includes(value as FetcherType)) {
+          console.warn(`Warning: Invalid fetcher type '${value}'. Using default 'auto'.`);
+          return "auto";
         }
-        return value as ScrapeMode;
+        return value as FetcherType;
       },
-      ScrapeMode.Auto,
     )
     .option(
       "--include-pattern <pattern>",

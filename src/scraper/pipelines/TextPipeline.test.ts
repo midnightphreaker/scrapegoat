@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import type { RawContent } from "../fetcher/types";
 import type { ScraperOptions } from "../types";
-import { ScrapeMode } from "../types";
+// Removed ScrapeMode import - now using fetcher property
 import { TextPipeline } from "./TextPipeline";
 
 describe("TextPipeline", () => {
@@ -12,7 +12,7 @@ describe("TextPipeline", () => {
     version: "1.0.0",
     maxDepth: 1,
     maxPages: 10,
-    scrapeMode: ScrapeMode.Auto,
+    fetcher: "auto",
   };
 
   describe("canProcess", () => {

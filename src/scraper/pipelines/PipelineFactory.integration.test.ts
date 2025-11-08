@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { ScrapeMode } from "../types";
+// Removed ScrapeMode import - now using fetcher property
 import { type PipelineConfiguration, PipelineFactory } from "./PipelineFactory";
 
 describe("PipelineFactory Integration", () => {
@@ -33,7 +33,7 @@ describe("PipelineFactory Integration", () => {
         url: "test.txt",
         library: "test",
         version: "1.0.0",
-        scrapeMode: ScrapeMode.Fetch,
+        fetcher: "http",
         ignoreErrors: false,
         maxConcurrency: 1,
       };
@@ -69,7 +69,7 @@ describe("PipelineFactory Integration", () => {
         url: "test.txt",
         library: "test",
         version: "1.0.0",
-        scrapeMode: ScrapeMode.Fetch,
+        fetcher: "http",
         ignoreErrors: false,
         maxConcurrency: 1,
       };
@@ -105,7 +105,7 @@ describe("PipelineFactory Integration", () => {
           url: "test.txt",
           library: "test",
           version: "1.0.0",
-          scrapeMode: ScrapeMode.Fetch,
+          fetcher: "http",
           ignoreErrors: false,
           maxConcurrency: 1,
         };
@@ -128,7 +128,7 @@ describe("PipelineFactory Integration", () => {
       url: "test",
       library: "test",
       version: "1.0.0",
-      scrapeMode: ScrapeMode.Fetch,
+      fetcher: "http",
       ignoreErrors: false,
       maxConcurrency: 1,
     };
@@ -352,7 +352,7 @@ Final paragraph here.
       url: "test",
       library: "test",
       version: "1.0.0",
-      scrapeMode: ScrapeMode.Fetch,
+      fetcher: "http",
       ignoreErrors: false,
       maxConcurrency: 1,
     };
@@ -492,7 +492,7 @@ class MyClass {
       url: "test",
       library: "test",
       version: "1.0.0",
-      scrapeMode: ScrapeMode.Fetch,
+      fetcher: "http",
       ignoreErrors: false,
       maxConcurrency: 1,
     };

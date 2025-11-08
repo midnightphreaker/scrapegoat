@@ -3,7 +3,7 @@ import { logger } from "../../utils/logger";
 import { HttpFetcher } from "../fetcher";
 import { PipelineFactory } from "../pipelines/PipelineFactory";
 import type { ContentPipeline } from "../pipelines/types";
-import { ScrapeMode, type ScraperOptions, type ScraperProgress } from "../types";
+import type { ScraperOptions, ScraperProgress } from "../types";
 import { shouldIncludeUrl } from "../utils/patternMatcher";
 import { BaseScraperStrategy, type QueueItem } from "./BaseScraperStrategy";
 
@@ -118,10 +118,8 @@ export class GitHubWikiScraperStrategy extends BaseScraperStrategy {
             `Selected ${pipeline.constructor.name} for content type "${rawContent.mimeType}" (${currentUrl})`,
           );
 
-          // Use fetch mode for consistent behavior
-          const wikiOptions = { ...options, scrapeMode: ScrapeMode.Fetch };
-
-          processed = await pipeline.process(rawContent, wikiOptions, this.httpFetcher);
+          // Process wiki content using standard pipelines with HttpFetcher
+          processed = await pipeline.process(rawContent, options, this.httpFetcher);
           break;
         }
       }

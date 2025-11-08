@@ -1,4 +1,3 @@
-import type { ScrapeMode } from "../scraper/types";
 import type { DocumentMetadata } from "../types";
 
 /** Default vector dimension used across the application */
@@ -15,6 +14,9 @@ export interface DbPage {
   etag: string | null;
   last_modified: string | null;
   content_type: string | null;
+  screenshot_path: string | null; // Path to screenshot file (Phase 3B)
+  fetcher_type: string | null; // Which fetcher was used: 'auto', 'http', 'crawl4ai', 'file' (Phase 3B)
+  metadata: string | null; // JSON metadata including media/links from Crawl4AI (Phase 3B)
   created_at: string;
   updated_at: string;
 }
@@ -111,8 +113,30 @@ export interface VersionScraperOptions {
   excludePatterns?: string[];
 
   // Processing options
-  scrapeMode?: ScrapeMode;
   headers?: Record<string, string>;
+
+  /**
+   * Explicit fetcher selection: 'auto', 'http', 'crawl4ai', or 'file'.
+   * Stored for reproducibility and audit trail.
+   */
+  fetcher?: "auto" | "http" | "crawl4ai" | "file";
+
+  /**
+   * @deprecated Use fetcher: 'crawl4ai' instead.
+   * Whether Crawl4AI was used for content fetching.
+   * Stored for reproducibility and audit trail.
+   */
+  useCrawl4AI?: boolean;
+
+  /**
+   * Crawl4AI-specific options
+   */
+  crawl4ai?: {
+    enableScreenshot?: boolean;
+    screenshotMode?: "viewport" | "full";
+    enableMedia?: boolean;
+    enableLinks?: boolean;
+  };
 }
 
 /**

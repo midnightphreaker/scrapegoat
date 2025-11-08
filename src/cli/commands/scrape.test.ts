@@ -42,7 +42,7 @@ describe("scrapeAction", () => {
         ignoreErrors: true,
         scope: "subpages",
         followRedirects: true,
-        scrapeMode: "auto" as any,
+        fetcher: "auto",
         includePattern: [],
         excludePattern: [],
         header: [],

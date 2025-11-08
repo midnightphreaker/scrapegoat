@@ -3,7 +3,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { RawContent } from "../fetcher/types";
 import { MarkdownLinkExtractorMiddleware } from "../middleware/MarkdownLinkExtractorMiddleware";
 import { MarkdownMetadataExtractorMiddleware } from "../middleware/MarkdownMetadataExtractorMiddleware";
-import { ScrapeMode, type ScraperOptions } from "../types";
+import type { ScraperOptions } from "../types";
 import { MarkdownPipeline } from "./MarkdownPipeline";
 
 describe("MarkdownPipeline", () => {
@@ -247,7 +247,7 @@ More content here.
       url: "http://example.com",
       library: "example",
       version: "",
-      scrapeMode: ScrapeMode.Fetch,
+      fetcher: "http",
     });
 
     // Verify all middleware was called
@@ -294,7 +294,7 @@ Final content in section B.`;
         url: "http://example.com",
         library: "example",
         version: "",
-        scrapeMode: ScrapeMode.Fetch,
+        fetcher: "http",
       });
 
       // Verify we got chunks with proper hierarchy
@@ -342,7 +342,7 @@ Content under second level.`;
         url: "http://example.com",
         library: "example",
         version: "",
-        scrapeMode: ScrapeMode.Fetch,
+        fetcher: "http",
       });
 
       // Should not create separate whitespace-only chunks at level 0
@@ -401,7 +401,7 @@ ${longContent}`;
         url: "http://example.com",
         library: "example",
         version: "",
-        scrapeMode: ScrapeMode.Fetch,
+        fetcher: "http",
       });
 
       // Should have multiple chunks due to size constraints
@@ -446,7 +446,7 @@ More details here.`;
         url: "http://example.com",
         library: "example",
         version: "",
-        scrapeMode: ScrapeMode.Fetch,
+        fetcher: "http",
       });
 
       // Verify we have content with semantic types (GreedySplitter may merge them)
@@ -493,7 +493,7 @@ Final paragraph.`;
         url: "http://example.com",
         library: "example",
         version: "",
-        scrapeMode: ScrapeMode.Fetch,
+        fetcher: "http",
       });
 
       // Verify semantic content is preserved (may not be perfect reconstruction due to whitespace normalization)
