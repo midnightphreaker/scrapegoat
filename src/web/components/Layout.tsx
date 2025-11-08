@@ -180,7 +180,97 @@ const Layout = ({ title, version, children }: LayoutProps) => {
                   </span>
                 ) : null}
               </div>
-              <div>
+              <div class="flex items-center gap-3">
+                {/* MCP Status Indicator */}
+                <div x-data="mcpStatus()" x-init="init()">
+                  {/* Connected State */}
+                  <button
+                    type="button"
+                    x-show="status === 'connected'"
+                    x-on:click="handleClick()"
+                    class="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-emerald-50 border border-emerald-200 hover:bg-emerald-100 transition-all duration-150 cursor-pointer"
+                    title="Click to view MCP configuration"
+                  >
+                    <span class="relative flex h-2.5 w-2.5">
+                      <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                      <span class="relative inline-flex rounded-full h-2.5 w-2.5 bg-emerald-600"></span>
+                    </span>
+                    <span class="text-sm font-medium text-emerald-700" x-text="`MCP: ${displayText}`"></span>
+                  </button>
+
+                  {/* Disconnected State */}
+                  <button
+                    type="button"
+                    x-show="status === 'disconnected'"
+                    x-on:click="handleClick()"
+                    x-cloak
+                    class="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-red-50 border border-red-200 hover:bg-red-100 transition-all duration-150 cursor-pointer"
+                    title="Click to retry connection"
+                  >
+                    <span class="relative flex h-2.5 w-2.5">
+                      <span class="animate-pulse absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
+                      <span class="relative inline-flex rounded-full h-2.5 w-2.5 bg-red-600"></span>
+                    </span>
+                    <span class="text-sm font-medium text-red-700">MCP: Disconnected</span>
+                  </button>
+
+                  {/* Checking State */}
+                  <div
+                    x-show="status === 'checking'"
+                    class="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-gray-50 border border-gray-200"
+                  >
+                    <span class="relative flex h-2.5 w-2.5">
+                      <span class="animate-pulse inline-flex h-2.5 w-2.5 rounded-full bg-gray-400"></span>
+                    </span>
+                    <span class="text-sm font-medium text-gray-700" x-text="`MCP: ${displayText}`"></span>
+                  </div>
+
+                  {/* Configuration Popup Modal */}
+                  <div
+                    x-show="showPopup"
+                    x-cloak
+                    class="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50"
+                    x-on:click="if ($event.target === $el) closePopup()"
+                  >
+                    <div class="bg-white rounded-lg shadow-xl p-6 max-w-2xl w-full mx-4" x-on:click="$event.stopPropagation()">
+                      <div class="flex items-center justify-between mb-4">
+                        <h3 class="text-lg font-semibold text-gray-900">MCP Server Configuration</h3>
+                        <button
+                          type="button"
+                          x-on:click="closePopup()"
+                          class="text-gray-400 hover:text-gray-600 transition-colors"
+                        >
+                          <svg class="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                          </svg>
+                        </button>
+                      </div>
+
+                      <p class="text-sm text-gray-600 mb-4">
+                        Add this configuration to your Claude Desktop settings to connect to the Scrapegoat MCP server:
+                      </p>
+
+                      <div class="relative">
+                        <pre class="bg-gray-50 border border-gray-200 rounded-lg p-4 overflow-x-auto text-sm font-mono"
+                             x-text="configSnippet"></pre>
+                        <button
+                          type="button"
+                          x-on:click="copyToClipboard()"
+                          class="absolute top-2 right-2 px-3 py-1.5 bg-primary-600 hover:bg-primary-700 text-white text-sm font-medium rounded-lg transition-colors"
+                        >
+                          Copy
+                        </button>
+                      </div>
+
+                      <p class="text-xs text-gray-500 mt-4">
+                        Configuration file location:
+                        <code class="bg-gray-100 px-2 py-0.5 rounded">~/Library/Application Support/Claude/claude_desktop_config.json</code>
+                      </p>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Version Update Notification */}
                 <span
                   x-show="hasUpdate"
                   x-cloak
@@ -224,8 +314,98 @@ const Layout = ({ title, version, children }: LayoutProps) => {
                 ) : null}
               </div>
 
-              {/* Row 3: Update notification */}
-              <div class="flex justify-center">
+              {/* Row 2: MCP Status and Update notification */}
+              <div class="flex justify-center gap-2 flex-wrap">
+                {/* MCP Status Indicator */}
+                <div x-data="mcpStatus()" x-init="init()">
+                  {/* Connected State */}
+                  <button
+                    type="button"
+                    x-show="status === 'connected'"
+                    x-on:click="handleClick()"
+                    class="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-emerald-50 border border-emerald-200 hover:bg-emerald-100 transition-all duration-150 cursor-pointer"
+                    title="Click to view MCP configuration"
+                  >
+                    <span class="relative flex h-2.5 w-2.5">
+                      <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                      <span class="relative inline-flex rounded-full h-2.5 w-2.5 bg-emerald-600"></span>
+                    </span>
+                    <span class="text-sm font-medium text-emerald-700" x-text="`MCP: ${displayText}`"></span>
+                  </button>
+
+                  {/* Disconnected State */}
+                  <button
+                    type="button"
+                    x-show="status === 'disconnected'"
+                    x-on:click="handleClick()"
+                    x-cloak
+                    class="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-red-50 border border-red-200 hover:bg-red-100 transition-all duration-150 cursor-pointer"
+                    title="Click to retry connection"
+                  >
+                    <span class="relative flex h-2.5 w-2.5">
+                      <span class="animate-pulse absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
+                      <span class="relative inline-flex rounded-full h-2.5 w-2.5 bg-red-600"></span>
+                    </span>
+                    <span class="text-sm font-medium text-red-700">MCP: Disconnected</span>
+                  </button>
+
+                  {/* Checking State */}
+                  <div
+                    x-show="status === 'checking'"
+                    class="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-gray-50 border border-gray-200"
+                  >
+                    <span class="relative flex h-2.5 w-2.5">
+                      <span class="animate-pulse inline-flex h-2.5 w-2.5 rounded-full bg-gray-400"></span>
+                    </span>
+                    <span class="text-sm font-medium text-gray-700" x-text="`MCP: ${displayText}`"></span>
+                  </div>
+
+                  {/* Configuration Popup Modal */}
+                  <div
+                    x-show="showPopup"
+                    x-cloak
+                    class="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50"
+                    x-on:click="if ($event.target === $el) closePopup()"
+                  >
+                    <div class="bg-white rounded-lg shadow-xl p-6 max-w-2xl w-full mx-4" x-on:click="$event.stopPropagation()">
+                      <div class="flex items-center justify-between mb-4">
+                        <h3 class="text-lg font-semibold text-gray-900">MCP Server Configuration</h3>
+                        <button
+                          type="button"
+                          x-on:click="closePopup()"
+                          class="text-gray-400 hover:text-gray-600 transition-colors"
+                        >
+                          <svg class="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                          </svg>
+                        </button>
+                      </div>
+
+                      <p class="text-sm text-gray-600 mb-4">
+                        Add this configuration to your Claude Desktop settings to connect to the Scrapegoat MCP server:
+                      </p>
+
+                      <div class="relative">
+                        <pre class="bg-gray-50 border border-gray-200 rounded-lg p-4 overflow-x-auto text-sm font-mono"
+                             x-text="configSnippet"></pre>
+                        <button
+                          type="button"
+                          x-on:click="copyToClipboard()"
+                          class="absolute top-2 right-2 px-3 py-1.5 bg-primary-600 hover:bg-primary-700 text-white text-sm font-medium rounded-lg transition-colors"
+                        >
+                          Copy
+                        </button>
+                      </div>
+
+                      <p class="text-xs text-gray-500 mt-4">
+                        Configuration file location:
+                        <code class="bg-gray-100 px-2 py-0.5 rounded">~/Library/Application Support/Claude/claude_desktop_config.json</code>
+                      </p>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Version Update Notification */}
                 <span
                   x-show="hasUpdate"
                   x-cloak

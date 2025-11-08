@@ -138,6 +138,62 @@ export async function startWebServer(
   });
 
   /**
+   * GET /api/health/mcp
+   * Check MCP server health
+   */
+  server.get("/api/health/mcp", async (request, reply) => {
+    try {
+      const mcpEnabled = appConfig.enableMcpServer;
+
+      if (!mcpEnabled) {
+        reply.status(503).send({
+          status: "down",
+          connected: false,
+          error: "MCP server not enabled in configuration",
+        });
+        return;
+      }
+
+      const mcpHost = appConfig.mcpHost || "localhost";
+      const mcpPort = appConfig.mcpPort || 6280;
+      const mcpUrl = `http://${mcpHost}:${mcpPort}`;
+
+      // Simple reachability check
+      try {
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 2000);
+
+        await fetch(mcpUrl, {
+          method: "HEAD",
+          signal: controller.signal,
+        });
+
+        clearTimeout(timeoutId);
+
+        reply.send({
+          status: "ok",
+          connected: true,
+          url: mcpUrl,
+          port: mcpPort,
+        });
+      } catch (error) {
+        reply.status(503).send({
+          status: "down",
+          connected: false,
+          error: "MCP server not reachable",
+        });
+      }
+    } catch (error) {
+      logger.error(`MCP health check failed: ${error}`);
+      reply.status(503).send({
+        status: "down",
+        connected: false,
+        error: error instanceof Error ? error.message : "Unknown error",
+      });
+    }
+  });
+
+  /**
    * GET /api/pages/:pageId/screenshot
    * Serve screenshot for a page
    */
@@ -303,6 +359,12 @@ export async function startWebServer(
             enabled: appConfig.monitoring.enabled,
             exportInterval: appConfig.monitoring.exportInterval,
           },
+        },
+        mcp: {
+          enabled: appConfig.enableMcpServer,
+          host: appConfig.mcpHost || "localhost",
+          port: appConfig.mcpPort || 6280,
+          url: `http://${appConfig.mcpHost || "localhost"}:${appConfig.mcpPort || 6280}`,
         },
         validation,
       });

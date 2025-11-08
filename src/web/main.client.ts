@@ -87,6 +87,112 @@ document.addEventListener("alpine:init", () => {
       }
     },
   }));
+
+  Alpine.data("mcpStatus", () => ({
+    status: "checking",
+    mcpUrl: "",
+    mcpHost: "",
+    mcpPort: 6280,
+    displayText: "Checking...",
+    showPopup: false,
+    configSnippet: "",
+
+    async init() {
+      // Fetch MCP config from server
+      await this.loadConfig();
+
+      // Initial health check
+      await this.checkMcpHealth();
+
+      // Start polling
+      this.startPolling();
+
+      // Generate config snippet
+      this.generateConfigSnippet();
+    },
+
+    async loadConfig() {
+      try {
+        const response = await fetch("/api/config");
+        const config = await response.json();
+
+        if (config.mcp) {
+          this.mcpUrl = config.mcp.url;
+          this.mcpHost = config.mcp.host;
+          this.mcpPort = config.mcp.port;
+        }
+      } catch (error) {
+        console.debug("Failed to load MCP config:", error);
+      }
+    },
+
+    async checkMcpHealth() {
+      try {
+        const response = await fetch("/api/health/mcp", {
+          signal: AbortSignal.timeout(5000),
+        });
+
+        const data = await response.json();
+
+        if (data.connected) {
+          this.status = "connected";
+          this.displayText = `${this.mcpHost}:${this.mcpPort} - Connected`;
+        } else {
+          this.status = "disconnected";
+          this.displayText = "Disconnected";
+        }
+      } catch (error) {
+        this.status = "disconnected";
+        this.displayText = "Disconnected";
+      }
+    },
+
+    startPolling() {
+      setInterval(() => {
+        void this.checkMcpHealth();
+      }, 30000);
+    },
+
+    handleClick() {
+      if (this.status === "connected") {
+        this.showPopup = true;
+      } else {
+        void this.retryConnection();
+      }
+    },
+
+    async retryConnection() {
+      this.status = "checking";
+      this.displayText = "Connecting...";
+      await this.checkMcpHealth();
+    },
+
+    generateConfigSnippet() {
+      this.configSnippet = JSON.stringify(
+        {
+          mcpServers: {
+            scrapegoat: {
+              url: `${this.mcpUrl}/mcp`,
+              transport: {
+                type: "sse",
+              },
+            },
+          },
+        },
+        null,
+        2,
+      );
+    },
+
+    closePopup() {
+      this.showPopup = false;
+    },
+
+    copyToClipboard() {
+      navigator.clipboard.writeText(this.configSnippet);
+      // Could add toast notification here
+    },
+  }));
 });
 
 // Ensure Alpine global store for confirmation actions is initialized before Alpine components render
