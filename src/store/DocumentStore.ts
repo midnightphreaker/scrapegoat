@@ -1170,10 +1170,21 @@ export class DocumentStore {
       }
 
       const currentMetadata = JSON.parse(currentResult.rows[0].metadata);
-      const currentPath = currentMetadata.path || "";
 
-      // Calculate parent path (remove last segment)
-      const pathParts = currentPath.split("/").filter((part: string) => part.length > 0);
+      // Handle both string and array path formats
+      let pathParts: string[];
+      if (Array.isArray(currentMetadata.path)) {
+        // Path is already an array of segments
+        pathParts = currentMetadata.path.filter((part: string) => part.length > 0);
+      } else if (typeof currentMetadata.path === "string") {
+        // Path is a string, split it
+        pathParts = currentMetadata.path
+          .split("/")
+          .filter((part: string) => part.length > 0);
+      } else {
+        // No path available
+        pathParts = [];
+      }
       if (pathParts.length === 0) {
         return null; // No parent
       }
