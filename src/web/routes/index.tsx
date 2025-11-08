@@ -55,7 +55,7 @@ export function registerIndexRoute(server: FastifyInstance) {
           </section>
           {/* Indexed Documentation Section */}
           <div>
-            <h2 class="text-xl font-semibold mb-4 text-gray-800">
+            <h2 class="text-xl font-semibold mb-4 text-white">
               Indexed Documentation
             </h2>
             <div
