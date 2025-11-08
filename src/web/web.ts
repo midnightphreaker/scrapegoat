@@ -1,8 +1,11 @@
+import fs from "node:fs/promises";
 import path from "node:path";
 import formBody from "@fastify/formbody";
 import fastifyStatic from "@fastify/static";
-import Fastify, { type FastifyInstance } from "fastify";
+import Fastify, { type FastifyInstance, type FastifyRequest } from "fastify";
+import { metricsCollector } from "../monitoring/metrics";
 import type { PipelineManager } from "../pipeline/PipelineManager";
+import { Crawl4AIClient } from "../scraper/fetcher/crawl4ai/Crawl4AIClient";
 import type { DocumentManagementService } from "../store/DocumentManagementService";
 import { SearchTool } from "../tools";
 import { CancelJobTool } from "../tools/CancelJobTool";
@@ -11,6 +14,7 @@ import { ListJobsTool } from "../tools/ListJobsTool";
 import { ListLibrariesTool } from "../tools/ListLibrariesTool";
 import { RemoveTool } from "../tools/RemoveTool";
 import { ScrapeTool } from "../tools/ScrapeTool";
+import { appConfig, validateConfig } from "../utils/config";
 import { logger } from "../utils/logger";
 import { getProjectRoot } from "../utils/paths";
 import { registerIndexRoute } from "./routes/index";
@@ -66,6 +70,251 @@ export async function startWebServer(
   registerClearCompletedJobsRoute(server, clearCompletedJobsTool);
   registerLibrariesRoutes(server, listLibrariesTool, removeTool);
   registerLibraryDetailRoutes(server, listLibrariesTool, searchTool);
+
+  // ============================================================================
+  // Phase 4 & 5: Enhanced API Routes
+  // ============================================================================
+
+  /**
+   * GET /api/health/crawl4ai
+   * Check Crawl4AI service health
+   */
+  server.get("/api/health/crawl4ai", async (request, reply) => {
+    try {
+      const client = new Crawl4AIClient();
+      const health = await client.health();
+
+      if (health) {
+        reply.send(health);
+      } else {
+        reply.status(503).send({
+          status: "down",
+          version: "unknown",
+          uptime: 0,
+        });
+      }
+    } catch (error) {
+      logger.error(`Crawl4AI health check failed: ${error}`);
+      reply.status(503).send({
+        status: "down",
+        version: "unknown",
+        uptime: 0,
+        error: error instanceof Error ? error.message : "Unknown error",
+      });
+    }
+  });
+
+  /**
+   * GET /api/health/all
+   * Get health status of all services
+   */
+  server.get("/api/health/all", async (request, reply) => {
+    const crawl4aiClient = new Crawl4AIClient();
+
+    try {
+      const crawl4aiHealth = await crawl4aiClient.health();
+
+      reply.send({
+        http: { status: "ok" }, // Always available
+        browser: { status: "ok" }, // Always available (lazy init)
+        crawl4ai: crawl4aiHealth || {
+          status: "down",
+          version: "unknown",
+          uptime: 0,
+        },
+      });
+    } catch (error) {
+      logger.error(`Health check failed: ${error}`);
+      reply.send({
+        http: { status: "ok" },
+        browser: { status: "ok" },
+        crawl4ai: {
+          status: "down",
+          version: "unknown",
+          uptime: 0,
+        },
+      });
+    }
+  });
+
+  /**
+   * GET /api/pages/:pageId/screenshot
+   * Serve screenshot for a page
+   */
+  server.get(
+    "/api/pages/:pageId/screenshot",
+    async (
+      request: FastifyRequest<{
+        Params: { pageId: string };
+      }>,
+      reply,
+    ) => {
+      try {
+        const pageId = Number.parseInt(request.params.pageId, 10);
+        if (Number.isNaN(pageId)) {
+          reply.status(400).send({ error: "Invalid page ID" });
+          return;
+        }
+
+        // Query the database for the page
+        const result = await docService
+          .getStore()
+          .query("SELECT screenshot_path FROM pages WHERE id = $1", [pageId]);
+
+        if (result.rows.length === 0 || !result.rows[0].screenshot_path) {
+          reply.status(404).send({ error: "Screenshot not found" });
+          return;
+        }
+
+        const screenshotPath = result.rows[0].screenshot_path;
+        const fullPath = path.isAbsolute(screenshotPath)
+          ? screenshotPath
+          : path.join(getProjectRoot(), screenshotPath);
+
+        // Read and serve the screenshot
+        const screenshot = await fs.readFile(fullPath);
+        reply.type("image/png").send(screenshot);
+      } catch (error) {
+        logger.error(`Error serving screenshot: ${error}`);
+        reply.status(500).send({ error: "Failed to load screenshot" });
+      }
+    },
+  );
+
+  /**
+   * GET /api/pages/:pageId/metadata
+   * Get enhanced metadata for a page (media, links)
+   */
+  server.get(
+    "/api/pages/:pageId/metadata",
+    async (
+      request: FastifyRequest<{
+        Params: { pageId: string };
+      }>,
+      reply,
+    ) => {
+      try {
+        const pageId = Number.parseInt(request.params.pageId, 10);
+        if (Number.isNaN(pageId)) {
+          reply.status(400).send({ error: "Invalid page ID" });
+          return;
+        }
+
+        // Query the database for the page metadata
+        const result = await docService
+          .getStore()
+          .query(
+            "SELECT metadata, fetcher_type, screenshot_path FROM pages WHERE id = $1",
+            [pageId],
+          );
+
+        if (result.rows.length === 0) {
+          reply.status(404).send({ error: "Page not found" });
+          return;
+        }
+
+        const row = result.rows[0];
+        const metadata = row.metadata ? JSON.parse(row.metadata) : {};
+
+        reply.send({
+          metadata,
+          fetcherType: row.fetcher_type,
+          hasScreenshot: !!row.screenshot_path,
+          screenshotPath: row.screenshot_path,
+        });
+      } catch (error) {
+        logger.error(`Error retrieving page metadata: ${error}`);
+        reply.status(500).send({ error: "Failed to load metadata" });
+      }
+    },
+  );
+
+  /**
+   * GET /api/metrics
+   * Get metrics in JSON format
+   */
+  server.get("/api/metrics", async (request, reply) => {
+    try {
+      const metrics = metricsCollector.getAllMetrics();
+
+      // Convert Maps to objects for JSON serialization
+      const serialized: Record<string, unknown> = {};
+      for (const [fetcher, data] of Object.entries(metrics)) {
+        serialized[fetcher] = {
+          ...data,
+          errorsByType: Object.fromEntries(data.errorsByType),
+        };
+      }
+
+      // Add summary
+      const summary = metricsCollector.getSummary();
+
+      reply.send({
+        metrics: serialized,
+        summary,
+        timestamp: new Date().toISOString(),
+      });
+    } catch (error) {
+      logger.error(`Error retrieving metrics: ${error}`);
+      reply.status(500).send({ error: "Failed to retrieve metrics" });
+    }
+  });
+
+  /**
+   * GET /metrics
+   * Prometheus metrics endpoint
+   */
+  server.get("/metrics", async (request, reply) => {
+    try {
+      const prometheusMetrics = metricsCollector.export();
+      reply.type("text/plain").send(prometheusMetrics);
+    } catch (error) {
+      logger.error(`Error exporting Prometheus metrics: ${error}`);
+      reply.status(500).send("# Error exporting metrics\n");
+    }
+  });
+
+  /**
+   * GET /api/config
+   * Get application configuration (read-only, sanitized)
+   */
+  server.get("/api/config", async (request, reply) => {
+    try {
+      const validation = validateConfig(appConfig);
+
+      reply.send({
+        config: {
+          fetcher: {
+            defaultFetcher: appConfig.fetcher.defaultFetcher,
+            http: {
+              timeout: appConfig.fetcher.http.timeout,
+              maxRetries: appConfig.fetcher.http.maxRetries,
+            },
+            browser: {
+              timeout: appConfig.fetcher.browser.timeout,
+              maxRetries: appConfig.fetcher.browser.maxRetries,
+            },
+            crawl4ai: {
+              serviceUrl: appConfig.fetcher.crawl4ai.serviceUrl,
+              enabled: appConfig.fetcher.crawl4ai.enabled,
+              timeout: appConfig.fetcher.crawl4ai.timeout,
+              features: appConfig.fetcher.crawl4ai.features,
+              defaultScreenshotMode: appConfig.fetcher.crawl4ai.defaultScreenshotMode,
+            },
+          },
+          storage: appConfig.storage,
+          monitoring: {
+            enabled: appConfig.monitoring.enabled,
+            exportInterval: appConfig.monitoring.exportInterval,
+          },
+        },
+        validation,
+      });
+    } catch (error) {
+      logger.error(`Error retrieving config: ${error}`);
+      reply.status(500).send({ error: "Failed to retrieve configuration" });
+    }
+  });
 
   // Graceful shutdown of services will be handled by the caller (src/index.ts)
 

@@ -104,10 +104,269 @@ export const CRAWL4AI_SERVICE_URL =
  * Crawl4AI request timeout in milliseconds.
  * Set via CRAWL4AI_TIMEOUT environment variable.
  */
-export const CRAWL4AI_TIMEOUT = parseInt(process.env.CRAWL4AI_TIMEOUT || "30000", 10);
+export const CRAWL4AI_TIMEOUT = Number.parseInt(
+  process.env.CRAWL4AI_TIMEOUT || "30000",
+  10,
+);
 
 /**
  * Crawl4AI maximum retry attempts.
  * Set via CRAWL4AI_MAX_RETRIES environment variable.
  */
-export const CRAWL4AI_MAX_RETRIES = parseInt(process.env.CRAWL4AI_MAX_RETRIES || "3", 10);
+export const CRAWL4AI_MAX_RETRIES = Number.parseInt(
+  process.env.CRAWL4AI_MAX_RETRIES || "3",
+  10,
+);
+
+// ============================================================================
+// Advanced Configuration System for Phases 4 & 5
+// ============================================================================
+
+import type { FetcherType } from "../scraper/fetcher/types";
+
+/**
+ * Crawl4AI service configuration
+ */
+export interface Crawl4AIConfig {
+  /** Crawl4AI service base URL */
+  serviceUrl: string;
+  /** Whether Crawl4AI is enabled globally */
+  enabled: boolean;
+  /** Request timeout in milliseconds */
+  timeout: number;
+  /** Maximum retry attempts */
+  maxRetries: number;
+  /** Feature flags */
+  features: {
+    screenshots: boolean;
+    media: boolean;
+    links: boolean;
+  };
+  /** Default screenshot mode */
+  defaultScreenshotMode: "viewport" | "full";
+}
+
+/**
+ * HTTP fetcher configuration
+ */
+export interface HttpFetcherConfig {
+  timeout: number;
+  maxRetries: number;
+  followRedirects: boolean;
+}
+
+/**
+ * Browser fetcher configuration
+ */
+export interface BrowserFetcherConfig {
+  timeout: number;
+  maxRetries: number;
+  headless: boolean;
+}
+
+/**
+ * Fetcher configuration
+ */
+export interface FetcherConfig {
+  /** Default fetcher type */
+  defaultFetcher: FetcherType;
+  /** HTTP fetcher configuration */
+  http: HttpFetcherConfig;
+  /** Browser fetcher configuration */
+  browser: BrowserFetcherConfig;
+  /** Crawl4AI configuration */
+  crawl4ai: Crawl4AIConfig;
+}
+
+/**
+ * Storage configuration
+ */
+export interface StorageConfig {
+  /** Screenshot storage path */
+  screenshotPath: string;
+  /** Maximum screenshot size in bytes */
+  maxScreenshotSize: number;
+  /** Screenshot retention days (0 = keep forever) */
+  screenshotRetentionDays: number;
+}
+
+/**
+ * Monitoring configuration
+ */
+export interface MonitoringConfig {
+  /** Enable metrics collection */
+  enabled: boolean;
+  /** Metrics export interval (ms) */
+  exportInterval: number;
+  /** Enable detailed logging */
+  detailedLogging: boolean;
+}
+
+/**
+ * Complete application configuration
+ */
+export interface Config {
+  fetcher: FetcherConfig;
+  storage: StorageConfig;
+  monitoring: MonitoringConfig;
+}
+
+/**
+ * Configuration validation result
+ */
+export interface ValidationResult {
+  valid: boolean;
+  errors: string[];
+}
+
+/**
+ * Load configuration from environment variables
+ *
+ * @returns Configuration object with values from environment or defaults
+ */
+export function loadConfig(): Config {
+  return {
+    fetcher: {
+      defaultFetcher: (process.env.DEFAULT_FETCHER as FetcherType) || "auto",
+      http: {
+        timeout: Number.parseInt(process.env.HTTP_TIMEOUT || "10000", 10),
+        maxRetries: Number.parseInt(process.env.HTTP_MAX_RETRIES || "3", 10),
+        followRedirects: process.env.HTTP_FOLLOW_REDIRECTS !== "false",
+      },
+      browser: {
+        timeout: Number.parseInt(process.env.BROWSER_TIMEOUT || "30000", 10),
+        maxRetries: Number.parseInt(process.env.BROWSER_MAX_RETRIES || "2", 10),
+        headless: process.env.BROWSER_HEADLESS !== "false",
+      },
+      crawl4ai: {
+        serviceUrl: process.env.CRAWL4AI_SERVICE_URL || "http://localhost:8001",
+        enabled: process.env.CRAWL4AI_ENABLED !== "false",
+        timeout: Number.parseInt(process.env.CRAWL4AI_TIMEOUT || "30000", 10),
+        maxRetries: Number.parseInt(process.env.CRAWL4AI_MAX_RETRIES || "3", 10),
+        features: {
+          screenshots: process.env.CRAWL4AI_ENABLE_SCREENSHOTS === "true",
+          media: process.env.CRAWL4AI_ENABLE_MEDIA === "true",
+          links: process.env.CRAWL4AI_ENABLE_LINKS === "true",
+        },
+        defaultScreenshotMode:
+          (process.env.CRAWL4AI_SCREENSHOT_MODE as "viewport" | "full") || "viewport",
+      },
+    },
+    storage: {
+      screenshotPath: process.env.SCREENSHOT_STORAGE_PATH || "./public/screenshots",
+      maxScreenshotSize:
+        Number.parseInt(process.env.SCREENSHOT_MAX_SIZE_MB || "5", 10) * 1024 * 1024,
+      screenshotRetentionDays: Number.parseInt(
+        process.env.SCREENSHOT_RETENTION_DAYS || "0",
+        10,
+      ),
+    },
+    monitoring: {
+      enabled: process.env.MONITORING_ENABLED !== "false",
+      exportInterval: Number.parseInt(process.env.METRICS_EXPORT_INTERVAL || "60000", 10),
+      detailedLogging: process.env.DETAILED_LOGGING === "true",
+    },
+  };
+}
+
+/**
+ * Validate configuration
+ *
+ * Checks for invalid values and returns validation errors.
+ * Should be called after loadConfig() to ensure configuration is valid.
+ *
+ * @param config Configuration object to validate
+ * @returns Validation result with errors if any
+ */
+export function validateConfig(config: Config): ValidationResult {
+  const errors: string[] = [];
+
+  // Validate fetcher config
+  const validFetcherTypes: FetcherType[] = [
+    "auto",
+    "http",
+    "browser",
+    "crawl4ai",
+    "file",
+  ];
+  if (!validFetcherTypes.includes(config.fetcher.defaultFetcher)) {
+    errors.push(`Invalid default fetcher: ${config.fetcher.defaultFetcher}`);
+  }
+
+  // Validate timeouts (must be positive and reasonable)
+  if (config.fetcher.http.timeout < 1000 || config.fetcher.http.timeout > 120000) {
+    errors.push("HTTP timeout must be between 1000 and 120000ms");
+  }
+
+  if (config.fetcher.browser.timeout < 1000 || config.fetcher.browser.timeout > 300000) {
+    errors.push("Browser timeout must be between 1000 and 300000ms");
+  }
+
+  if (
+    config.fetcher.crawl4ai.timeout < 1000 ||
+    config.fetcher.crawl4ai.timeout > 300000
+  ) {
+    errors.push("Crawl4AI timeout must be between 1000 and 300000ms");
+  }
+
+  // Validate retry counts
+  if (config.fetcher.http.maxRetries < 0 || config.fetcher.http.maxRetries > 10) {
+    errors.push("HTTP max retries must be between 0 and 10");
+  }
+
+  if (config.fetcher.browser.maxRetries < 0 || config.fetcher.browser.maxRetries > 10) {
+    errors.push("Browser max retries must be between 0 and 10");
+  }
+
+  if (config.fetcher.crawl4ai.maxRetries < 0 || config.fetcher.crawl4ai.maxRetries > 10) {
+    errors.push("Crawl4AI max retries must be between 0 and 10");
+  }
+
+  // Validate Crawl4AI service URL
+  try {
+    new URL(config.fetcher.crawl4ai.serviceUrl);
+  } catch {
+    errors.push(`Invalid Crawl4AI service URL: ${config.fetcher.crawl4ai.serviceUrl}`);
+  }
+
+  // Validate screenshot mode
+  if (!["viewport", "full"].includes(config.fetcher.crawl4ai.defaultScreenshotMode)) {
+    errors.push(
+      `Invalid screenshot mode: ${config.fetcher.crawl4ai.defaultScreenshotMode}. Must be 'viewport' or 'full'`,
+    );
+  }
+
+  // Validate storage config
+  if (config.storage.maxScreenshotSize < 1024 * 100) {
+    // Min 100KB
+    errors.push("Max screenshot size must be at least 100KB");
+  }
+
+  if (config.storage.maxScreenshotSize > 50 * 1024 * 1024) {
+    // Max 50MB
+    errors.push("Max screenshot size must not exceed 50MB");
+  }
+
+  if (config.storage.screenshotRetentionDays < 0) {
+    errors.push("Screenshot retention days must be non-negative (0 = keep forever)");
+  }
+
+  // Validate monitoring config
+  if (
+    config.monitoring.exportInterval < 1000 ||
+    config.monitoring.exportInterval > 600000
+  ) {
+    errors.push("Metrics export interval must be between 1000 and 600000ms");
+  }
+
+  return {
+    valid: errors.length === 0,
+    errors,
+  };
+}
+
+/**
+ * Export singleton config instance
+ * Loaded once at startup and validated
+ */
+export const appConfig = loadConfig();

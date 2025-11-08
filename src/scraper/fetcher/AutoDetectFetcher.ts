@@ -1,3 +1,5 @@
+import { metricsCollector } from "../../monitoring/metrics";
+import { appConfig } from "../../utils/config";
 import { ChallengeError } from "../../utils/errors";
 import { logger } from "../../utils/logger";
 import { BrowserFetcher } from "./BrowserFetcher";
@@ -47,30 +49,58 @@ export class AutoDetectFetcher implements ContentFetcher {
    */
   async fetch(source: string, options?: FetchOptions): Promise<RawContent> {
     const fetcherType = this.determineFetcherType(source, options);
+    const startTime = Date.now();
+    const metricsEnabled = appConfig.monitoring.enabled;
 
-    // Route to appropriate fetcher
-    switch (fetcherType) {
-      case "file":
-        logger.debug(`Using FileFetcher for: ${source}`);
-        return this.fileFetcher.fetch(source, options);
+    try {
+      let result: RawContent;
 
-      case "http":
-        logger.debug(`Using HttpFetcher (explicit) for: ${source}`);
-        return this.httpFetcher.fetch(source, options);
+      // Route to appropriate fetcher
+      switch (fetcherType) {
+        case "file":
+          logger.debug(`Using FileFetcher for: ${source}`);
+          result = await this.fileFetcher.fetch(source, options);
+          break;
 
-      case "browser":
-        logger.debug(`Using BrowserFetcher (explicit) for: ${source}`);
-        return this.browserFetcher.fetch(source, options);
+        case "http":
+          logger.debug(`Using HttpFetcher (explicit) for: ${source}`);
+          result = await this.httpFetcher.fetch(source, options);
+          break;
 
-      case "crawl4ai":
-        logger.debug(`Using Crawl4AIFetcher (explicit) for: ${source}`);
-        return this.crawl4aiFetcher.fetch(source, options);
+        case "browser":
+          logger.debug(`Using BrowserFetcher (explicit) for: ${source}`);
+          result = await this.browserFetcher.fetch(source, options);
+          break;
 
-      case "auto":
-        return this.autoDetect(source, options);
+        case "crawl4ai":
+          logger.debug(`Using Crawl4AIFetcher (explicit) for: ${source}`);
+          result = await this.crawl4aiFetcher.fetch(source, options);
+          break;
 
-      default:
-        throw new Error(`Unknown fetcher type: ${fetcherType}`);
+        case "auto":
+          result = await this.autoDetect(source, options);
+          break;
+
+        default:
+          throw new Error(`Unknown fetcher type: ${fetcherType}`);
+      }
+
+      // Record successful fetch metrics
+      if (metricsEnabled) {
+        const responseTime = Date.now() - startTime;
+        const actualFetcher = result.fetcherType || fetcherType;
+        metricsCollector.recordFetch(actualFetcher, true, responseTime);
+      }
+
+      return result;
+    } catch (error) {
+      // Record failed fetch metrics
+      if (metricsEnabled) {
+        const responseTime = Date.now() - startTime;
+        metricsCollector.recordFetch(fetcherType, false, responseTime, error as Error);
+      }
+
+      throw error;
     }
   }
 
