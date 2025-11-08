@@ -172,14 +172,14 @@
 **Description**: CLI for scripting and automation
 
 **Requirements**:
-- FR-13.1: `docs-mcp-server` default command (starts server)
-- FR-13.2: `docs-mcp-server scrape` - queue scraping job
-- FR-13.3: `docs-mcp-server search` - search documentation
-- FR-13.4: `docs-mcp-server list` - list libraries
-- FR-13.5: `docs-mcp-server remove` - delete library
-- FR-13.6: `docs-mcp-server web` - start web interface only
-- FR-13.7: `docs-mcp-server worker` - start worker only
-- FR-13.8: `docs-mcp-server mcp` - start MCP server only
+- FR-13.1: `scrapegoat` default command (starts server)
+- FR-13.2: `scrapegoat scrape` - queue scraping job
+- FR-13.3: `scrapegoat search` - search documentation
+- FR-13.4: `scrapegoat list` - list libraries
+- FR-13.5: `scrapegoat remove` - delete library
+- FR-13.6: `scrapegoat web` - start web interface only
+- FR-13.7: `scrapegoat worker` - start worker only
+- FR-13.8: `scrapegoat mcp` - start MCP server only
 - FR-13.9: Configuration via environment variables
 - FR-13.10: Configuration via CLI flags
 

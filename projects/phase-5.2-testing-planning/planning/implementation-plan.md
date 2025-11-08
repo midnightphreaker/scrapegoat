@@ -22,7 +22,7 @@ Detailed step-by-step plan for implementing Phase 5.2, organized by priority and
 **Steps**:
 1. Start Docker Compose test database:
    ```bash
-   cd /home/mp/Workspace/docs-mcp-server
+   cd /home/mp/Workspace/scrapegoat
    docker-compose -f docker-compose.test.yml up -d
    ```
 
@@ -54,7 +54,7 @@ Detailed step-by-step plan for implementing Phase 5.2, organized by priority and
 **Priority**: CRITICAL
 **Dependencies**: Task 1.1
 
-**File**: `/home/mp/Workspace/docs-mcp-server/src/store/DocumentStore.test.ts`
+**File**: `/home/mp/Workspace/scrapegoat/src/store/DocumentStore.test.ts`
 **Lines**: 69-494
 
 **Changes**:
@@ -165,7 +165,7 @@ Detailed step-by-step plan for implementing Phase 5.2, organized by priority and
 **Priority**: HIGH
 **Dependencies**: Task 1.2
 
-**File**: `/home/mp/Workspace/docs-mcp-server/src/store/DocumentStore.test.ts`
+**File**: `/home/mp/Workspace/scrapegoat/src/store/DocumentStore.test.ts`
 **Lines**: 499-616
 
 **Changes**:
@@ -235,7 +235,7 @@ Detailed step-by-step plan for implementing Phase 5.2, organized by priority and
 **Priority**: HIGH
 **Dependencies**: Task 1.3
 
-**File**: `/home/mp/Workspace/docs-mcp-server/src/store/DocumentStore.test.ts`
+**File**: `/home/mp/Workspace/scrapegoat/src/store/DocumentStore.test.ts`
 **Lines**: 622-835
 
 **Changes**:
@@ -331,7 +331,7 @@ Detailed step-by-step plan for implementing Phase 5.2, organized by priority and
 **Priority**: CRITICAL
 **Dependencies**: Day 1 complete
 
-**File**: `/home/mp/Workspace/docs-mcp-server/src/store/applyMigrations.test.ts`
+**File**: `/home/mp/Workspace/scrapegoat/src/store/applyMigrations.test.ts`
 
 **Steps**:
 
@@ -933,12 +933,12 @@ describe("RRF (Reciprocal Rank Fusion) Scoring", () => {
 **Dependencies**: None
 
 **Files to Test**:
-1. `/home/mp/Workspace/docs-mcp-server/src/cli/commands/search.test.ts`
-2. `/home/mp/Workspace/docs-mcp-server/src/cli/commands/list.test.ts`
-3. `/home/mp/Workspace/docs-mcp-server/src/cli/commands/fetchUrl.test.ts`
-4. `/home/mp/Workspace/docs-mcp-server/src/cli/commands/findVersion.test.ts`
-5. `/home/mp/Workspace/docs-mcp-server/src/cli/commands/scrape.test.ts`
-6. `/home/mp/Workspace/docs-mcp-server/src/cli/commands/remove.test.ts`
+1. `/home/mp/Workspace/scrapegoat/src/cli/commands/search.test.ts`
+2. `/home/mp/Workspace/scrapegoat/src/cli/commands/list.test.ts`
+3. `/home/mp/Workspace/scrapegoat/src/cli/commands/fetchUrl.test.ts`
+4. `/home/mp/Workspace/scrapegoat/src/cli/commands/findVersion.test.ts`
+5. `/home/mp/Workspace/scrapegoat/src/cli/commands/scrape.test.ts`
+6. `/home/mp/Workspace/scrapegoat/src/cli/commands/remove.test.ts`
 
 **Steps for Each File**:
 1. Run test:
@@ -1037,7 +1037,7 @@ describe("RRF (Reciprocal Rank Fusion) Scoring", () => {
 **Priority**: HIGH
 **Dependencies**: None
 
-**File**: `/home/mp/Workspace/docs-mcp-server/docs/POSTGRESQL_SETUP.md`
+**File**: `/home/mp/Workspace/scrapegoat/docs/POSTGRESQL_SETUP.md`
 
 **Content to Create**:
 
@@ -1504,7 +1504,7 @@ See [PERFORMANCE.md](./PERFORMANCE.md) for tuning guidance.
 **Priority**: HIGH
 **Dependencies**: None
 
-**File**: `/home/mp/Workspace/docs-mcp-server/docs/CONFIGURATION.md`
+**File**: `/home/mp/Workspace/scrapegoat/docs/CONFIGURATION.md`
 
 **Content**:
 

@@ -1,6 +1,6 @@
 # Migration Guide: SQLite to PostgreSQL
 
-This guide helps you migrate from the original docs-mcp-server (SQLite-based) to Scrapegoat (PostgreSQL-based).
+This guide helps you migrate from the original scrapegoat (SQLite-based) to Scrapegoat (PostgreSQL-based).
 
 ## Table of Contents
 
@@ -78,10 +78,10 @@ If you have an existing SQLite database with indexed documentation:
 
 ```bash
 # Identify your SQLite database location
-# Default: ~/.local/share/docs-mcp-server/store.db
+# Default: ~/.local/share/scrapegoat/store.db
 
 # Create backup
-cp ~/.local/share/docs-mcp-server/store.db ~/docs-mcp-backup-$(date +%Y%m%d).db
+cp ~/.local/share/scrapegoat/store.db ~/docs-mcp-backup-$(date +%Y%m%d).db
 ```
 
 ### 2. Document Current State
@@ -89,8 +89,8 @@ cp ~/.local/share/docs-mcp-server/store.db ~/docs-mcp-backup-$(date +%Y%m%d).db
 List all indexed libraries before migration:
 
 ```bash
-# Using original docs-mcp-server
-docs-mcp-server list
+# Using original scrapegoat
+scrapegoat list
 ```
 
 Save this output for verification after migration.
@@ -439,7 +439,7 @@ Compare with your pre-migration list to ensure all libraries are re-indexed.
 
 **Option 1: Keep Using Original System**
 - Your original SQLite database remains untouched
-- Continue using docs-mcp-server as before
+- Continue using scrapegoat as before
 - No data loss
 
 **Option 2: Clean PostgreSQL and Retry**
@@ -465,7 +465,7 @@ psql $DATABASE_URL < backup.sql
 ```
 
 **Option 2: Switch Back to SQLite**
-- Reinstall original docs-mcp-server
+- Reinstall original scrapegoat
 - Your SQLite backup remains available
 - No permanent changes to original setup
 

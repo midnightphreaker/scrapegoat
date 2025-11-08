@@ -58,7 +58,7 @@ Create an enterprise-grade documentation indexing and semantic search server bui
 
 **Enterprise PostgreSQL Power for AI Documentation Search**
 
-While the original docs-mcp-server targets simplicity with SQLite, this fork targets production deployments requiring:
+While the original scrapegoat targets simplicity with SQLite, this fork targets production deployments requiring:
 
 - **Scalability**: PostgreSQL handles millions of documents with proper indexing
 - **Concurrency**: Multiple users querying simultaneously without performance degradation

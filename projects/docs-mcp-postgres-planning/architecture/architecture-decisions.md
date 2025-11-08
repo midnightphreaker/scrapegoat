@@ -5,7 +5,7 @@
 **Status**: Accepted
 
 ### Context
-Original docs-mcp-server uses SQLite + sqlite-vec. We're creating a fork for PostgreSQL + pgvector.
+Original scrapegoat uses SQLite + sqlite-vec. We're creating a fork for PostgreSQL + pgvector.
 
 ### Decision
 **Complete removal of SQLite code and dependencies. No dual-database support, no migration tooling.**

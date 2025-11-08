@@ -307,7 +307,7 @@ export function validateAuthConfig(authConfig: AuthConfig): void {
     errors.push("--auth-audience is required when auth is enabled");
   } else {
     // Audience can be any valid URI (URL or URN)
-    // Examples: https://api.example.com, urn:docs-mcp-server:api, urn:company:service
+    // Examples: https://api.example.com, urn:scrapegoat:api, urn:company:service
     try {
       // Try parsing as URL first (most common case)
       const url = new URL(authConfig.audience);

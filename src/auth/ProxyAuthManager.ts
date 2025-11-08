@@ -131,7 +131,7 @@ export class ProxyAuthManager {
         scopes_supported: ["profile", "email"],
         bearer_methods_supported: ["header"],
         resource_name: "Documentation MCP Server",
-        resource_documentation: "https://github.com/arabold/docs-mcp-server#readme",
+        resource_documentation: "https://github.com/arabold/scrapegoat#readme",
         // Enhanced metadata for better discoverability
         resource_server_metadata_url: `${baseUrl}/.well-known/oauth-protected-resource`,
         authorization_server_metadata_url: `${this.config.issuerUrl}/.well-known/openid-configuration`,

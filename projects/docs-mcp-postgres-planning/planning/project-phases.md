@@ -5,7 +5,7 @@
 **Goal**: Fork repository, remove SQLite, establish PostgreSQL foundation
 
 ### Features
-- [ ] Fork repository from arabold/docs-mcp-server
+- [ ] Fork repository from denmaster/scrapegoat
 - [ ] Create `postgres-fork` branch
 - [ ] Remove all SQLite dependencies (better-sqlite3, sqlite-vec)
 - [ ] Remove SQLite-specific code from DocumentStore
