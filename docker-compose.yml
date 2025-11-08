@@ -106,8 +106,7 @@ services:
     image: scrapegoat-crawl4ai:latest
     container_name: scrapegoat-crawl4ai
     restart: unless-stopped
-    ports:
-      - "8001:8001"
+    network_mode: host
     environment:
       - HOST=0.0.0.0
       - PORT=8001
@@ -115,6 +114,9 @@ services:
       - HEADLESS=true
       - MAX_CONCURRENT_CRAWLS=5
       - REQUEST_TIMEOUT=30
+    # Playwright/Chromium requires increased shared memory and privileged mode in Proxmox
+    shm_size: 2gb
+    privileged: true
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8001/health"]
       interval: 30s
