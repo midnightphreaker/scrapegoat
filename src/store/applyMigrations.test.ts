@@ -1,653 +1,679 @@
-// Integration test for database migrations using a real SQLite database
+// Integration test for database migrations using PostgreSQL with pgvector
 
-import Database, { type Database as DatabaseType } from "better-sqlite3";
-import * as sqliteVec from "sqlite-vec";
+import { Pool, type PoolClient } from "pg";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { applyMigrations } from "./applyMigrations";
 
+const TEST_DATABASE_URL =
+  process.env.TEST_DATABASE_URL ||
+  "postgresql://postgres:postgres@localhost:5433/postgres";
+
+interface TestSchema {
+  schemaName: string;
+  pool: Pool;
+  cleanup: () => Promise<void>;
+}
+
+/**
+ * Creates an isolated PostgreSQL schema for testing.
+ * Each test gets its own schema to prevent interference.
+ */
+async function createTestSchema(): Promise<TestSchema> {
+  const schemaName = `test_${Date.now()}_${Math.random().toString(36).substring(7)}`;
+
+  // Step 1: Create the schema
+  const setupPool = new Pool({ connectionString: TEST_DATABASE_URL });
+  const setupClient = await setupPool.connect();
+
+  try {
+    await setupClient.query(`CREATE SCHEMA ${schemaName}`);
+  } finally {
+    setupClient.release();
+    await setupPool.end();
+  }
+
+  // Step 2: Create pool with isolated schema
+  const pool = new Pool({
+    connectionString: TEST_DATABASE_URL,
+    options: `-c search_path=${schemaName},public`,
+  });
+
+  // Step 3: Define cleanup
+  const cleanup = async () => {
+    await pool.end();
+
+    const cleanupPool = new Pool({ connectionString: TEST_DATABASE_URL });
+    const cleanupClient = await cleanupPool.connect();
+
+    try {
+      await cleanupClient.query(`DROP SCHEMA IF EXISTS ${schemaName} CASCADE`);
+    } finally {
+      cleanupClient.release();
+      await cleanupPool.end();
+    }
+  };
+
+  return { schemaName, pool, cleanup };
+}
+
 describe("Database Migrations", () => {
-  let db: DatabaseType;
+  let testSchema: TestSchema;
+  let pool: Pool;
 
-  beforeEach(() => {
-    db = new Database(":memory:");
-    sqliteVec.load(db);
+  beforeEach(async () => {
+    testSchema = await createTestSchema();
+    pool = testSchema.pool;
   });
 
-  afterEach(() => {
-    db.close();
+  afterEach(async () => {
+    await testSchema.cleanup();
   });
 
-  it("should apply all migrations and create expected tables and columns", () => {
-    expect(() => applyMigrations(db)).not.toThrow();
+  it("should apply all migrations and create expected tables and columns", async () => {
+    // Apply migrations
+    await expect(applyMigrations(pool)).resolves.not.toThrow();
 
-    // Check tables
-    const tables = db
-      .prepare("SELECT name FROM sqlite_master WHERE type='table' ORDER BY name;")
-      .all();
-    interface TableRow {
-      name: string;
-    }
-    const tableNames = (tables as TableRow[]).map((t) => t.name);
-    expect(tableNames).toContain("documents");
-    expect(tableNames).toContain("documents_fts");
-    expect(tableNames).toContain("documents_vec");
-    expect(tableNames).toContain("libraries");
-    expect(tableNames).toContain("pages");
+    const client = await pool.connect();
+    try {
+      // Check tables exist
+      const tablesResult = await client.query(
+        `SELECT table_name
+         FROM information_schema.tables
+         WHERE table_schema = $1
+         ORDER BY table_name`,
+        [testSchema.schemaName],
+      );
+      const tableNames = tablesResult.rows.map((r) => r.table_name);
 
-    // Check columns for 'documents'
-    const documentsColumns = db.prepare("PRAGMA table_info(documents);").all();
-    interface ColumnInfo {
-      name: string;
-    }
-    const documentsColumnNames = (documentsColumns as ColumnInfo[]).map(
-      (col) => col.name,
-    );
-    expect(documentsColumnNames).toEqual(
-      expect.arrayContaining([
-        "id",
-        "page_id",
-        "content",
-        "metadata",
-        "sort_order",
-        "embedding",
-      ]),
-    );
+      expect(tableNames).toContain("documents");
+      expect(tableNames).toContain("libraries");
+      expect(tableNames).toContain("pages");
+      expect(tableNames).toContain("versions");
 
-    // Ensure the old library and version columns are removed after complete normalization
-    expect(documentsColumnNames).not.toContain("library");
-    expect(documentsColumnNames).not.toContain("version");
-    expect(documentsColumnNames).not.toContain("library_id");
-    expect(documentsColumnNames).not.toContain("version_id");
-    expect(documentsColumnNames).not.toContain("url");
+      // Check documents table columns
+      const documentsColumnsResult = await client.query(
+        `SELECT column_name
+         FROM information_schema.columns
+         WHERE table_schema = $1 AND table_name = 'documents'
+         ORDER BY column_name`,
+        [testSchema.schemaName],
+      );
+      const documentsColumnNames = documentsColumnsResult.rows.map((r) => r.column_name);
 
-    // Check columns for 'pages'
-    const pagesColumns = db.prepare("PRAGMA table_info(pages);").all();
-    const pagesColumnNames = (pagesColumns as ColumnInfo[]).map((col) => col.name);
-    expect(pagesColumnNames).toEqual(
-      expect.arrayContaining([
-        "id",
-        "version_id",
-        "url",
-        "title",
-        "etag",
-        "last_modified",
-        "content_type",
-        "created_at",
-      ]),
-    );
-
-    // Check columns for 'libraries'
-    const librariesColumns = db.prepare("PRAGMA table_info(libraries);").all();
-    const librariesColumnNames = (librariesColumns as ColumnInfo[]).map(
-      (col) => col.name,
-    );
-    expect(librariesColumnNames).toEqual(expect.arrayContaining(["id", "name"]));
-
-    // Check versions table exists and has correct schema
-    expect(tableNames).toContain("versions");
-    const versionsColumns = db.prepare("PRAGMA table_info(versions);").all();
-    const versionsColumnNames = (versionsColumns as ColumnInfo[]).map((col) => col.name);
-    expect(versionsColumnNames).toEqual(
-      expect.arrayContaining(["id", "library_id", "name", "created_at"]),
-    );
-
-    // Check FTS virtual table
-    const ftsTableInfo = db
-      .prepare(
-        "SELECT sql FROM sqlite_master WHERE type='table' AND name='documents_fts';",
-      )
-      .get() as { sql: string } | undefined;
-    expect(ftsTableInfo?.sql).toContain("VIRTUAL TABLE documents_fts USING fts5");
-
-    // Check vector virtual table exists
-    const vecTableInfo = db
-      .prepare(
-        "SELECT sql FROM sqlite_master WHERE type='table' AND name='documents_vec';",
-      )
-      .get() as { sql: string } | undefined;
-    expect(vecTableInfo).toBeDefined();
-    expect(vecTableInfo?.sql).toContain("USING vec0");
-
-    // Check that vector table has the expected schema with foreign keys
-    expect(vecTableInfo?.sql).toContain("library_id INTEGER NOT NULL");
-    expect(vecTableInfo?.sql).toContain("version_id INTEGER NOT NULL");
-    expect(vecTableInfo?.sql).toContain("embedding FLOAT[1536]");
-  });
-
-  it("should handle vector search with empty results gracefully", () => {
-    // Apply all migrations
-    expect(() => applyMigrations(db)).not.toThrow();
-
-    // Insert a library and version but no documents
-    db.prepare("INSERT INTO libraries (name) VALUES (?)").run("empty-lib");
-    const emptyLibraryIdResult = db
-      .prepare("SELECT id FROM libraries WHERE name = ?")
-      .get("empty-lib") as { id: number } | undefined;
-    expect(emptyLibraryIdResult).toBeDefined();
-    const emptyLibraryId = emptyLibraryIdResult!.id;
-
-    // Insert a version for this library
-    db.prepare("INSERT INTO versions (library_id, name) VALUES (?, ?)").run(
-      emptyLibraryId,
-      "1.0.0",
-    );
-    const versionResult = db
-      .prepare("SELECT id FROM versions WHERE library_id = ? AND name = ?")
-      .get(emptyLibraryId, "1.0.0") as { id: number } | undefined;
-    expect(versionResult).toBeDefined();
-    const _versionId = versionResult!.id;
-
-    // Search for vectors in empty library with k constraint
-    const searchVector = new Array(1536).fill(0.5);
-    const vectorSearchQuery = `
-      SELECT 
-        dv.rowid,
-        d.content,
-        dv.distance
-      FROM documents_vec dv
-      JOIN documents d ON dv.rowid = d.id
-      JOIN versions v ON dv.version_id = v.id
-      JOIN libraries l ON v.library_id = l.id
-      WHERE dv.embedding MATCH ?
-      AND l.name = ?
-      AND v.name = ?
-      AND k = 5
-      ORDER BY dv.distance ASC
-    `;
-
-    const searchResults = db
-      .prepare(vectorSearchQuery)
-      .all(JSON.stringify(searchVector), "empty-lib", "1.0.0");
-
-    // Should return empty array, not throw an error
-    expect(searchResults).toEqual([]);
-  });
-
-  it("should perform vector search and return similar vectors correctly", () => {
-    // Apply all migrations
-    expect(() => applyMigrations(db)).not.toThrow();
-
-    // Insert test library and version
-    db.prepare("INSERT INTO libraries (name) VALUES (?)").run("test-lib");
-    const libraryResult = db
-      .prepare("SELECT id FROM libraries WHERE name = ?")
-      .get("test-lib") as { id: number } | undefined;
-    expect(libraryResult).toBeDefined();
-    const libraryId = libraryResult!.id;
-
-    db.prepare("INSERT INTO versions (library_id, name) VALUES (?, ?)").run(
-      libraryId,
-      "1.0.0",
-    );
-    const versionResult = db
-      .prepare("SELECT id FROM versions WHERE library_id = ? AND name = ?")
-      .get(libraryId, "1.0.0") as { id: number } | undefined;
-    expect(versionResult).toBeDefined();
-    const versionId = versionResult!.id;
-
-    // Insert test pages first
-    const insertPage = db.prepare(`
-      INSERT INTO pages (version_id, url, title, etag, last_modified, content_type)
-      VALUES (?, ?, ?, ?, ?, ?)
-    `);
-
-    const page1Id = insertPage.run(
-      versionId,
-      "https://example.com/doc1",
-      "AI Basics",
-      null,
-      null,
-      "text/html",
-    ).lastInsertRowid as number;
-
-    const page2Id = insertPage.run(
-      versionId,
-      "https://example.com/doc2",
-      "Neural Networks",
-      null,
-      null,
-      "text/html",
-    ).lastInsertRowid as number;
-
-    const page3Id = insertPage.run(
-      versionId,
-      "https://example.com/doc3",
-      "Cooking Guide",
-      null,
-      null,
-      "text/html",
-    ).lastInsertRowid as number;
-
-    // Insert test documents
-    const insertDoc = db.prepare(`
-      INSERT INTO documents (page_id, content, metadata, sort_order)
-      VALUES (?, ?, ?, ?)
-    `);
-
-    const doc1Id = insertDoc.run(
-      page1Id,
-      "This is about machine learning and artificial intelligence",
-      JSON.stringify({ title: "AI Basics", path: "/ai-basics" }),
-      1,
-    ).lastInsertRowid as number;
-
-    const doc2Id = insertDoc.run(
-      page2Id,
-      "This document discusses neural networks and deep learning",
-      JSON.stringify({ title: "Neural Networks", path: "/neural-networks" }),
-      2,
-    ).lastInsertRowid as number;
-
-    const doc3Id = insertDoc.run(
-      page3Id,
-      "Cooking recipes and food preparation techniques",
-      JSON.stringify({ title: "Cooking Guide", path: "/cooking" }),
-      3,
-    ).lastInsertRowid as number;
-
-    // Create test vectors (similar vectors for AI-related docs, different for cooking)
-    const aiVector1 = new Array(1536)
-      .fill(0)
-      .map((_, i) => (i < 100 ? Math.random() * 0.1 + 0.8 : Math.random() * 0.2));
-    const aiVector2 = new Array(1536)
-      .fill(0)
-      .map((_, i) => (i < 100 ? Math.random() * 0.1 + 0.75 : Math.random() * 0.2));
-    const cookingVector = new Array(1536)
-      .fill(0)
-      .map((_, i) =>
-        i >= 100 && i < 200 ? Math.random() * 0.1 + 0.9 : Math.random() * 0.2,
+      expect(documentsColumnNames).toEqual(
+        expect.arrayContaining([
+          "id",
+          "page_id",
+          "content",
+          "metadata",
+          "sort_order",
+          "embedding",
+          "indexed_at",
+        ]),
       );
 
-    // Insert vectors
-    const insertVector = db.prepare(`
-      INSERT INTO documents_vec (rowid, library_id, version_id, embedding)
-      VALUES (?, ?, ?, ?)
-    `);
+      // Ensure old denormalized columns are not present
+      expect(documentsColumnNames).not.toContain("library");
+      expect(documentsColumnNames).not.toContain("version");
+      expect(documentsColumnNames).not.toContain("library_id");
+      expect(documentsColumnNames).not.toContain("version_id");
+      expect(documentsColumnNames).not.toContain("url");
 
-    insertVector.run(
-      BigInt(doc1Id),
-      BigInt(libraryId),
-      BigInt(versionId),
-      JSON.stringify(aiVector1),
-    );
-    insertVector.run(
-      BigInt(doc2Id),
-      BigInt(libraryId),
-      BigInt(versionId),
-      JSON.stringify(aiVector2),
-    );
-    insertVector.run(
-      BigInt(doc3Id),
-      BigInt(libraryId),
-      BigInt(versionId),
-      JSON.stringify(cookingVector),
-    );
+      // Check pages table columns
+      const pagesColumnsResult = await client.query(
+        `SELECT column_name
+         FROM information_schema.columns
+         WHERE table_schema = $1 AND table_name = 'pages'
+         ORDER BY column_name`,
+        [testSchema.schemaName],
+      );
+      const pagesColumnNames = pagesColumnsResult.rows.map((r) => r.column_name);
 
-    // Search with a vector similar to AI vectors
-    const searchVector = new Array(1536)
-      .fill(0)
-      .map((_, i) => (i < 100 ? Math.random() * 0.1 + 0.77 : Math.random() * 0.2));
+      expect(pagesColumnNames).toEqual(
+        expect.arrayContaining([
+          "id",
+          "version_id",
+          "url",
+          "title",
+          "etag",
+          "last_modified",
+          "content_type",
+          "created_at",
+        ]),
+      );
 
-    const vectorSearchQuery = `
-      SELECT 
-        dv.rowid,
-        d.content,
-        dv.distance
-      FROM documents_vec dv
-      JOIN documents d ON dv.rowid = d.id
-      JOIN versions v ON dv.version_id = v.id
-      JOIN libraries l ON v.library_id = l.id
-      WHERE dv.embedding MATCH ?
-      AND l.name = ?
-      AND v.name = ?
-      AND k = 3
-      ORDER BY dv.distance ASC
-    `;
+      // Check libraries table columns
+      const librariesColumnsResult = await client.query(
+        `SELECT column_name
+         FROM information_schema.columns
+         WHERE table_schema = $1 AND table_name = 'libraries'
+         ORDER BY column_name`,
+        [testSchema.schemaName],
+      );
+      const librariesColumnNames = librariesColumnsResult.rows.map((r) => r.column_name);
 
-    interface VectorSearchResult {
-      rowid: number;
-      content: string;
-      distance: number;
+      expect(librariesColumnNames).toEqual(
+        expect.arrayContaining(["id", "name", "created_at"]),
+      );
+
+      // Check versions table columns
+      const versionsColumnsResult = await client.query(
+        `SELECT column_name
+         FROM information_schema.columns
+         WHERE table_schema = $1 AND table_name = 'versions'
+         ORDER BY column_name`,
+        [testSchema.schemaName],
+      );
+      const versionsColumnNames = versionsColumnsResult.rows.map((r) => r.column_name);
+
+      expect(versionsColumnNames).toEqual(
+        expect.arrayContaining([
+          "id",
+          "library_id",
+          "name",
+          "status",
+          "created_at",
+          "updated_at",
+        ]),
+      );
+
+      // Check pgvector extension is installed
+      const extensionsResult = await client.query(
+        `SELECT extname
+         FROM pg_extension
+         WHERE extname = 'vector'`,
+      );
+      expect(extensionsResult.rows).toHaveLength(1);
+      expect(extensionsResult.rows[0].extname).toBe("vector");
+
+      // Check GIN index for FTS exists
+      const ginIndexResult = await client.query(
+        `SELECT indexname
+         FROM pg_indexes
+         WHERE schemaname = $1 AND indexname = 'idx_documents_content_fts'`,
+        [testSchema.schemaName],
+      );
+      expect(ginIndexResult.rows).toHaveLength(1);
+
+      // Check HNSW index for vector search exists
+      const hnswIndexResult = await client.query(
+        `SELECT indexname
+         FROM pg_indexes
+         WHERE schemaname = $1 AND indexname = 'idx_documents_embedding_hnsw'`,
+        [testSchema.schemaName],
+      );
+      expect(hnswIndexResult.rows).toHaveLength(1);
+    } finally {
+      client.release();
     }
-
-    const searchResults = db
-      .prepare(vectorSearchQuery)
-      .all(JSON.stringify(searchVector), "test-lib", "1.0.0") as VectorSearchResult[];
-
-    // Should return 3 results ordered by similarity
-    expect(searchResults).toHaveLength(3);
-
-    // Results should be ordered by distance (most similar first)
-    expect(searchResults[0].distance).toBeLessThan(searchResults[1].distance);
-    expect(searchResults[1].distance).toBeLessThan(searchResults[2].distance);
-
-    // AI-related documents should be more similar (lower distance) than cooking document
-    const aiResults = searchResults.filter(
-      (r) =>
-        r.content.includes("machine learning") || r.content.includes("neural networks"),
-    );
-    const cookingResults = searchResults.filter(
-      (r) => r.content.includes("cooking") || r.content.includes("recipes"),
-    );
-
-    expect(aiResults).toHaveLength(2);
-    expect(cookingResults).toHaveLength(1);
-
-    // AI documents should have lower distances than cooking document
-    const maxAiDistance = Math.max(...aiResults.map((r) => r.distance));
-    const cookingDistance = cookingResults[0].distance;
-    expect(maxAiDistance).toBeLessThan(cookingDistance);
-
-    // Validate actual distance behavior: sqlite-vec uses Euclidean distance (L2 norm)
-    // - Distance 0 = identical vectors (closest match)
-    // - Higher distances = less similar vectors (farther match)
-    // - No upper bound (unlike cosine similarity which ranges 0-1)
-    // NOTE: This is OPPOSITE to cosine similarity where 1=closest, 0=farthest
-    for (const result of searchResults) {
-      expect(result.distance).toBeGreaterThanOrEqual(0); // Distances are non-negative
-      expect(result.distance).toBeLessThan(50); // Should be reasonable for our test vectors (relaxed bound)
-    }
-
-    // Test identical vector search should return distance ≈ 0
-    const identicalSearchResults = db
-      .prepare(vectorSearchQuery)
-      .all(JSON.stringify(aiVector1), "test-lib", "1.0.0") as VectorSearchResult[];
-
-    expect(identicalSearchResults).toHaveLength(3);
-
-    // Find the result that matches our exact vector (should be doc1)
-    const exactMatch = identicalSearchResults.find((r) =>
-      r.content.includes("machine learning"),
-    );
-    expect(exactMatch).toBeDefined();
-    expect(exactMatch!.distance).toBeCloseTo(0, 6); // Very close to 0 for identical vectors
-
-    // Demonstrate distance semantics: lower distance = higher similarity
-    const allDistances = searchResults.map((r) => r.distance).sort((a, b) => a - b);
-    expect(allDistances[0]).toBeLessThan(allDistances[1]); // Best match has lowest distance
-    expect(allDistances[1]).toBeLessThan(allDistances[2]); // Worst match has highest distance
   });
 
-  it("should perform FTS search and return relevant text matches correctly", () => {
-    // Apply all migrations
-    expect(() => applyMigrations(db)).not.toThrow();
+  it("should handle vector search with empty results gracefully", async () => {
+    // Apply migrations
+    await applyMigrations(pool);
 
-    // Insert test library and version
-    db.prepare("INSERT INTO libraries (name) VALUES (?)").run("docs-lib");
-    const libraryResult = db
-      .prepare("SELECT id FROM libraries WHERE name = ?")
-      .get("docs-lib") as { id: number } | undefined;
-    expect(libraryResult).toBeDefined();
-    const libraryId = libraryResult!.id;
+    const client = await pool.connect();
+    try {
+      // Insert library but no documents
+      const libraryResult = await client.query(
+        "INSERT INTO libraries (name) VALUES ($1) RETURNING id",
+        ["empty-lib"],
+      );
+      const libraryId = libraryResult.rows[0].id;
 
-    db.prepare("INSERT INTO versions (library_id, name) VALUES (?, ?)").run(
-      libraryId,
-      "1.0.0",
-    );
-    const versionResult = db
-      .prepare("SELECT id FROM versions WHERE library_id = ? AND name = ?")
-      .get(libraryId, "1.0.0") as { id: number } | undefined;
-    expect(versionResult).toBeDefined();
-    const versionId = versionResult!.id;
+      // Insert version
+      const versionResult = await client.query(
+        "INSERT INTO versions (library_id, name, status) VALUES ($1, $2, 'completed') RETURNING id",
+        [libraryId, "1.0.0"],
+      );
+      const versionId = versionResult.rows[0].id;
 
-    // Insert test pages first
-    const insertPage = db.prepare(`
-      INSERT INTO pages (version_id, url, title, etag, last_modified, content_type)
-      VALUES (?, ?, ?, ?, ?, ?)
-    `);
+      // Search for vectors in empty library
+      const searchVector = new Array(1536).fill(0.5);
+      const searchResult = await client.query(
+        `SELECT d.id, d.content, 1 - (d.embedding <=> $1::vector) as similarity
+         FROM documents d
+         INNER JOIN pages p ON d.page_id = p.id
+         INNER JOIN versions v ON p.version_id = v.id
+         INNER JOIN libraries l ON v.library_id = l.id
+         WHERE l.name = $2 AND v.name = $3 AND d.embedding IS NOT NULL
+         ORDER BY d.embedding <=> $1::vector
+         LIMIT 5`,
+        [`[${searchVector.join(",")}]`, "empty-lib", "1.0.0"],
+      );
 
-    const reactPageId = insertPage.run(
-      versionId,
-      "https://example.com/react-hooks",
-      "React Hooks Guide",
-      null,
-      null,
-      "text/html",
-    ).lastInsertRowid as number;
-
-    const vuePageId = insertPage.run(
-      versionId,
-      "https://example.com/vue-composition",
-      "Vue Composition API",
-      null,
-      null,
-      "text/html",
-    ).lastInsertRowid as number;
-
-    const angularPageId = insertPage.run(
-      versionId,
-      "https://example.com/angular-services",
-      "Angular Services",
-      null,
-      null,
-      "text/html",
-    ).lastInsertRowid as number;
-
-    const dbPageId = insertPage.run(
-      versionId,
-      "https://example.com/database-design",
-      "Database Design",
-      null,
-      null,
-      "text/html",
-    ).lastInsertRowid as number;
-
-    // Insert test documents with diverse content
-    const insertDoc = db.prepare(`
-      INSERT INTO documents (page_id, content, metadata, sort_order)
-      VALUES (?, ?, ?, ?)
-    `);
-
-    insertDoc.run(
-      reactPageId,
-      "React hooks are a powerful feature that allows you to use state and lifecycle methods in functional components. The useState hook manages component state.",
-      JSON.stringify({
-        title: "React Hooks Guide",
-        path: "/react/hooks",
-      }),
-      1,
-    );
-
-    insertDoc.run(
-      vuePageId,
-      "Vue composition API provides a way to organize component logic. It offers reactive state management and computed properties for building dynamic applications.",
-      JSON.stringify({
-        title: "Vue Composition API",
-        path: "/vue/composition",
-      }),
-      2,
-    );
-
-    insertDoc.run(
-      angularPageId,
-      "Angular services are singleton objects that provide functionality across the application. Dependency injection makes services available to components.",
-      JSON.stringify({
-        title: "Angular Services",
-        path: "/angular/services",
-      }),
-      3,
-    );
-
-    insertDoc.run(
-      dbPageId,
-      "Database normalization reduces redundancy and improves data integrity. Primary keys uniquely identify records in relational databases.",
-      JSON.stringify({
-        title: "Database Design",
-        path: "/database/design",
-      }),
-      4,
-    );
-
-    // Test 1: Search for React-specific content
-    interface FTSSearchResult {
-      id: number;
-      content: string;
-      title: string;
-      url: string;
-      path: string;
-      rank: number;
+      // Should return empty array, not throw
+      expect(searchResult.rows).toEqual([]);
+    } finally {
+      client.release();
     }
+  });
 
-    const reactSearchQuery = `
-      SELECT 
-        d.id,
-        d.content,
-        json_extract(d.metadata, '$.title') as title,
-        p.url,
-        json_extract(d.metadata, '$.path') as path,
-        fts.rank
-      FROM documents_fts fts
-      JOIN documents d ON fts.rowid = d.id
-      JOIN pages p ON d.page_id = p.id
-      JOIN versions v ON p.version_id = v.id
-      JOIN libraries l ON v.library_id = l.id
-      WHERE documents_fts MATCH ?
-      AND l.name = ?
-      AND v.name = ?
-      ORDER BY fts.rank
-    `;
+  it("should perform vector search and return similar vectors correctly", async () => {
+    // Apply migrations
+    await applyMigrations(pool);
 
-    const reactResults = db
-      .prepare(reactSearchQuery)
-      .all("react hooks", "docs-lib", "1.0.0") as FTSSearchResult[];
+    const client = await pool.connect();
+    try {
+      // Insert test library and version
+      const libraryResult = await client.query(
+        "INSERT INTO libraries (name) VALUES ($1) RETURNING id",
+        ["test-lib"],
+      );
+      const libraryId = libraryResult.rows[0].id;
 
-    expect(reactResults).toHaveLength(1);
-    expect(reactResults[0].content).toContain("React hooks");
-    expect(reactResults[0].title).toBe("React Hooks Guide");
+      const versionResult = await client.query(
+        "INSERT INTO versions (library_id, name, status) VALUES ($1, $2, 'completed') RETURNING id",
+        [libraryId, "1.0.0"],
+      );
+      const versionId = versionResult.rows[0].id;
 
-    // Test 2: Search for state management across frameworks
-    const stateResults = db
-      .prepare(reactSearchQuery)
-      .all("state", "docs-lib", "1.0.0") as FTSSearchResult[];
+      // Insert test pages
+      const page1Result = await client.query(
+        `INSERT INTO pages (version_id, url, title, content_type)
+         VALUES ($1, $2, $3, $4) RETURNING id`,
+        [versionId, "https://example.com/doc1", "AI Basics", "text/html"],
+      );
+      const page1Id = page1Result.rows[0].id;
 
-    expect(stateResults.length).toBeGreaterThanOrEqual(2);
+      const page2Result = await client.query(
+        `INSERT INTO pages (version_id, url, title, content_type)
+         VALUES ($1, $2, $3, $4) RETURNING id`,
+        [versionId, "https://example.com/doc2", "Neural Networks", "text/html"],
+      );
+      const page2Id = page2Result.rows[0].id;
 
-    // Should find both React (useState) and Vue (reactive state) content
-    const contentTexts = stateResults.map((r) => r.content);
-    const hasReactState = contentTexts.some((content) => content.includes("useState"));
-    const hasVueState = contentTexts.some((content) =>
-      content.includes("reactive state"),
-    );
+      const page3Result = await client.query(
+        `INSERT INTO pages (version_id, url, title, content_type)
+         VALUES ($1, $2, $3, $4) RETURNING id`,
+        [versionId, "https://example.com/doc3", "Cooking Guide", "text/html"],
+      );
+      const page3Id = page3Result.rows[0].id;
 
-    expect(hasReactState || hasVueState).toBe(true);
+      // Create test vectors (similar vectors for AI-related docs, different for cooking)
+      const aiVector1 = new Array(1536)
+        .fill(0)
+        .map((_, i) => (i < 100 ? Math.random() * 0.1 + 0.8 : Math.random() * 0.2));
+      const aiVector2 = new Array(1536)
+        .fill(0)
+        .map((_, i) => (i < 100 ? Math.random() * 0.1 + 0.75 : Math.random() * 0.2));
+      const cookingVector = new Array(1536)
+        .fill(0)
+        .map((_, i) =>
+          i >= 100 && i < 200 ? Math.random() * 0.1 + 0.9 : Math.random() * 0.2,
+        );
 
-    // Test 3: Search with phrase matching
-    const phraseResults = db
-      .prepare(reactSearchQuery)
-      .all('"dependency injection"', "docs-lib", "1.0.0") as FTSSearchResult[];
+      // Insert documents with embeddings
+      await client.query(
+        `INSERT INTO documents (page_id, content, metadata, sort_order, embedding)
+         VALUES ($1, $2, $3, $4, $5::vector)`,
+        [
+          page1Id,
+          "This is about machine learning and artificial intelligence",
+          JSON.stringify({ title: "AI Basics", path: "/ai-basics" }),
+          1,
+          `[${aiVector1.join(",")}]`,
+        ],
+      );
 
-    expect(phraseResults).toHaveLength(1);
-    expect(phraseResults[0].content).toContain("Dependency injection");
-    expect(phraseResults[0].title).toBe("Angular Services");
+      await client.query(
+        `INSERT INTO documents (page_id, content, metadata, sort_order, embedding)
+         VALUES ($1, $2, $3, $4, $5::vector)`,
+        [
+          page2Id,
+          "This document discusses neural networks and deep learning",
+          JSON.stringify({ title: "Neural Networks", path: "/neural-networks" }),
+          2,
+          `[${aiVector2.join(",")}]`,
+        ],
+      );
 
-    // Test 4: Search in metadata fields (title and path)
-    const titleSearchQuery = `
-      SELECT 
-        d.id,
-        d.content,
-        json_extract(d.metadata, '$.title') as title,
-        p.url,
-        json_extract(d.metadata, '$.path') as path,
-        fts.rank
-      FROM documents_fts fts
-      JOIN documents d ON fts.rowid = d.id
-      JOIN pages p ON d.page_id = p.id
-      JOIN versions v ON p.version_id = v.id
-      JOIN libraries l ON v.library_id = l.id
-      WHERE fts.title MATCH ?
-      AND l.name = ?
-      AND v.name = ?
-      ORDER BY fts.rank
-    `;
+      await client.query(
+        `INSERT INTO documents (page_id, content, metadata, sort_order, embedding)
+         VALUES ($1, $2, $3, $4, $5::vector)`,
+        [
+          page3Id,
+          "Cooking recipes and food preparation techniques",
+          JSON.stringify({ title: "Cooking Guide", path: "/cooking" }),
+          3,
+          `[${cookingVector.join(",")}]`,
+        ],
+      );
 
-    const titleResults = db
-      .prepare(titleSearchQuery)
-      .all("Database", "docs-lib", "1.0.0") as FTSSearchResult[];
+      // Search with a vector similar to AI vectors
+      const searchVector = new Array(1536)
+        .fill(0)
+        .map((_, i) => (i < 100 ? Math.random() * 0.1 + 0.77 : Math.random() * 0.2));
 
-    expect(titleResults).toHaveLength(1);
-    expect(titleResults[0].title).toBe("Database Design");
-
-    // Test 5: Test empty search results
-    const emptyResults = db
-      .prepare(reactSearchQuery)
-      .all("nonexistent term", "docs-lib", "1.0.0") as FTSSearchResult[];
-
-    expect(emptyResults).toHaveLength(0);
-
-    // Test 6: Test ranking (more relevant results should have better rank)
-    const multiResults = db
-      .prepare(reactSearchQuery)
-      .all("component", "docs-lib", "1.0.0") as FTSSearchResult[];
-
-    if (multiResults.length > 1) {
-      // Results should be ordered by relevance (rank)
-      for (let i = 1; i < multiResults.length; i++) {
-        expect(multiResults[i].rank).toBeGreaterThanOrEqual(multiResults[i - 1].rank);
+      interface VectorSearchResult {
+        id: number;
+        content: string;
+        distance: number;
       }
-    }
 
-    // Test 7: Validate FTS scoring behavior - BM25 rank semantics
-    // Get BM25 scores using the same query pattern as DocumentStore
-    const bm25SearchQuery = `
-      SELECT 
-        d.id,
-        d.content,
-        json_extract(d.metadata, '$.title') as title,
-        bm25(documents_fts, 10.0, 1.0, 5.0, 1.0) as bm25_score
-      FROM documents_fts fts
-      JOIN documents d ON fts.rowid = d.id
-      JOIN pages p ON d.page_id = p.id
-      JOIN versions v ON p.version_id = v.id
-      JOIN libraries l ON v.library_id = l.id
-      WHERE documents_fts MATCH ?
-      AND l.name = ?
-      AND v.name = ?
-      ORDER BY bm25_score ASC
-    `;
-
-    const bm25Results = db
-      .prepare(bm25SearchQuery)
-      .all("state", "docs-lib", "1.0.0") as Array<{
-      id: number;
-      content: string;
-      title: string;
-      bm25_score: number;
-    }>;
-
-    expect(bm25Results.length).toBeGreaterThanOrEqual(2);
-
-    // Validate BM25 score behavior: lower scores = better matches (more relevant)
-    // This is OPPOSITE to similarity scores where higher = better
-    // NOTE: BM25 scores is internally multiplied by -1 to ensure good matches rank higher in default sorting
-    for (const result of bm25Results) {
-      expect(result.bm25_score).toBeGreaterThan(-100); // BM25 can be negative but should be reasonable
-      expect(result.bm25_score).toBeLessThan(100); // Should be reasonable for our test content
-    }
-
-    // Results should be ordered by BM25 score (best matches first)
-    for (let i = 1; i < bm25Results.length; i++) {
-      expect(bm25Results[i].bm25_score).toBeGreaterThanOrEqual(
-        bm25Results[i - 1].bm25_score,
+      const searchResult = await client.query(
+        `SELECT d.id, d.content, d.embedding <=> $1::vector as distance
+         FROM documents d
+         INNER JOIN pages p ON d.page_id = p.id
+         INNER JOIN versions v ON p.version_id = v.id
+         INNER JOIN libraries l ON v.library_id = l.id
+         WHERE l.name = $2 AND v.name = $3 AND d.embedding IS NOT NULL
+         ORDER BY d.embedding <=> $1::vector
+         LIMIT 3`,
+        [`[${searchVector.join(",")}]`, "test-lib", "1.0.0"],
       );
+
+      const searchResults = searchResult.rows as VectorSearchResult[];
+
+      // Should return 3 results ordered by similarity
+      expect(searchResults).toHaveLength(3);
+
+      // Results should be ordered by distance (most similar first = lowest distance)
+      expect(searchResults[0].distance).toBeLessThan(searchResults[1].distance);
+      expect(searchResults[1].distance).toBeLessThan(searchResults[2].distance);
+
+      // AI-related documents should be more similar (lower distance) than cooking
+      const aiResults = searchResults.filter(
+        (r) =>
+          r.content.includes("machine learning") || r.content.includes("neural networks"),
+      );
+      const cookingResults = searchResults.filter(
+        (r) => r.content.includes("cooking") || r.content.includes("recipes"),
+      );
+
+      expect(aiResults).toHaveLength(2);
+      expect(cookingResults).toHaveLength(1);
+
+      // AI documents should have lower distances than cooking document
+      const maxAiDistance = Math.max(...aiResults.map((r) => r.distance));
+      const cookingDistance = cookingResults[0].distance;
+      expect(maxAiDistance).toBeLessThan(cookingDistance);
+
+      // Validate distance behavior: pgvector cosine distance
+      // - Distance 0 = identical vectors (closest match)
+      // - Distance 2 = opposite vectors (farthest match)
+      // - Lower distances = more similar
+      for (const result of searchResults) {
+        expect(result.distance).toBeGreaterThanOrEqual(0);
+        expect(result.distance).toBeLessThan(2);
+      }
+
+      // Test identical vector search
+      const identicalSearchResult = await client.query(
+        `SELECT d.id, d.content, d.embedding <=> $1::vector as distance
+         FROM documents d
+         INNER JOIN pages p ON d.page_id = p.id
+         INNER JOIN versions v ON p.version_id = v.id
+         INNER JOIN libraries l ON v.library_id = l.id
+         WHERE l.name = $2 AND v.name = $3 AND d.embedding IS NOT NULL
+         ORDER BY d.embedding <=> $1::vector
+         LIMIT 3`,
+        [`[${aiVector1.join(",")}]`, "test-lib", "1.0.0"],
+      );
+
+      const identicalResults = identicalSearchResult.rows as VectorSearchResult[];
+      expect(identicalResults).toHaveLength(3);
+
+      // Find exact match (should be doc1)
+      const exactMatch = identicalResults.find((r) =>
+        r.content.includes("machine learning"),
+      );
+      expect(exactMatch).toBeDefined();
+      expect(exactMatch!.distance).toBeCloseTo(0, 6);
+    } finally {
+      client.release();
     }
+  });
 
-    // Test exact phrase match vs partial match scoring
-    const exactPhraseResults = db
-      .prepare(bm25SearchQuery)
-      .all('"component state"', "docs-lib", "1.0.0") as Array<{
-      id: number;
-      bm25_score: number;
-    }>;
+  it("should perform FTS search and return relevant text matches correctly", async () => {
+    // Apply migrations
+    await applyMigrations(pool);
 
-    const partialMatchResults = db
-      .prepare(bm25SearchQuery)
-      .all("component", "docs-lib", "1.0.0") as Array<{ id: number; bm25_score: number }>;
+    const client = await pool.connect();
+    try {
+      // Insert test library and version
+      const libraryResult = await client.query(
+        "INSERT INTO libraries (name) VALUES ($1) RETURNING id",
+        ["docs-lib"],
+      );
+      const libraryId = libraryResult.rows[0].id;
 
-    if (exactPhraseResults.length > 0 && partialMatchResults.length > 0) {
-      // Exact phrase matches should have better (lower) BM25 scores than partial matches
-      const bestExactScore = Math.min(...exactPhraseResults.map((r) => r.bm25_score));
-      const bestPartialScore = Math.min(...partialMatchResults.map((r) => r.bm25_score));
-      expect(bestExactScore).toBeLessThanOrEqual(bestPartialScore);
+      const versionResult = await client.query(
+        "INSERT INTO versions (library_id, name, status) VALUES ($1, $2, 'completed') RETURNING id",
+        [libraryId, "1.0.0"],
+      );
+      const versionId = versionResult.rows[0].id;
+
+      // Insert test pages
+      const reactPageResult = await client.query(
+        `INSERT INTO pages (version_id, url, title, content_type)
+         VALUES ($1, $2, $3, $4) RETURNING id`,
+        [versionId, "https://example.com/react-hooks", "React Hooks Guide", "text/html"],
+      );
+      const reactPageId = reactPageResult.rows[0].id;
+
+      const vuePageResult = await client.query(
+        `INSERT INTO pages (version_id, url, title, content_type)
+         VALUES ($1, $2, $3, $4) RETURNING id`,
+        [
+          versionId,
+          "https://example.com/vue-composition",
+          "Vue Composition API",
+          "text/html",
+        ],
+      );
+      const vuePageId = vuePageResult.rows[0].id;
+
+      const angularPageResult = await client.query(
+        `INSERT INTO pages (version_id, url, title, content_type)
+         VALUES ($1, $2, $3, $4) RETURNING id`,
+        [
+          versionId,
+          "https://example.com/angular-services",
+          "Angular Services",
+          "text/html",
+        ],
+      );
+      const angularPageId = angularPageResult.rows[0].id;
+
+      const dbPageResult = await client.query(
+        `INSERT INTO pages (version_id, url, title, content_type)
+         VALUES ($1, $2, $3, $4) RETURNING id`,
+        [
+          versionId,
+          "https://example.com/database-design",
+          "Database Design",
+          "text/html",
+        ],
+      );
+      const dbPageId = dbPageResult.rows[0].id;
+
+      // Insert test documents with diverse content
+      await client.query(
+        `INSERT INTO documents (page_id, content, metadata, sort_order)
+         VALUES ($1, $2, $3, $4)`,
+        [
+          reactPageId,
+          "React hooks are a powerful feature that allows you to use state and lifecycle methods in functional components. The useState hook manages component state.",
+          JSON.stringify({ title: "React Hooks Guide", path: "/react/hooks" }),
+          1,
+        ],
+      );
+
+      await client.query(
+        `INSERT INTO documents (page_id, content, metadata, sort_order)
+         VALUES ($1, $2, $3, $4)`,
+        [
+          vuePageId,
+          "Vue composition API provides a way to organize component logic. It offers reactive state management and computed properties for building dynamic applications.",
+          JSON.stringify({ title: "Vue Composition API", path: "/vue/composition" }),
+          2,
+        ],
+      );
+
+      await client.query(
+        `INSERT INTO documents (page_id, content, metadata, sort_order)
+         VALUES ($1, $2, $3, $4)`,
+        [
+          angularPageId,
+          "Angular services are singleton objects that provide functionality across the application. Dependency injection makes services available to components.",
+          JSON.stringify({ title: "Angular Services", path: "/angular/services" }),
+          3,
+        ],
+      );
+
+      await client.query(
+        `INSERT INTO documents (page_id, content, metadata, sort_order)
+         VALUES ($1, $2, $3, $4)`,
+        [
+          dbPageId,
+          "Database normalization reduces redundancy and improves data integrity. Primary keys uniquely identify records in relational databases.",
+          JSON.stringify({ title: "Database Design", path: "/database/design" }),
+          4,
+        ],
+      );
+
+      interface FTSSearchResult {
+        id: number;
+        content: string;
+        title: string;
+        url: string;
+        path: string;
+        rank: number;
+      }
+
+      // Test 1: Search for React-specific content
+      const reactSearchResult = await client.query(
+        `SELECT
+           d.id,
+           d.content,
+           (d.metadata::json)->>'title' as title,
+           p.url,
+           (d.metadata::json)->>'path' as path,
+           ts_rank(to_tsvector('english', d.content), plainto_tsquery('english', $1)) as rank
+         FROM documents d
+         INNER JOIN pages p ON d.page_id = p.id
+         INNER JOIN versions v ON p.version_id = v.id
+         INNER JOIN libraries l ON v.library_id = l.id
+         WHERE to_tsvector('english', d.content) @@ plainto_tsquery('english', $1)
+           AND l.name = $2 AND v.name = $3
+         ORDER BY rank DESC`,
+        ["react hooks", "docs-lib", "1.0.0"],
+      );
+
+      const reactResults = reactSearchResult.rows as FTSSearchResult[];
+      expect(reactResults).toHaveLength(1);
+      expect(reactResults[0].content).toContain("React hooks");
+      expect(reactResults[0].title).toBe("React Hooks Guide");
+
+      // Test 2: Search for state management across frameworks
+      const stateSearchResult = await client.query(
+        `SELECT
+           d.id,
+           d.content,
+           (d.metadata::json)->>'title' as title,
+           p.url,
+           (d.metadata::json)->>'path' as path,
+           ts_rank(to_tsvector('english', d.content), plainto_tsquery('english', $1)) as rank
+         FROM documents d
+         INNER JOIN pages p ON d.page_id = p.id
+         INNER JOIN versions v ON p.version_id = v.id
+         INNER JOIN libraries l ON v.library_id = l.id
+         WHERE to_tsvector('english', d.content) @@ plainto_tsquery('english', $1)
+           AND l.name = $2 AND v.name = $3
+         ORDER BY rank DESC`,
+        ["state", "docs-lib", "1.0.0"],
+      );
+
+      const stateResults = stateSearchResult.rows as FTSSearchResult[];
+      expect(stateResults.length).toBeGreaterThanOrEqual(2);
+
+      // Should find both React and Vue content
+      const contentTexts = stateResults.map((r) => r.content);
+      const hasReactState = contentTexts.some((content) => content.includes("useState"));
+      const hasVueState = contentTexts.some((content) =>
+        content.includes("reactive state"),
+      );
+      expect(hasReactState || hasVueState).toBe(true);
+
+      // Test 3: Search with phrase matching (dependency injection)
+      const phraseSearchResult = await client.query(
+        `SELECT
+           d.id,
+           d.content,
+           (d.metadata::json)->>'title' as title,
+           p.url,
+           (d.metadata::json)->>'path' as path,
+           ts_rank(to_tsvector('english', d.content), plainto_tsquery('english', $1)) as rank
+         FROM documents d
+         INNER JOIN pages p ON d.page_id = p.id
+         INNER JOIN versions v ON p.version_id = v.id
+         INNER JOIN libraries l ON v.library_id = l.id
+         WHERE to_tsvector('english', d.content) @@ plainto_tsquery('english', $1)
+           AND l.name = $2 AND v.name = $3
+         ORDER BY rank DESC`,
+        ["dependency injection", "docs-lib", "1.0.0"],
+      );
+
+      const phraseResults = phraseSearchResult.rows as FTSSearchResult[];
+      expect(phraseResults).toHaveLength(1);
+      expect(phraseResults[0].content).toContain("Dependency injection");
+      expect(phraseResults[0].title).toBe("Angular Services");
+
+      // Test 4: Test empty search results
+      const emptySearchResult = await client.query(
+        `SELECT d.id, d.content
+         FROM documents d
+         INNER JOIN pages p ON d.page_id = p.id
+         INNER JOIN versions v ON p.version_id = v.id
+         INNER JOIN libraries l ON v.library_id = l.id
+         WHERE to_tsvector('english', d.content) @@ plainto_tsquery('english', $1)
+           AND l.name = $2 AND v.name = $3`,
+        ["nonexistent term xyz", "docs-lib", "1.0.0"],
+      );
+
+      expect(emptySearchResult.rows).toHaveLength(0);
+
+      // Test 5: Test ranking (higher rank = more relevant in PostgreSQL)
+      const componentSearchResult = await client.query(
+        `SELECT
+           d.id,
+           d.content,
+           ts_rank(to_tsvector('english', d.content), plainto_tsquery('english', $1)) as rank
+         FROM documents d
+         INNER JOIN pages p ON d.page_id = p.id
+         INNER JOIN versions v ON p.version_id = v.id
+         INNER JOIN libraries l ON v.library_id = l.id
+         WHERE to_tsvector('english', d.content) @@ plainto_tsquery('english', $1)
+           AND l.name = $2 AND v.name = $3
+         ORDER BY rank DESC`,
+        ["component", "docs-lib", "1.0.0"],
+      );
+
+      const componentResults = componentSearchResult.rows as Array<{
+        id: number;
+        content: string;
+        rank: number;
+      }>;
+
+      if (componentResults.length > 1) {
+        // PostgreSQL ts_rank: Higher scores = better matches (OPPOSITE of SQLite BM25)
+        // Results are ordered DESC, so each subsequent result should have lower or equal rank
+        for (let i = 1; i < componentResults.length; i++) {
+          expect(componentResults[i].rank).toBeLessThanOrEqual(
+            componentResults[i - 1].rank,
+          );
+        }
+      }
+
+      // Test 6: Validate ts_rank scoring behavior
+      // PostgreSQL ts_rank returns higher scores for better matches
+      for (const result of componentResults) {
+        expect(result.rank).toBeGreaterThan(0); // ts_rank returns positive values
+        expect(result.rank).toBeLessThan(1); // Typically normalized between 0-1
+      }
+    } finally {
+      client.release();
     }
   });
 });
