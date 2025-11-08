@@ -36,6 +36,7 @@ Complete configuration guide for Scrapegoat, covering database connections, embe
 | `OPENAI_BASE_URL` | No | `https://api.openai.com/v1` | Custom OpenAI-compatible endpoint |
 | `EMBEDDING_MODEL` | No | `text-embedding-3-small` | Embedding model to use |
 | `EMBEDDING_DIMENSIONS` | No | `1536` | Vector dimensions (must match model) |
+| `INFINITY_API_URL` | No | `http://localhost:7997` | Infinity embedding server URL |
 | `GOOGLE_VERTEX_PROJECT_ID` | No | - | Google Cloud project ID |
 | `GOOGLE_VERTEX_LOCATION` | No | `us-central1` | Vertex AI region |
 | `AWS_REGION` | No | `us-east-1` | AWS region for Bedrock |
@@ -215,6 +216,49 @@ export EMBEDDING_DIMENSIONS="1536"
   ]
 }
 ```
+
+### Infinity (Local Embedding Server)
+
+**Setup:**
+```bash
+export INFINITY_API_URL="http://embed.den.lan"  # Or http://localhost:7997
+export EMBEDDING_MODEL="infinity:nomic-ai/nomic-embed-text-v1.5"
+export EMBEDDING_DIMENSIONS="768"  # Model-specific
+```
+
+**Features:**
+- ✅ **Free & unlimited**: No API costs
+- ✅ **Low latency**: Local network or same host
+- ✅ **Privacy**: Data stays on your infrastructure
+- ✅ **High throughput**: Batch processing up to 2048 items
+- ✅ **OpenAI compatible**: Drop-in replacement API
+- ✅ **Multi-modal**: Text, image, and audio embeddings (model dependent)
+
+**Running Infinity Server:**
+
+Using Docker:
+```bash
+docker run -p 7997:7997 \
+  michaelf34/infinity:latest \
+  v2 --model-id nomic-ai/nomic-embed-text-v1.5
+```
+
+Or using pip:
+```bash
+pip install infinity-emb
+infinity_emb v2 --model-id nomic-ai/nomic-embed-text-v1.5
+```
+
+**Available Models:**
+- `nomic-ai/nomic-embed-text-v1.5` (768 dims, recommended)
+- `BAAI/bge-small-en-v1.5` (384 dims)
+- `BAAI/bge-base-en-v1.5` (768 dims)
+- `sentence-transformers/all-MiniLM-L6-v2` (384 dims)
+- And many more from HuggingFace
+
+**Documentation:**
+- GitHub: https://github.com/michaelfeil/infinity
+- OpenAPI docs: http://localhost:7997/docs (when running)
 
 ### Disable Embeddings (Keyword-Only Search)
 

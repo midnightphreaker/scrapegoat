@@ -47,7 +47,7 @@ LLM-assisted coding promises speed and efficiency, but often falls short due to:
 - **Accurate & Version-Aware AI Responses:** Provides up-to-date, version-specific documentation to reduce AI hallucinations and improve code accuracy.
 - **Broad Source Compatibility:** Scrapes documentation from websites, GitHub repos, package manager sites (npm, PyPI), and local file directories.
 - **Advanced Search & Processing:** Intelligently chunks documentation semantically, generates embeddings, and combines vector similarity with full-text search.
-- **Flexible Embedding Models:** Supports various providers including OpenAI (and compatible APIs), Google Gemini/Vertex AI, Azure OpenAI, and AWS Bedrock. Vector search is optional.
+- **Flexible Embedding Models:** Supports various providers including OpenAI (and compatible APIs), Google Gemini/Vertex AI, Azure OpenAI, AWS Bedrock, and Infinity (local embedding server). Vector search is optional.
 - **Enterprise Authentication:** Optional OAuth2/OIDC authentication with dynamic client registration for secure deployments.
 - **Web Interface:** Easy-to-use web interface for searching and managing documentation.
 - **Free & Open Source:** Community-driven and freely available.
@@ -481,6 +481,7 @@ Configure embedding providers via environment variables. Set these in your shell
 | `DOCS_MCP_EMBEDDING_MODEL`         | Embedding model to use (see below for options).       | No       |
 | `OPENAI_API_KEY`                   | OpenAI API key for embeddings.                        | No       |
 | `OPENAI_API_BASE`                  | Custom OpenAI-compatible API endpoint (e.g., Ollama). | No       |
+| `INFINITY_API_URL`                 | Infinity embedding server URL (e.g., http://embed.den.lan). | No       |
 | `GOOGLE_API_KEY`                   | Google API key for Gemini embeddings.                 | No       |
 | `GOOGLE_APPLICATION_CREDENTIALS`   | Path to Google service account JSON for Vertex AI.    | No       |
 | `AWS_ACCESS_KEY_ID`                | AWS key for Bedrock embeddings.                       | No       |
@@ -499,6 +500,7 @@ Set `DOCS_MCP_EMBEDDING_MODEL` to one of:
 
 - `text-embedding-3-small` (default, OpenAI)
 - `openai:snowflake-arctic-embed2` (OpenAI-compatible, Ollama)
+- `infinity:nomic-ai/nomic-embed-text-v1.5` (Infinity local server)
 - `vertex:text-embedding-004` (Google Vertex AI)
 - `gemini:embedding-001` (Google Gemini)
 - `aws:amazon.titan-embed-text-v1` (AWS Bedrock)
@@ -533,6 +535,15 @@ npx @arabold/docs-mcp-server@latest
 OPENAI_API_KEY="lmstudio" \
 OPENAI_API_BASE="http://localhost:1234/v1" \
 DOCS_MCP_EMBEDDING_MODEL="text-embedding-qwen3-embedding-4b" \
+npx @arabold/docs-mcp-server@latest
+```
+
+**Infinity (Local Embedding Server):**
+
+```bash
+DATABASE_URL="postgresql://scrapegoat:password@localhost:5432/scrapegoat" \
+INFINITY_API_URL="http://embed.den.lan" \
+DOCS_MCP_EMBEDDING_MODEL="infinity:nomic-ai/nomic-embed-text-v1.5" \
 npx @arabold/docs-mcp-server@latest
 ```
 
