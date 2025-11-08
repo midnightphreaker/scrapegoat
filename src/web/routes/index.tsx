@@ -14,7 +14,7 @@ export function registerIndexRoute(server: FastifyInstance) {
       (
         <Layout title="ScrapeGoat">
           {/* Job Queue Section */}
-          <section class="mb-4 p-4 bg-white rounded-lg shadow dark:bg-[#242424] border border-gray-300 dark:border-[#3c3c3c]">
+          <section class="mb-4 p-4 bg-white rounded-lg shadow dark:bg-[#181818] border border-gray-300 dark:border-[#3c3c3c]">
             <div class="flex items-center justify-between mb-2">
               <h2 class="text-xl font-semibold text-gray-900 dark:text-white">
                 Job Queue
@@ -46,7 +46,7 @@ export function registerIndexRoute(server: FastifyInstance) {
             {/* Container for the add job form, loaded via HTMX */}
             <div id="addJobForm" hx-get="/web/jobs/new" hx-trigger="load">
               {/* Initial loading state (optional, could just be empty) */}
-              <div class="p-6 bg-white rounded-lg shadow dark:bg-[#242424] animate-pulse">
+              <div class="p-6 bg-white rounded-lg shadow dark:bg-[#181818] animate-pulse">
                 <div class="h-6 bg-gray-200 rounded-full dark:bg-gray-700 w-1/3 mb-4" />
                 <div class="h-[0.8em] bg-gray-200 rounded-full dark:bg-gray-700 w-full mb-2.5" />
                 <div class="h-[0.8em] bg-gray-200 rounded-full dark:bg-gray-700 w-full mb-2.5" />
