@@ -156,7 +156,7 @@ export class FetchUrlTool {
         this.constructor.name,
       );
     } finally {
-      // Cleanup all pipelines and fetcher to prevent resource leaks (e.g., browser instances)
+      // Cleanup all pipelines and fetcher to prevent resource leaks
       await Promise.allSettled([
         ...this.pipelines.map((pipeline) => pipeline.close()),
         this.fetcher.close(),

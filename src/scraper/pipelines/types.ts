@@ -45,7 +45,7 @@ export interface ContentPipeline {
   ): Promise<ProcessedContent>;
 
   /**
-   * Cleanup resources used by this pipeline (e.g., browser instances, database connections).
+   * Cleanup resources used by this pipeline (e.g., connections, caches).
    * Should be called when the pipeline is no longer needed.
    */
   close(): Promise<void>;

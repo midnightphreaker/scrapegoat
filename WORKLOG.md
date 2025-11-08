@@ -864,3 +864,54 @@ The Playwright removal refactoring is **complete and ready for merge**. All phas
 **Commit**: `fix(issue-4): remove browser config validation and references`
 
 ---
+
+## [2025-11-09 15:30:00] - Issue #5 FIXED: Clean Up 'browser' Documentation Comments
+
+**Priority**: MEDIUM (documentation cleanup)
+
+**Problem**: JSDoc comments and inline documentation still referenced 'browser' as a valid fetcher type.
+
+**Files Modified**:
+
+1. `src/types/index.ts`
+   - Updated fetcherType comment: Removed 'browser' from valid values list
+
+2. `src/store/types.ts`
+   - Updated fetcher_type comment: Removed 'browser' from valid values list
+
+3. `src/mcp/mcpServer.ts`
+   - Updated type assertion comment: Removed 'browser' from fetcher type list
+
+4. `src/tools/FetchUrlTool.ts`
+   - Updated cleanup comment: Removed "(e.g., browser instances)" reference
+
+5. `src/scraper/strategies/WebScraperStrategy.ts`
+   - Updated cleanup JSDoc: Changed "pipeline browser instances" to "pipelines and fetcher instances"
+
+6. `src/scraper/types.ts`
+   - Updated ScraperStrategy.cleanup JSDoc: Changed "pipeline browser instances" to "pipelines and fetchers"
+
+7. `src/scraper/pipelines/types.ts`
+   - Updated Pipeline.close JSDoc: Changed "browser instances, database connections" to "connections, caches"
+
+**Changes Summary**:
+- All JSDoc @param comments updated to remove 'browser'
+- All inline comments mentioning browser fetcher updated
+- Cleanup comments no longer reference "browser instances"
+- Documentation now accurately reflects current architecture
+
+**Notes**:
+- Left intentional references in AutoDetectFetcher.ts (backward compatibility redirect)
+- Left comments in MIGRATION.md (intentional documentation of removed feature)
+- General "browser-like" references in FingerprintGenerator, etc. are fine (not referring to fetcher type)
+
+**Verification**:
+- Ran `npm run build` - compilation succeeded
+- Documentation comments now accurate
+- No misleading references to browser fetcher
+
+**Status**: ✅ FIXED and VERIFIED
+
+**Commit**: `fix(issue-5): clean up browser fetcher documentation comments`
+
+---

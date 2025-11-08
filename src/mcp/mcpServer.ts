@@ -131,7 +131,7 @@ export function createMcpServerInstance(
               maxDepth,
               scope,
               followRedirects,
-              fetcher: fetcher as "auto" | "http" | "browser" | "crawl4ai", // Type assertion safe due to zod validation
+              fetcher: fetcher as "auto" | "http" | "crawl4ai", // Type assertion safe due to zod validation
               crawl4ai: {
                 enableScreenshot: enableScreenshots,
                 screenshotMode: "viewport", // Default mode

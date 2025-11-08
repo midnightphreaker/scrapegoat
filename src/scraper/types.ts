@@ -13,7 +13,7 @@ export interface ScraperStrategy {
   ): Promise<void>;
 
   /**
-   * Cleanup resources used by this strategy (e.g., pipeline browser instances).
+   * Cleanup resources used by this strategy (e.g., pipelines and fetchers).
    * Should be called when the strategy is no longer needed.
    */
   cleanup?(): Promise<void>;

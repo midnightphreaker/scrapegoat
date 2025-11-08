@@ -15,7 +15,7 @@ export interface DbPage {
   last_modified: string | null;
   content_type: string | null;
   screenshot_path: string | null; // Path to screenshot file (Phase 3B)
-  fetcher_type: string | null; // Which fetcher was used: 'auto', 'http', 'browser', 'crawl4ai', 'file' (Phase 3B)
+  fetcher_type: string | null; // Which fetcher was used: 'auto', 'http', 'crawl4ai', 'file' (Phase 3B)
   metadata: string | null; // JSON metadata including media/links from Crawl4AI (Phase 3B)
   created_at: string;
   updated_at: string;

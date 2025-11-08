@@ -170,7 +170,7 @@ export class WebScraperStrategy extends BaseScraperStrategy {
   }
 
   /**
-   * Cleanup resources used by this strategy, specifically the pipeline browser instances and fetcher.
+   * Cleanup resources used by this strategy, specifically pipelines and fetcher instances.
    */
   async cleanup(): Promise<void> {
     await Promise.allSettled([
