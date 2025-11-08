@@ -2,7 +2,7 @@
 
 ## Overview
 
-The storage system uses SQLite with a normalized schema design for efficient document storage, retrieval, and version management.
+The storage system uses PostgreSQL with pgvector extension, providing a normalized schema design for efficient document storage, retrieval, and version management with enterprise-grade scalability.
 
 ## Database Schema
 
@@ -12,11 +12,14 @@ Core library metadata and organization:
 
 ```sql
 CREATE TABLE libraries (
-  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  id SERIAL PRIMARY KEY,
   name TEXT NOT NULL UNIQUE,
-  created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-  updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+  created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
 );
+
+-- Index for case-insensitive lookups
+CREATE INDEX idx_libraries_name_lower ON libraries(LOWER(name));
 ```
 
 **Purpose:** Library name normalization and metadata storage.
@@ -27,46 +30,88 @@ Version tracking with comprehensive status and configuration:
 
 ```sql
 CREATE TABLE versions (
-  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  id SERIAL PRIMARY KEY,
   library_id INTEGER NOT NULL,
-  version TEXT,
+  name TEXT,
   status TEXT NOT NULL DEFAULT 'pending',
-  indexed_at DATETIME,
+  indexed_at TIMESTAMPTZ,
   error_message TEXT,
-  -- Job state fields
   job_status TEXT DEFAULT 'queued',
   progress_current INTEGER DEFAULT 0,
   progress_total INTEGER DEFAULT 0,
-  -- Configuration storage
-  scraper_config TEXT,
-  created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-  updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-  FOREIGN KEY (library_id) REFERENCES libraries (id)
+  scraper_config JSONB,
+  created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+  CONSTRAINT versions_library_id_fkey FOREIGN KEY (library_id)
+    REFERENCES libraries (id) ON DELETE CASCADE
 );
+
+-- Indexes
+CREATE INDEX idx_versions_library_id ON versions(library_id);
+CREATE INDEX idx_versions_status ON versions(status);
+CREATE UNIQUE INDEX idx_versions_library_version ON versions(library_id, name);
 ```
 
 **Purpose:** Job state management, progress tracking, and scraper configuration persistence.
+
+### Pages Table
+
+Page-level information and metadata:
+
+```sql
+CREATE TABLE pages (
+  id SERIAL PRIMARY KEY,
+  version_id INTEGER NOT NULL,
+  url TEXT NOT NULL,
+  title TEXT,
+  content_type TEXT,
+  created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+  CONSTRAINT pages_version_id_fkey FOREIGN KEY (version_id)
+    REFERENCES versions (id) ON DELETE CASCADE
+);
+
+-- Indexes
+CREATE INDEX idx_pages_version_id ON pages(version_id);
+CREATE INDEX idx_pages_url ON pages(url);
+```
+
+**Purpose:** URL and page-level metadata storage.
 
 ### Documents Table
 
 Document content with embeddings and metadata:
 
 ```sql
+CREATE EXTENSION IF NOT EXISTS vector;
+
 CREATE TABLE documents (
-  id INTEGER PRIMARY KEY AUTOINCREMENT,
-  version_id INTEGER NOT NULL,
-  title TEXT NOT NULL,
+  id SERIAL PRIMARY KEY,
+  page_id INTEGER NOT NULL,
   content TEXT NOT NULL,
-  url TEXT NOT NULL,
-  order_index INTEGER NOT NULL,
-  embedding BLOB,
-  metadata TEXT,
-  created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-  FOREIGN KEY (version_id) REFERENCES versions (id)
+  metadata JSONB,
+  sort_order INTEGER NOT NULL,
+  embedding vector(1536),  -- pgvector type for semantic search
+  created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+  CONSTRAINT documents_page_id_fkey FOREIGN KEY (page_id)
+    REFERENCES pages (id) ON DELETE CASCADE
 );
+
+-- Full-text search index (GIN)
+CREATE INDEX idx_documents_content_fts ON documents
+USING gin(to_tsvector('english', content));
+
+-- Vector similarity search index (HNSW)
+CREATE INDEX idx_documents_embedding_hnsw ON documents
+USING hnsw (embedding vector_cosine_ops);
+
+-- Other indexes
+CREATE INDEX idx_documents_page_id ON documents(page_id);
+CREATE INDEX idx_documents_sort_order ON documents(page_id, sort_order);
 ```
 
-**Purpose:** Content storage with vector embeddings and search metadata.
+**Purpose:** Content storage with vector embeddings (pgvector) and full-text search capabilities.
 
 ## Schema Evolution
 
@@ -74,40 +119,58 @@ CREATE TABLE documents (
 
 Sequential SQL migrations in `db/migrations/`:
 
-- `000-initial-schema.sql`: Base schema creation
-- `001-add-indexed-at-column.sql`: Indexing timestamp
-- `002-normalize-library-table.sql`: Library normalization
-- `003-normalize-vector-table.sql`: Vector storage optimization
-- `004-complete-normalization.sql`: Full schema normalization
-- `005-add-status-tracking.sql`: Job status tracking
-- `006-add-scraper-options.sql`: Configuration persistence
+- `001-initial-schema.sql`: Base schema with pgvector extension, all tables
+- `002-gin-indexes.sql`: Full-text search GIN indexes
+- `003-hnsw-indexes.sql`: Vector similarity HNSW indexes
+- `010-add-indexed-at-column.sql`: Additional indexed_at timestamp column
 
 ### Migration Application
 
 Automatic migration execution:
 
-- Check current schema version
+- Check current schema version using `_migrations` table
 - Apply pending migrations in sequence
-- Validate schema integrity
-- Handle migration failures gracefully
+- Validate schema integrity with `information_schema` queries
+- Handle migration failures gracefully with transaction rollback
+- Support for both local and remote PostgreSQL instances
 
 ## Data Location
 
-### Storage Directory Resolution
+### Database Connection
 
-Database location determined by priority:
+PostgreSQL database connection configured via `DATABASE_URL` environment variable:
 
-1. Project-local `.store` directory
-2. OS-specific application data directory
-3. Temporary directory as fallback
+```bash
+export DATABASE_URL="postgresql://user:password@host:port/database"
+```
+
+Connection resolution priority:
+
+1. `DATABASE_URL` environment variable
+2. `.env` file in project root
+3. `.env.local` for local overrides (development)
+4. `.env.test` for test environment
+
+### Connection String Format
+
+```
+postgresql://[user[:password]@][host][:port][/database][?parameters]
+```
+
+**Examples:**
+
+- Local development: `postgresql://scrapegoat:password@localhost:5432/scrapegoat`
+- Docker: `postgresql://scrapegoat:password@postgres-container:5432/scrapegoat`
+- Remote: `postgresql://scrapegoat:password@db.example.com:5432/scrapegoat?sslmode=require`
 
 ### Cross-Platform Support
 
-Platform-specific paths:
+PostgreSQL server can run on any platform:
 
-- **macOS:** `~/Library/Application Support/docs-mcp-server/`
-- **Linux:** `~/.local/share/docs-mcp-server/`
-- **Windows:** `%APPDATA%/docs-mcp-server/`
+- **Docker:** Recommended for development (includes pgvector)
+- **Linux:** Via package manager or Docker
+- **macOS:** Via Homebrew or Postgres.app
+- **Windows:** Via official installer or WSL2
 
 ## Document Management
 
@@ -141,11 +204,12 @@ Handles document lifecycle operations:
 
 ### Vector Storage
 
-Embeddings stored as BLOB data:
+Embeddings stored using pgvector's native `vector` type:
 
-- Consistent 1536-dimensional vectors
-- Provider-agnostic storage format
-- Efficient binary serialization
+- Consistent 1536-dimensional vectors (configurable)
+- Native PostgreSQL type with optimized storage
+- Efficient cosine distance calculations using `<=>` operator
+- HNSW indexing for fast approximate nearest neighbor search
 - Null handling for missing embeddings
 
 ### EmbeddingFactory
@@ -189,30 +253,49 @@ Support for multiple embedding providers:
 
 ### DocumentRetrieverService
 
-Handles search and retrieval operations:
+Handles search and retrieval operations using PostgreSQL's advanced search capabilities:
 
 **Search Methods:**
 
-- Vector similarity search
-- Full-text search
-- Hybrid search combining both
-- Context-aware result ranking
+- **Vector Similarity Search:** Using pgvector's HNSW index and `<=>` operator
+- **Full-Text Search:** Using PostgreSQL's native FTS with GIN indexes and `@@` operator
+- **Hybrid Search:** Reciprocal Rank Fusion (RRF) combining both methods
+- **Context-Aware Ranking:** Using `ts_rank()` for FTS and cosine distance for vectors
 
 **Context Retrieval:**
 
-- Parent-child chunk relationships
-- Sibling chunk context
-- Document-level metadata
-- Sequential ordering preservation
+- Parent-child chunk relationships via JOIN queries
+- Sibling chunk context through `sort_order` column
+- Document-level metadata stored as JSONB
+- Sequential ordering preservation with indexed sort_order
 
 ### Search Optimization
 
-Performance optimizations:
+Performance optimizations using PostgreSQL features:
 
-- Vector similarity indexing
-- Full-text search indexes
-- Query result caching
-- Batch retrieval operations
+**Vector Search:**
+- HNSW index for approximate nearest neighbor search
+- Cosine distance operator (`<=>`) for similarity
+- Efficient vector operations in C (pgvector extension)
+- Configurable `ef_search` parameter for accuracy/speed tradeoff
+
+**Full-Text Search:**
+- GIN index on `to_tsvector('english', content)`
+- `plainto_tsquery()` for safe user input handling
+- `phraseto_tsquery()` for exact phrase matching
+- `ts_rank()` for relevance scoring (higher = better)
+
+**Hybrid Search:**
+- Parallel execution of vector and FTS queries
+- Reciprocal Rank Fusion (RRF) algorithm
+- Overfetch factor (10x) for better result merging
+- Final ranking combining both relevance signals
+
+**Query Optimization:**
+- Connection pooling with `pg` driver
+- Prepared statements for common queries
+- Index-only scans where possible
+- Efficient JOIN operations on foreign keys
 
 ## Data Consistency
 
@@ -220,112 +303,278 @@ Performance optimizations:
 
 Immediate persistence of state changes:
 
-- Job status updates
-- Progress tracking
-- Configuration changes
-- Error information
+- Job status updates committed immediately
+- Progress tracking with real-time updates
+- Configuration changes stored in JSONB
+- Error information logged with timestamps
 
 ### Transaction Management
 
-Database transactions for consistency:
+PostgreSQL ACID transactions for consistency:
 
-- Atomic document storage
-- Version state transitions
-- Batch operations
-- Error rollback handling
+- Atomic document storage with `BEGIN/COMMIT` blocks
+- Version state transitions using row-level locking
+- Batch operations with transaction boundaries
+- Automatic rollback on error using `try/catch` with `ROLLBACK`
 
 ### Concurrent Access
 
-Safe concurrent database access:
+PostgreSQL's MVCC for safe concurrent database access:
 
-- Connection pooling
-- Transaction isolation
-- Lock management
-- Deadlock prevention
+- Connection pooling with `pg` driver (default: 10 connections)
+- Multi-Version Concurrency Control (MVCC) for isolation
+- Row-level locking with `SELECT ... FOR UPDATE` when needed
+- Deadlock detection and automatic resolution
+- Serializable isolation level available for critical operations
 
 ## Performance Considerations
 
 ### Index Strategy
 
-Database indexes for performance:
+PostgreSQL indexes optimized for workload:
 
-- Primary keys on all tables
-- Foreign key indexes
-- Search-specific indexes
-- Composite indexes for common queries
+- **Primary Keys:** B-tree indexes (SERIAL columns)
+- **Foreign Keys:** B-tree indexes on all FKs for JOIN performance
+- **Vector Search:** HNSW index on `embedding` column
+- **Full-Text Search:** GIN index on `to_tsvector(content)`
+- **Composite Indexes:** On `(page_id, sort_order)` for ordered retrieval
+- **Partial Indexes:** On `WHERE embedding IS NOT NULL` to save space
 
 ### Query Optimization
 
-Efficient query patterns:
+PostgreSQL-specific optimization techniques:
 
-- Prepared statements
-- Batch operations
-- Result pagination
-- Query plan optimization
+- **Prepared Statements:** All queries use parameterized statements ($1, $2)
+- **Batch Operations:** Multi-row INSERT with `VALUES (...), (...), ...`
+- **Result Pagination:** `LIMIT` and `OFFSET` for large result sets
+- **Query Planner:** EXPLAIN ANALYZE for query tuning
+- **Connection Pooling:** Reuse connections to avoid overhead
+- **Index-Only Scans:** Queries satisfied entirely from index
 
 ### Storage Efficiency
 
-Space-efficient storage:
+Space-efficient storage using PostgreSQL features:
 
-- Text compression for large content
-- Binary embedding storage
-- Metadata JSON optimization
-- Garbage collection for deleted records
+- **TOAST:** Automatic compression for large content (>2KB)
+- **Native Vector Type:** Efficient binary storage for embeddings
+- **JSONB:** Compressed, indexed JSON for metadata
+- **VACUUM:** Automatic cleanup of deleted rows (autovacuum)
+- **Partitioning:** Table partitioning for very large datasets (optional)
 
 ## Backup and Recovery
 
 ### Data Export
 
-Export functionality for data portability:
+PostgreSQL backup tools for data portability:
 
-- Complete database export
-- Library-specific export
-- Version-specific export
-- Metadata preservation
+**pg_dump:**
+```bash
+# Full database backup
+pg_dump "$DATABASE_URL" -Fc -f scrapegoat_backup.dump
+
+# Schema-only backup
+pg_dump "$DATABASE_URL" -s -f scrapegoat_schema.sql
+
+# Data-only backup
+pg_dump "$DATABASE_URL" -a -f scrapegoat_data.sql
+
+# Specific table backup
+pg_dump "$DATABASE_URL" -t documents -Fc -f documents_backup.dump
+```
+
+**pg_basebackup:**
+```bash
+# Physical backup for PITR (Point-in-Time Recovery)
+pg_basebackup -h localhost -U postgres -D /backups/base -Ft -z -P
+```
 
 ### Data Import
 
-Import from various sources:
+Import from backups:
 
-- Previous database versions
-- External documentation sources
-- Configuration-based restoration
-- Duplicate detection during import
+**pg_restore:**
+```bash
+# Restore from custom format backup
+pg_restore -d scrapegoat -c scrapegoat_backup.dump
+
+# Parallel restore (faster)
+pg_restore -d scrapegoat -j 4 scrapegoat_backup.dump
+```
+
+**psql:**
+```bash
+# Restore from SQL file
+psql "$DATABASE_URL" -f scrapegoat_schema.sql
+```
 
 ### Disaster Recovery
 
-Recovery mechanisms:
+PostgreSQL disaster recovery capabilities:
 
-- Database integrity checks
-- Automatic backup creation
-- Transaction log recovery
-- Schema validation and repair
+- **WAL (Write-Ahead Logging):** Continuous archiving for point-in-time recovery
+- **Streaming Replication:** Real-time replica for high availability
+- **pg_checksums:** Data corruption detection
+- **Transaction Rollback:** Automatic on error
+- **Schema Validation:** Using `information_schema` queries
+
+**Point-in-Time Recovery Example:**
+```bash
+# Restore to specific timestamp
+pg_restore -d scrapegoat scrapegoat_backup.dump
+psql "$DATABASE_URL" -c "SELECT pg_wal_replay_resume();"
+```
 
 ## Monitoring and Maintenance
 
 ### Database Health
 
-Health monitoring capabilities:
+PostgreSQL monitoring tools and queries:
 
-- Storage space utilization
-- Query performance metrics
-- Connection pool status
-- Error rate tracking
+**Storage Utilization:**
+```sql
+-- Database size
+SELECT pg_size_pretty(pg_database_size('scrapegoat'));
+
+-- Table sizes
+SELECT
+  tablename,
+  pg_size_pretty(pg_total_relation_size(schemaname||'.'||tablename)) AS size
+FROM pg_tables
+WHERE schemaname = 'public'
+ORDER BY pg_total_relation_size(schemaname||'.'||tablename) DESC;
+
+-- Index sizes
+SELECT
+  indexname,
+  pg_size_pretty(pg_relation_size(schemaname||'.'||indexname)) AS size
+FROM pg_indexes
+WHERE schemaname = 'public';
+```
+
+**Query Performance:**
+```sql
+-- Slow queries (requires pg_stat_statements)
+SELECT
+  query,
+  calls,
+  total_exec_time,
+  mean_exec_time,
+  max_exec_time
+FROM pg_stat_statements
+ORDER BY mean_exec_time DESC
+LIMIT 10;
+```
+
+**Connection Pool:**
+```sql
+-- Active connections
+SELECT * FROM pg_stat_activity
+WHERE datname = 'scrapegoat';
+
+-- Connection count
+SELECT count(*) FROM pg_stat_activity
+WHERE datname = 'scrapegoat';
+```
 
 ### Maintenance Operations
 
-Regular maintenance tasks:
+Regular PostgreSQL maintenance:
 
-- Vacuum operations for SQLite
-- Index rebuilding
-- Orphaned record cleanup
-- Performance analysis
+**VACUUM:**
+```sql
+-- Analyze all tables
+VACUUM ANALYZE;
+
+-- Vacuum specific table
+VACUUM ANALYZE documents;
+
+-- Full vacuum (requires table lock)
+VACUUM FULL documents;
+```
+
+**REINDEX:**
+```sql
+-- Rebuild all indexes
+REINDEX DATABASE scrapegoat;
+
+-- Rebuild specific index
+REINDEX INDEX CONCURRENTLY idx_documents_embedding_hnsw;
+```
+
+**ANALYZE:**
+```sql
+-- Update statistics for query planner
+ANALYZE;
+
+-- Analyze specific table
+ANALYZE documents;
+```
+
+**Autovacuum Configuration** (in `postgresql.conf`):
+```ini
+autovacuum = on
+autovacuum_vacuum_scale_factor = 0.1
+autovacuum_analyze_scale_factor = 0.05
+```
 
 ### Diagnostics
 
-Debugging and diagnostic tools:
+PostgreSQL diagnostic tools:
 
-- Query execution analysis
-- Storage space breakdown
-- Relationship integrity checks
-- Performance bottleneck identification
+**EXPLAIN ANALYZE:**
+```sql
+-- Analyze query performance
+EXPLAIN ANALYZE
+SELECT * FROM documents
+WHERE to_tsvector('english', content) @@ plainto_tsquery('english', 'search term');
+```
+
+**pg_stat_user_tables:**
+```sql
+-- Table access patterns
+SELECT
+  schemaname,
+  tablename,
+  seq_scan,
+  idx_scan,
+  n_tup_ins,
+  n_tup_upd,
+  n_tup_del
+FROM pg_stat_user_tables;
+```
+
+**pg_stat_user_indexes:**
+```sql
+-- Index usage statistics
+SELECT
+  schemaname,
+  tablename,
+  indexname,
+  idx_scan,
+  idx_tup_read,
+  idx_tup_fetch
+FROM pg_stat_user_indexes
+WHERE idx_scan = 0;  -- Unused indexes
+```
+
+**Bloat Detection:**
+```sql
+-- Detect table bloat
+SELECT
+  schemaname,
+  tablename,
+  pg_size_pretty(pg_total_relation_size(schemaname||'.'||tablename)) AS size,
+  pg_size_pretty(pg_total_relation_size(schemaname||'.'||tablename) - pg_relation_size(schemaname||'.'||tablename)) AS bloat
+FROM pg_tables
+WHERE schemaname = 'public';
+```
+
+---
+
+## Additional Resources
+
+- [PostgreSQL Setup Guide](./POSTGRESQL_SETUP.md)
+- [Configuration Reference](./CONFIGURATION.md)
+- [Migration Guide](./MIGRATION.md)
+- [pgvector Documentation](https://github.com/pgvector/pgvector)
+- [PostgreSQL Full-Text Search](https://www.postgresql.org/docs/current/textsearch.html)
