@@ -168,11 +168,16 @@ document.addEventListener("alpine:init", () => {
     },
 
     generateConfigSnippet() {
+      // Build full URL using window.location for the current domain
+      const protocol = window.location.protocol; // http: or https:
+      const host = window.location.host; // includes port if not default
+      const fullUrl = `${protocol}//${host}/mcp`;
+
       this.configSnippet = JSON.stringify(
         {
           mcpServers: {
             scrapegoat: {
-              url: `${this.mcpUrl}/mcp`,
+              url: fullUrl,
               transport: {
                 type: "sse",
               },
