@@ -98,6 +98,36 @@ services:
         reservations:
           memory: 256M
 
+  # Crawl4AI service - AI-optimized web crawling with BM25-filtered markdown
+  crawl4ai:
+    build:
+      context: ./services/crawl4ai
+      dockerfile: Dockerfile
+    image: scrapegoat-crawl4ai:latest
+    container_name: scrapegoat-crawl4ai
+    restart: unless-stopped
+    ports:
+      - "8001:8001"
+    environment:
+      - HOST=0.0.0.0
+      - PORT=8001
+      - VERBOSE=false
+      - HEADLESS=true
+      - MAX_CONCURRENT_CRAWLS=5
+      - REQUEST_TIMEOUT=30
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8001/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    deploy:
+      resources:
+        limits:
+          memory: 2G
+        reservations:
+          memory: 1G
+
 volumes:
   docs-mcp-data:
     name: docs-mcp-data

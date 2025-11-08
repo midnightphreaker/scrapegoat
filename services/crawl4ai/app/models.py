@@ -2,7 +2,13 @@
 
 from enum import Enum
 from typing import Literal, Optional
-from pydantic import BaseModel, Field, field_validator
+from pydantic import BaseModel, ConfigDict, Field, field_validator
+
+
+def to_camel(string: str) -> str:
+    """Convert snake_case to camelCase."""
+    components = string.split('_')
+    return components[0] + ''.join(x.title() for x in components[1:])
 
 
 class CacheMode(str, Enum):
@@ -21,6 +27,8 @@ class ProxyConfig(BaseModel):
 
 class CrawlConfig(BaseModel):
     """Configuration for crawling."""
+    model_config = ConfigDict(alias_generator=to_camel, populate_by_name=True)
+
     cache_mode: CacheMode = Field(default=CacheMode.enabled)
     wait_for: Optional[str] = Field(default=None, description="CSS selector to wait for")
     wait_for_timeout: int = Field(default=10000, ge=0, le=60000)
@@ -54,6 +62,8 @@ class CrawlRequest(BaseModel):
 
 class MediaItem(BaseModel):
     """Media item extracted from page."""
+    model_config = ConfigDict(alias_generator=to_camel, populate_by_name=True)
+
     type: Literal["image", "video", "audio"]
     url: str
     alt: Optional[str] = None
@@ -70,6 +80,8 @@ class LinkItem(BaseModel):
 
 class CrawlMetadata(BaseModel):
     """Metadata about the crawl."""
+    model_config = ConfigDict(alias_generator=to_camel, populate_by_name=True)
+
     title: Optional[str] = None
     description: Optional[str] = None
     status_code: int
@@ -79,6 +91,8 @@ class CrawlMetadata(BaseModel):
 
 class CrawlData(BaseModel):
     """Successful crawl result data."""
+    model_config = ConfigDict(alias_generator=to_camel, populate_by_name=True)
+
     markdown: str
     raw_markdown: Optional[str] = None
     fit_markdown: Optional[str] = None
