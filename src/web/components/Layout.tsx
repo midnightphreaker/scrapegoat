@@ -166,10 +166,9 @@ const Layout = ({ title, version, children }: LayoutProps) => {
               <div class="flex items-center gap-3">
                 <a
                   href="/"
-                  class="text-2xl font-bold text-gray-800 hover:text-primary-600 transition-colors duration-150 font-brand"
+                  class="text-2xl font-bold text-gray-900 hover:text-gray-700 transition-colors duration-150 font-brand"
                 >
-                  <span class="text-primary-600">Scrape</span>
-                  <span class="text-accent-600">Goat</span>
+                  scrapegoat
                 </a>
                 {versionString ? (
                   <span
@@ -206,14 +205,13 @@ const Layout = ({ title, version, children }: LayoutProps) => {
 
             {/* Small screens: stacked layout */}
             <div class="sm:hidden space-y-2">
-              {/* Row 1: ScrapeGoat branding */}
+              {/* Row 1: scrapegoat branding */}
               <div class="flex items-center justify-center gap-2">
                 <a
                   href="/"
-                  class="text-2xl font-bold text-gray-800 hover:text-primary-600 transition-colors duration-150 font-brand"
+                  class="text-2xl font-bold text-gray-900 hover:text-gray-700 transition-colors duration-150 font-brand"
                 >
-                  <span class="text-primary-600">Scrape</span>
-                  <span class="text-accent-600">Goat</span>
+                  scrapegoat
                 </a>
                 {versionString ? (
                   <span
