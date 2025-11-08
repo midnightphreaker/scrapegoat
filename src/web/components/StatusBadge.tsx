@@ -18,19 +18,19 @@ function getStatusClasses(status: VersionStatus): string {
 
   switch (status) {
     case VersionStatus.COMPLETED:
-      return `${baseClasses} bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300`;
+      return `${baseClasses} bg-green-100 text-green-800`;
     case VersionStatus.RUNNING:
     case VersionStatus.UPDATING:
-      return `${baseClasses} bg-primary-100 text-primary-800 dark:bg-primary-900 dark:text-primary-300`;
+      return `${baseClasses} bg-primary-100 text-primary-800`;
     case VersionStatus.QUEUED:
-      return `${baseClasses} bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-300`;
+      return `${baseClasses} bg-yellow-100 text-yellow-800`;
     case VersionStatus.FAILED:
-      return `${baseClasses} bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-300`;
+      return `${baseClasses} bg-red-100 text-red-800`;
     case VersionStatus.CANCELLED:
-      return `${baseClasses} bg-gray-100 text-gray-800 dark:bg-[#181818] dark:text-gray-300`;
+      return `${baseClasses} bg-gray-100 text-gray-800`;
     case VersionStatus.NOT_INDEXED:
     default:
-      return `${baseClasses} bg-gray-100 text-gray-600 dark:bg-[#242424] dark:text-gray-400`;
+      return `${baseClasses} bg-gray-100 text-gray-600`;
   }
 }
 

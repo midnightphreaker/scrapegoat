@@ -16,7 +16,7 @@ interface JobListProps {
 const JobList = ({ jobs }: JobListProps) => (
   <div id="job-list" class="space-y-2">
     {jobs.length === 0 ? (
-      <p class="text-center text-gray-500 dark:text-gray-400">
+      <p class="text-center text-gray-500">
         No pending jobs.
       </p>
     ) : (

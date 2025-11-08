@@ -41,13 +41,13 @@ const SearchResultItem = async ({ result }: SearchResultItemProps) => {
     // Sanitize the HTML content
     const safeHtml = purifier.sanitize(rawHtml);
     contentElement = (
-      <div class="format dark:format-invert max-w-none">{safeHtml}</div>
+      <div class="format max-w-none">{safeHtml}</div>
     );
   } else {
     // For non-markdown content, sanitize and render as preformatted text
     const safeContent = escapeHtml(result.content);
     contentElement = (
-      <div class="format dark:format-invert max-w-none">
+      <div class="format max-w-none">
         <pre>
           <code>{safeContent}</code>
         </pre>
@@ -56,8 +56,8 @@ const SearchResultItem = async ({ result }: SearchResultItemProps) => {
   }
 
   return (
-    <div class="block px-4 py-2 bg-white dark:bg-[#242424] rounded-lg shadow-sm border border-gray-300 dark:border-[#3c3c3c] mb-2">
-      <div class="text-sm text-gray-600 dark:text-gray-400 mb-1 flex items-center gap-2">
+    <div class="block px-4 py-2 bg-white rounded-lg shadow-sm border border-gray-300 mb-2">
+      <div class="text-sm text-gray-600 mb-1 flex items-center gap-2">
         <a
           href={result.url}
           target="_blank"

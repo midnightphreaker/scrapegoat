@@ -32,25 +32,25 @@ const LinksTable = ({ links, baseUrl }: LinksTableProps) => {
   }
 
   return (
-    <div class="mt-6 p-4 bg-white dark:bg-[#242424] rounded-lg shadow border border-gray-300 dark:border-[#3c3c3c]">
-      <h3 class="text-lg font-semibold text-gray-900 dark:text-white mb-3">
+    <div class="mt-6 p-4 bg-white rounded-lg shadow border border-gray-300">
+      <h3 class="text-lg font-semibold text-gray-900 mb-3">
         Extracted Links
       </h3>
 
       {/* Internal Links */}
       {internal.length > 0 && (
         <div class="mb-6">
-          <h4 class="font-medium text-gray-700 dark:text-gray-300 mb-2">
+          <h4 class="font-medium text-gray-700 mb-2">
             Internal Links ({internal.length})
           </h4>
           <div class="overflow-x-auto">
-            <table class="min-w-full text-sm border border-gray-200 dark:border-[#3c3c3c]">
-              <thead class="bg-gray-50 dark:bg-[#181818]">
+            <table class="min-w-full text-sm border border-gray-200">
+              <thead class="bg-gray-50">
                 <tr>
-                  <th class="text-left p-2 font-medium text-gray-700 dark:text-gray-300">
+                  <th class="text-left p-2 font-medium text-gray-700">
                     Text
                   </th>
-                  <th class="text-left p-2 font-medium text-gray-700 dark:text-gray-300">
+                  <th class="text-left p-2 font-medium text-gray-700">
                     URL
                   </th>
                 </tr>
@@ -59,10 +59,10 @@ const LinksTable = ({ links, baseUrl }: LinksTableProps) => {
                 {internal.map((link, index) => (
                   <tr
                     key={index}
-                    class="border-t border-gray-200 dark:border-[#3c3c3c] hover:bg-gray-50 dark:hover:bg-[#181818]"
+                    class="border-t border-gray-200 hover:bg-gray-50"
                   >
-                    <td class="p-2 text-gray-900 dark:text-white">{link.text}</td>
-                    <td class="p-2 text-gray-600 dark:text-gray-400 font-mono text-xs break-all">
+                    <td class="p-2 text-gray-900">{link.text}</td>
+                    <td class="p-2 text-gray-600 font-mono text-xs break-all">
                       {link.url}
                     </td>
                   </tr>
@@ -76,17 +76,17 @@ const LinksTable = ({ links, baseUrl }: LinksTableProps) => {
       {/* External Links */}
       {external.length > 0 && (
         <div>
-          <h4 class="font-medium text-gray-700 dark:text-gray-300 mb-2">
+          <h4 class="font-medium text-gray-700 mb-2">
             External Links ({external.length})
           </h4>
           <div class="overflow-x-auto">
-            <table class="min-w-full text-sm border border-gray-200 dark:border-[#3c3c3c]">
-              <thead class="bg-gray-50 dark:bg-[#181818]">
+            <table class="min-w-full text-sm border border-gray-200">
+              <thead class="bg-gray-50">
                 <tr>
-                  <th class="text-left p-2 font-medium text-gray-700 dark:text-gray-300">
+                  <th class="text-left p-2 font-medium text-gray-700">
                     Text
                   </th>
-                  <th class="text-left p-2 font-medium text-gray-700 dark:text-gray-300">
+                  <th class="text-left p-2 font-medium text-gray-700">
                     URL
                   </th>
                 </tr>
@@ -95,15 +95,15 @@ const LinksTable = ({ links, baseUrl }: LinksTableProps) => {
                 {external.map((link, index) => (
                   <tr
                     key={index}
-                    class="border-t border-gray-200 dark:border-[#3c3c3c] hover:bg-gray-50 dark:hover:bg-[#181818]"
+                    class="border-t border-gray-200 hover:bg-gray-50"
                   >
-                    <td class="p-2 text-gray-900 dark:text-white">{link.text}</td>
+                    <td class="p-2 text-gray-900">{link.text}</td>
                     <td class="p-2 font-mono text-xs">
                       <a
                         href={link.url}
                         target="_blank"
                         rel="noopener noreferrer"
-                        class="text-pink-500 hover:text-pink-600 dark:text-pink-400 dark:hover:text-pink-500 hover:underline break-all"
+                        class="text-pink-500 hover:text-pink-600 hover:underline break-all"
                       >
                         {link.url}
                       </a>

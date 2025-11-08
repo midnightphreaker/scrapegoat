@@ -20,9 +20,9 @@ const ServiceHealthIndicator = ({
   };
 
   const textColors = {
-    ok: "text-green-700 dark:text-green-400",
-    degraded: "text-yellow-700 dark:text-yellow-400",
-    down: "text-red-700 dark:text-red-400",
+    ok: "text-green-700",
+    degraded: "text-yellow-700",
+    down: "text-red-700",
   };
 
   const icons = {
@@ -35,7 +35,7 @@ const ServiceHealthIndicator = ({
     <div class="flex items-center gap-2">
       <div class={`w-3 h-3 rounded-full ${colors[status]}`} />
       <span class={`font-medium ${textColors[status]}`}>{serviceName}</span>
-      <span class="text-sm text-gray-500 dark:text-gray-400">{icons[status]}</span>
+      <span class="text-sm text-gray-500">{icons[status]}</span>
     </div>
   );
 };

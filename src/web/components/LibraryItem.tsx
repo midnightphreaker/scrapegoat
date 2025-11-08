@@ -19,8 +19,8 @@ const LibraryItem = ({ library }: LibraryItemProps) => {
   const latestVersion = versions[0];
   return (
     // Use Flowbite Card structure with updated padding and border, and white background
-    <div class="block px-4 py-2 bg-white dark:bg-[#242424] rounded-lg shadow-sm border border-gray-300 dark:border-[#3c3c3c]">
-      <h3 class="text-lg font-medium text-gray-900 dark:text-white">
+    <div class="block px-4 py-2 bg-white rounded-lg shadow-sm border border-gray-300">
+      <h3 class="text-lg font-medium text-gray-900">
         <a
           href={`/libraries/${encodeURIComponent(library.name)}`}
           class="hover:underline"
@@ -29,7 +29,7 @@ const LibraryItem = ({ library }: LibraryItemProps) => {
         </a>
       </h3>
       {latestVersion?.sourceUrl ? (
-        <div class="text-sm text-gray-500 dark:text-gray-400">
+        <div class="text-sm text-gray-500">
           <a
             href={latestVersion.sourceUrl}
             target="_blank"
@@ -63,7 +63,7 @@ const LibraryItem = ({ library }: LibraryItemProps) => {
           })
         ) : (
           // Display message if no versions are indexed
-          <p class="text-sm text-gray-500 dark:text-gray-400 italic">
+          <p class="text-sm text-gray-500 italic">
             No versions indexed.
           </p>
         )}

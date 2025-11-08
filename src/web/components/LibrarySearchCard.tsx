@@ -15,8 +15,8 @@ interface LibrarySearchCardProps {
  */
 const LibrarySearchCard = ({ library }: LibrarySearchCardProps) => {
   return (
-    <div class="block p-4 bg-white dark:bg-[#242424] rounded-lg shadow-sm border border-gray-300 dark:border-[#3c3c3c] mb-4">
-      <h2 class="text-xl font-semibold mb-2 text-gray-900 dark:text-white" safe>
+    <div class="block p-4 bg-white rounded-lg shadow-sm border border-gray-300 mb-4">
+      <h2 class="text-xl font-semibold mb-2 text-gray-900" safe>
         Search {library.name} Documentation
       </h2>
       <form
@@ -28,7 +28,7 @@ const LibrarySearchCard = ({ library }: LibrarySearchCardProps) => {
       >
         <select
           name="version"
-          class="w-40 bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-accent-500 focus:border-accent-500 block p-2.5 dark:bg-[#181818] dark:border-[#3c3c3c] dark:placeholder-gray-400 dark:text-white dark:focus:ring-accent-500 dark:focus:border-accent-500"
+          class="w-40 bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-accent-500 focus:border-accent-500 block p-2.5"
         >
           <option value="">Latest</option> {/* Default to latest */}
           {library.versions.map((version) => (
@@ -42,11 +42,11 @@ const LibrarySearchCard = ({ library }: LibrarySearchCardProps) => {
           name="query"
           placeholder="Search query..."
           required
-          class="flex-grow bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-accent-500 focus:border-accent-500 block p-2.5 dark:bg-[#181818] dark:border-[#3c3c3c] dark:placeholder-gray-400 dark:text-white dark:focus:ring-accent-500 dark:focus:border-accent-500"
+          class="flex-grow bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-accent-500 focus:border-accent-500 block p-2.5"
         />
         <button
           type="submit"
-          class="text-white bg-accent-700 hover:bg-accent-800 focus:ring-4 focus:outline-none focus:ring-accent-300 font-medium rounded-lg text-sm px-5 py-2.5 text-center dark:bg-accent-600 dark:hover:bg-accent-700 dark:focus:ring-accent-800 relative"
+          class="text-white bg-accent-700 hover:bg-accent-800 focus:ring-4 focus:outline-none focus:ring-accent-300 font-medium rounded-lg text-sm px-5 py-2.5 text-center relative"
         >
           <span class="search-text">Search</span>
           {/* Spinner for HTMX loading - shown via htmx-indicator class on parent */}

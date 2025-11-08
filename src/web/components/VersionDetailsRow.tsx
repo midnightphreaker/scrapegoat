@@ -37,19 +37,19 @@ const VersionDetailsRow = ({
 
   // Define state-specific button classes for Alpine toggling
   const defaultStateClasses =
-    "text-red-700 border border-red-700 hover:bg-red-700 hover:text-white focus:ring-4 focus:outline-none focus:ring-red-300 dark:border-red-500 dark:text-red-500 dark:hover:text-white dark:focus:ring-red-800 dark:hover:bg-red-500";
+    "text-red-700 border border-red-700 hover:bg-red-700 hover:text-white focus:ring-4 focus:outline-none focus:ring-red-300";
   const confirmingStateClasses =
-    "bg-red-600 text-white border-red-600 focus:ring-4 focus:outline-none focus:ring-red-300 dark:bg-red-700 dark:border-red-700 dark:focus:ring-red-800";
+    "bg-red-600 text-white border-red-600 focus:ring-4 focus:outline-none focus:ring-red-300";
 
   return (
     // Use flexbox for layout, add border between rows
     <div
       id={rowId}
-      class="flex justify-between items-center py-1 border-b border-gray-200 dark:border-gray-600 last:border-b-0"
+      class="flex justify-between items-center py-1 border-b border-gray-200 last:border-b-0"
     >
       {/* Version Label */}
       <span
-        class="text-sm text-gray-900 dark:text-white w-1/4 truncate"
+        class="text-sm text-gray-900 w-1/4 truncate"
         title={versionLabel}
       >
         {version.ref.version ? (
@@ -60,7 +60,7 @@ const VersionDetailsRow = ({
       </span>
 
       {/* Stats Group */}
-      <div class="flex space-x-2 text-sm text-gray-600 dark:text-gray-400 w-3/4 justify-end items-center">
+      <div class="flex space-x-2 text-sm text-gray-600 w-3/4 justify-end items-center">
         <span title="Number of unique pages indexed">
           Pages:{" "}
           <span class="font-semibold" safe>

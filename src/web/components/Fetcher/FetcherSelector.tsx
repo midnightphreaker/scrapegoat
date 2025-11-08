@@ -19,7 +19,7 @@ const FetcherSelector = ({ name = "fetcher", defaultValue = "auto" }: FetcherSel
       <div class="flex items-center mb-2">
         <label
           for={name}
-          class="block text-sm font-medium text-gray-800 dark:text-gray-300"
+          class="block text-sm font-medium text-gray-800"
         >
           Content Fetcher
         </label>
@@ -28,7 +28,7 @@ const FetcherSelector = ({ name = "fetcher", defaultValue = "auto" }: FetcherSel
       <select
         name={name}
         id={name}
-        class="block w-full px-3 py-2 text-sm border border-gray-200 dark:border-[#3c3c3c] rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-primary-600 focus:border-primary-600 bg-white dark:bg-[#181818] text-gray-800 dark:text-white transition-colors duration-150"
+        class="block w-full px-3 py-2 text-sm border border-gray-200 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-primary-600 focus:border-primary-600 bg-white text-gray-800 transition-colors duration-150"
         x-model="fetcher"
         x-on:change="updateFetcherHelp()"
       >
@@ -43,7 +43,7 @@ const FetcherSelector = ({ name = "fetcher", defaultValue = "auto" }: FetcherSel
         </option>
       </select>
       <p
-        class="mt-2 text-sm text-gray-500 dark:text-gray-400"
+        class="mt-2 text-sm text-gray-500"
         x-text="fetcherHelp"
         x-show="fetcherHelp"
       />

@@ -153,10 +153,10 @@ const Layout = ({ title, version, children }: LayoutProps) => {
           `}
         </style>
       </head>
-      <body class="flex min-h-screen flex-col overflow-x-hidden bg-stone-50 dark:bg-[#181818] antialiased">
+      <body class="flex min-h-screen flex-col overflow-x-hidden bg-stone-50 antialiased">
         {/* Full-width header with ScrapeGoat branding */}
         <header
-          class="sticky top-0 z-50 bg-white border-b border-gray-200 dark:bg-[#242424] dark:border-[#3c3c3c] shadow-sm"
+          class="sticky top-0 z-50 bg-white border-b border-gray-200 shadow-sm"
           x-data={versionInitializer}
           x-init="queueCheck()"
         >
@@ -166,15 +166,15 @@ const Layout = ({ title, version, children }: LayoutProps) => {
               <div class="flex items-center gap-3">
                 <a
                   href="/"
-                  class="text-2xl font-bold text-gray-800 dark:text-white hover:text-primary-600 dark:hover:text-primary-400 transition-colors duration-150 font-brand"
+                  class="text-2xl font-bold text-gray-800 hover:text-primary-600 transition-colors duration-150 font-brand"
                 >
-                  <span class="text-primary-600 dark:text-primary-400">Scrape</span>
-                  <span class="text-accent-600 dark:text-accent-400">Goat</span>
+                  <span class="text-primary-600">Scrape</span>
+                  <span class="text-accent-600">Goat</span>
                 </a>
                 {versionString ? (
                   <span
                     safe
-                    class="text-sm font-normal text-gray-500 dark:text-slate-400"
+                    class="text-sm font-normal text-gray-500"
                     title={`Version ${versionString}`}
                   >
                     v{versionString}
@@ -185,18 +185,18 @@ const Layout = ({ title, version, children }: LayoutProps) => {
                 <span
                   x-show="hasUpdate"
                   x-cloak
-                  class="inline-flex items-center gap-2 rounded-full bg-amber-100 dark:bg-amber-500/20 px-3 py-1.5 text-sm font-medium text-amber-700 dark:text-amber-300 border border-amber-200 dark:border-amber-500/30"
+                  class="inline-flex items-center gap-2 rounded-full bg-amber-100 px-3 py-1.5 text-sm font-medium text-amber-700 border border-amber-200"
                   role="status"
                   aria-live="polite"
                 >
-                  <span class="flex h-4 w-4 items-center justify-center rounded-full bg-amber-500 text-amber-800 dark:text-amber-900 text-xs font-bold">
+                  <span class="flex h-4 w-4 items-center justify-center rounded-full bg-amber-500 text-amber-800 text-xs font-bold">
                     !
                   </span>
                   <a
                     x-bind:href="latestReleaseUrl"
                     target="_blank"
                     rel="noopener noreferrer"
-                    class="hover:text-amber-800 dark:hover:text-amber-200 transition-colors"
+                    class="hover:text-amber-800 transition-colors"
                   >
                     <span class="mr-1">Update available</span>
                   </a>
@@ -210,15 +210,15 @@ const Layout = ({ title, version, children }: LayoutProps) => {
               <div class="flex items-center justify-center gap-2">
                 <a
                   href="/"
-                  class="text-2xl font-bold text-gray-800 dark:text-white hover:text-primary-600 dark:hover:text-primary-400 transition-colors duration-150 font-brand"
+                  class="text-2xl font-bold text-gray-800 hover:text-primary-600 transition-colors duration-150 font-brand"
                 >
-                  <span class="text-primary-600 dark:text-primary-400">Scrape</span>
-                  <span class="text-accent-600 dark:text-accent-400">Goat</span>
+                  <span class="text-primary-600">Scrape</span>
+                  <span class="text-accent-600">Goat</span>
                 </a>
                 {versionString ? (
                   <span
                     safe
-                    class="text-sm font-normal text-gray-500 dark:text-slate-400"
+                    class="text-sm font-normal text-gray-500"
                     title={`Version ${versionString}`}
                   >
                     v{versionString}
@@ -231,18 +231,18 @@ const Layout = ({ title, version, children }: LayoutProps) => {
                 <span
                   x-show="hasUpdate"
                   x-cloak
-                  class="inline-flex items-center gap-2 rounded-full bg-amber-100 dark:bg-amber-500/20 px-3 py-1.5 text-sm font-medium text-amber-700 dark:text-amber-300 border border-amber-200 dark:border-amber-500/30"
+                  class="inline-flex items-center gap-2 rounded-full bg-amber-100 px-3 py-1.5 text-sm font-medium text-amber-700 border border-amber-200"
                   role="status"
                   aria-live="polite"
                 >
-                  <span class="flex h-4 w-4 items-center justify-center rounded-full bg-amber-500 text-amber-800 dark:text-amber-900 text-xs font-bold">
+                  <span class="flex h-4 w-4 items-center justify-center rounded-full bg-amber-500 text-amber-800 text-xs font-bold">
                     !
                   </span>
                   <a
                     x-bind:href="latestReleaseUrl"
                     target="_blank"
                     rel="noopener noreferrer"
-                    class="hover:text-amber-800 dark:hover:text-amber-200 transition-colors"
+                    class="hover:text-amber-800 transition-colors"
                   >
                     <span class="mr-1">Update available</span>
                   </a>
