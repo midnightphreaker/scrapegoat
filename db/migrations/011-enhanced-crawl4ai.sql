@@ -19,15 +19,6 @@ ADD COLUMN IF NOT EXISTS fetcher_type TEXT DEFAULT 'http';
 -- This allows efficient filtering by fetcher type for analytics and debugging
 CREATE INDEX IF NOT EXISTS idx_pages_fetcher_type ON pages(fetcher_type);
 
--- Update comment on metadata column to document new structure
--- The metadata column now stores additional data from Crawl4AI:
--- {
---   "media": [{"type": "image", "url": "...", "alt": "...", "width": 100, "height": 100}],
---   "links": [{"url": "...", "text": "...", "rel": "..."}]
--- }
-COMMENT ON COLUMN pages.metadata IS
-  'JSON metadata including Crawl4AI extracted data: { media?: MediaItem[], links?: LinkItem[], ... }';
-
 -- Note: No changes needed to existing data
 -- - screenshot_path will be NULL for existing pages (expected)
 -- - fetcher_type will default to 'http' (reasonable assumption for old data)
