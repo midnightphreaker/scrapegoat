@@ -39,6 +39,11 @@
   --color-accent-900: #5b2e6b;
   --color-accent-950: #3a1d47;
 
+  /* Terminal UI backgrounds (from style guide) */
+  --color-terminal-bg: #181818;
+  --color-terminal-panel: #242424;
+  --color-terminal-border: #3c3c3c;
+
   --font-brand: "JetBrains Mono", ui-monospace, SFMono-Regular, monospace;
 }
 

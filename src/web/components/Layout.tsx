@@ -153,10 +153,10 @@ const Layout = ({ title, version, children }: LayoutProps) => {
           `}
         </style>
       </head>
-      <body class="bg-gray-50 dark:bg-gray-900">
+      <body class="bg-gray-50 dark:bg-[#181818]">
         {/* Full-width header with ScrapeGoat branding */}
         <header
-          class="bg-white border-b border-gray-200 dark:bg-gray-800 dark:border-gray-700"
+          class="bg-white border-b border-gray-200 dark:bg-[#242424] dark:border-[#3c3c3c]"
           x-data={versionInitializer}
           x-init="queueCheck()"
         >

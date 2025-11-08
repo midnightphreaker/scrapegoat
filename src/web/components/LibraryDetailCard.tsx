@@ -19,7 +19,7 @@ const LibraryDetailCard = ({ library }: LibraryDetailCardProps) => {
   const latestVersion = versions[0];
   return (
     // Use Flowbite Card structure with updated padding and border, and white background
-    <div class="block p-4 bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-300 dark:border-gray-600 mb-4">
+    <div class="block p-4 bg-white dark:bg-[#242424] rounded-lg shadow-sm border border-gray-300 dark:border-[#3c3c3c] mb-4">
       <h3 class="text-lg font-medium text-gray-900 dark:text-white mb-1">
         <span safe>{library.name}</span>
       </h3>

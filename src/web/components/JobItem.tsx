@@ -26,7 +26,7 @@ const JobItem = ({ job }: JobItemProps) => {
       job.status === PipelineJobStatus.RUNNING;
 
   return (
-    <div class="block p-3 bg-gray-50 dark:bg-gray-700 rounded-lg border border-gray-200 dark:border-gray-600">
+    <div class="block p-3 bg-gray-50 dark:bg-gray-700 rounded-lg border border-gray-200 dark:border-[#3c3c3c]">
       <div class="flex items-start justify-between">
         <div class="flex-1">
           <p class="text-sm font-medium text-gray-900 dark:text-white">
@@ -87,7 +87,7 @@ const JobItem = ({ job }: JobItemProps) => {
             {isActiveJob && (
               <button
                 type="button"
-                class="font-medium rounded-lg text-xs p-1 text-center inline-flex items-center transition-colors duration-150 ease-in-out border border-gray-300 bg-white text-red-600 hover:bg-red-50 focus:ring-4 focus:outline-none focus:ring-red-100 dark:border-gray-600 dark:bg-gray-800 dark:text-red-400 dark:hover:bg-gray-700 dark:focus:ring-red-900"
+                class="font-medium rounded-lg text-xs p-1 text-center inline-flex items-center transition-colors duration-150 ease-in-out border border-gray-300 bg-white text-red-600 hover:bg-red-50 focus:ring-4 focus:outline-none focus:ring-red-100 dark:border-[#3c3c3c] dark:bg-[#242424] dark:text-red-400 dark:hover:bg-gray-700 dark:focus:ring-red-900"
                 title="Stop this job"
                 x-data="{}"
                 x-on:click={`

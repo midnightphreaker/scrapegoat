@@ -56,7 +56,7 @@ const Tooltip = ({ text, position = "top" }: TooltipProps) => {
       <div
         x-show="isVisible"
         x-cloak
-        class={`absolute z-10 w-64 p-2 text-sm text-gray-500 bg-white border border-gray-200 rounded-lg shadow-sm dark:bg-gray-800 dark:border-gray-600 dark:text-gray-400 ${positionClasses[position]}`}
+        class={`absolute z-10 w-64 p-2 text-sm text-gray-500 bg-white border border-gray-200 rounded-lg shadow-sm dark:bg-[#242424] dark:border-[#3c3c3c] dark:text-gray-400 ${positionClasses[position]}`}
       >
         {text as "safe"}
       </div>

@@ -27,10 +27,10 @@ function getStatusClasses(status: VersionStatus): string {
     case VersionStatus.FAILED:
       return `${baseClasses} bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-300`;
     case VersionStatus.CANCELLED:
-      return `${baseClasses} bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-300`;
+      return `${baseClasses} bg-gray-100 text-gray-800 dark:bg-[#181818] dark:text-gray-300`;
     case VersionStatus.NOT_INDEXED:
     default:
-      return `${baseClasses} bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400`;
+      return `${baseClasses} bg-gray-100 text-gray-600 dark:bg-[#242424] dark:text-gray-400`;
   }
 }
 
