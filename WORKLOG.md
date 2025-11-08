@@ -114,3 +114,44 @@ This log tracks all changes made during the comprehensive refactoring to remove 
 **Commit Message**: `refactor(phase3): remove HtmlPlaywrightMiddleware and simplify HtmlPipeline`
 
 ---
+
+## [2025-11-09 07:15:00] - Phase 4 Complete: CLI and Utilities
+
+**Files Modified**:
+1. `src/cli/utils.ts`
+   - Removed chromium import from playwright
+   - Removed execSync import from node:child_process
+   - Removed existsSync import from node:fs
+   - Removed getProjectRoot import (no longer needed)
+   - Deleted ensurePlaywrightBrowsersInstalled() function (lines 47-83)
+     - Function handled automatic Playwright browser installation
+     - Checked PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH environment variable
+     - Attempted to install chromium browser if not found
+     - No longer needed as Crawl4AI handles browser automation in Docker
+
+2. `src/index.ts`
+   - Removed ensurePlaywrightBrowsersInstalled import
+   - Removed ensurePlaywrightBrowsersInstalled() call
+   - Simplified entry point - no longer needs browser setup
+
+3. `src/cli/commands/default.ts`
+   - Removed ensurePlaywrightBrowsersInstalled from import list
+   - Removed ensurePlaywrightBrowsersInstalled() call (line 149)
+   - Default command no longer ensures Playwright browsers
+
+4. `src/cli/commands/worker.ts`
+   - Removed ensurePlaywrightBrowsersInstalled from import list
+   - Removed ensurePlaywrightBrowsersInstalled() call (line 76)
+   - Worker command no longer ensures Playwright browsers
+
+**Verification**:
+- Ran `npm run build` to verify TypeScript compilation
+- Build correctly fails at GitHubRepoScraperStrategy.ts trying to import ScrapeMode (expected)
+- All Playwright browser installation logic removed
+- CLI entry points simplified
+
+**Next Steps**: Phase 5 - Tool and Strategy Updates (update ScrapeTool, WebScraperStrategy, GitHubRepoScraperStrategy, etc.)
+
+**Commit Message**: `refactor(phase4): remove Playwright browser installation utilities`
+
+---

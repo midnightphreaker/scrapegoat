@@ -1,6 +1,5 @@
 import * as semver from "semver";
 import type { IPipeline } from "../pipeline/trpc/interfaces";
-import { ScrapeMode } from "../scraper/types";
 import {
   DEFAULT_MAX_CONCURRENCY,
   DEFAULT_MAX_DEPTH,
@@ -32,14 +31,6 @@ export interface ScrapeToolOptions {
     maxConcurrency?: number; // Note: Concurrency is now set when PipelineManager is created
     ignoreErrors?: boolean;
     /**
-     * Determines the HTML processing strategy.
-     * - 'fetch': Use a simple DOM parser (faster, less JS support).
-     * - 'playwright': Use a headless browser (slower, full JS support).
-     * - 'auto': Automatically select the best strategy (currently defaults to 'playwright').
-     * @default ScrapeMode.Auto
-     */
-    scrapeMode?: ScrapeMode;
-    /**
      * Patterns for including URLs during scraping. If not set, all are included by default.
      * Regex patterns must be wrapped in slashes, e.g. /pattern/.
      */
@@ -57,10 +48,10 @@ export interface ScrapeToolOptions {
      */
     headers?: Record<string, string>;
     /**
-     * Explicit fetcher selection: 'auto', 'http', 'browser', 'crawl4ai', or 'file'.
+     * Explicit fetcher selection: 'auto', 'http', 'crawl4ai', or 'file'.
      * @default 'auto'
      */
-    fetcher?: "auto" | "http" | "browser" | "crawl4ai" | "file";
+    fetcher?: "auto" | "http" | "crawl4ai" | "file";
     /**
      * Crawl4AI-specific options
      */
@@ -156,7 +147,6 @@ export class ScrapeTool {
       maxDepth: scraperOptions?.maxDepth ?? DEFAULT_MAX_DEPTH,
       maxConcurrency: scraperOptions?.maxConcurrency ?? DEFAULT_MAX_CONCURRENCY,
       ignoreErrors: scraperOptions?.ignoreErrors ?? true,
-      scrapeMode: scraperOptions?.scrapeMode ?? ScrapeMode.Auto, // Pass scrapeMode enum
       includePatterns: scraperOptions?.includePatterns,
       excludePatterns: scraperOptions?.excludePatterns,
       headers: scraperOptions?.headers, // <-- propagate headers

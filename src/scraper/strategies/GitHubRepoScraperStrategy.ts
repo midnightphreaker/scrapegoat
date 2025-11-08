@@ -5,7 +5,7 @@ import { HttpFetcher } from "../fetcher";
 import type { RawContent } from "../fetcher/types";
 import { PipelineFactory } from "../pipelines/PipelineFactory";
 import type { ContentPipeline } from "../pipelines/types";
-import { ScrapeMode, type ScraperOptions, type ScraperProgress } from "../types";
+import type { ScraperOptions, ScraperProgress } from "../types";
 import { shouldIncludeUrl } from "../utils/patternMatcher";
 import { BaseScraperStrategy, type QueueItem } from "./BaseScraperStrategy";
 
@@ -432,13 +432,11 @@ export class GitHubRepoScraperStrategy extends BaseScraperStrategy {
             `Selected ${pipeline.constructor.name} for content type "${rawContent.mimeType}" (${filePath})`,
           );
 
-          // Force 'fetch' mode for GitHub to avoid unnecessary Playwright usage on raw content.
+          // Process GitHub raw content using standard pipelines.
           // GitHub raw files (e.g., HTML files) don't have their dependencies available at the
-          // raw.githubusercontent.com domain, so rendering them in a browser would be broken
-          // and provide no additional value over direct HTML parsing with Cheerio.
-          const gitHubOptions = { ...options, scrapeMode: ScrapeMode.Fetch };
-
-          processed = await pipeline.process(rawContent, gitHubOptions, this.httpFetcher);
+          // raw.githubusercontent.com domain, so we use HttpFetcher which provides efficient
+          // processing without browser automation overhead.
+          processed = await pipeline.process(rawContent, options, this.httpFetcher);
           break;
         }
       }
