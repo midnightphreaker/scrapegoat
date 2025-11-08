@@ -79,3 +79,38 @@ This log tracks all changes made during the comprehensive refactoring to remove 
 **Commit Message**: `refactor(phase2): remove BrowserFetcher and update AutoDetectFetcher to use Crawl4AI`
 
 ---
+
+## [2025-11-09 07:07:23] - Phase 3 Complete: Pipeline Middleware
+
+**Files Modified**:
+1. `src/scraper/pipelines/HtmlPipeline.ts`
+   - Removed HtmlPlaywrightMiddleware import
+   - Removed playwrightMiddleware instance variable
+   - Renamed standardMiddleware to middleware (now always used)
+   - Removed conditional middleware stack logic:
+     - Removed scrapeMode checks (options.scrapeMode === "playwright" || "auto")
+     - Now always uses standard middleware stack
+   - Removed close() method override
+     - Previously called playwrightMiddleware.closeBrowser()
+     - Now inherits base class close() (no-op)
+   - Updated class JSDoc to document change from Playwright to Crawl4AI
+
+2. `src/scraper/middleware/index.ts`
+   - Removed HtmlPlaywrightMiddleware export
+
+**Files Deleted**:
+1. `src/scraper/middleware/HtmlPlaywrightMiddleware.ts` (831 lines removed)
+   - Complex Playwright rendering logic removed
+   - Shadow DOM extraction, iframe processing, frameset handling
+   - Credential propagation
+
+2. `src/scraper/middleware/HtmlPlaywrightMiddleware.test.ts` (~500 lines removed)
+   - Test coverage for removed middleware
+
+**Verification**: All Playwright middleware references removed from pipeline layer
+
+**Next Steps**: Phase 4 - CLI and Utilities (remove ensurePlaywrightBrowsersInstalled, update entry points)
+
+**Commit Message**: `refactor(phase3): remove HtmlPlaywrightMiddleware and simplify HtmlPipeline`
+
+---

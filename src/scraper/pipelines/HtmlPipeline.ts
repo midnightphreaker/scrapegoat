@@ -11,7 +11,6 @@ import { HtmlCheerioParserMiddleware } from "../middleware/HtmlCheerioParserMidd
 import { HtmlLinkExtractorMiddleware } from "../middleware/HtmlLinkExtractorMiddleware";
 import { HtmlMetadataExtractorMiddleware } from "../middleware/HtmlMetadataExtractorMiddleware";
 import { HtmlNormalizationMiddleware } from "../middleware/HtmlNormalizationMiddleware";
-import { HtmlPlaywrightMiddleware } from "../middleware/HtmlPlaywrightMiddleware";
 import { HtmlToMarkdownMiddleware } from "../middleware/HtmlToMarkdownMiddleware";
 import type { ContentProcessorMiddleware, MiddlewareContext } from "../middleware/types";
 import type { ScraperOptions } from "../types";
@@ -24,10 +23,12 @@ import type { ProcessedContent } from "./types";
  * Pipeline for processing HTML content using middleware and semantic splitting with size optimization.
  * Converts HTML to clean markdown format then uses SemanticMarkdownSplitter for semantic chunking,
  * followed by GreedySplitter for universal size optimization.
+ *
+ * Note: Previously used HtmlPlaywrightMiddleware for in-process browser rendering,
+ * but now relies on Crawl4AI to provide pre-rendered HTML.
  */
 export class HtmlPipeline extends BasePipeline {
-  private readonly playwrightMiddleware: HtmlPlaywrightMiddleware;
-  private readonly standardMiddleware: ContentProcessorMiddleware[];
+  private readonly middleware: ContentProcessorMiddleware[];
   private readonly greedySplitter: GreedySplitter;
 
   constructor(
@@ -35,8 +36,9 @@ export class HtmlPipeline extends BasePipeline {
     maxChunkSize = SPLITTER_MAX_CHUNK_SIZE,
   ) {
     super();
-    this.playwrightMiddleware = new HtmlPlaywrightMiddleware();
-    this.standardMiddleware = [
+    // Always use standard middleware stack
+    // Crawl4AI returns pre-rendered HTML, no in-process rendering needed
+    this.middleware = [
       new HtmlCheerioParserMiddleware(),
       new HtmlMetadataExtractorMiddleware(),
       new HtmlLinkExtractorMiddleware(),
@@ -84,14 +86,9 @@ export class HtmlPipeline extends BasePipeline {
       fetcher,
     };
 
-    // Build middleware stack dynamically based on scrapeMode
-    let middleware: ContentProcessorMiddleware[] = [...this.standardMiddleware];
-    if (options.scrapeMode === "playwright" || options.scrapeMode === "auto") {
-      middleware = [this.playwrightMiddleware, ...middleware];
-    }
-
     // Execute the middleware stack using the base class method
-    await this.executeMiddlewareStack(middleware, context);
+    // Always use standard middleware stack - Crawl4AI provides pre-rendered HTML
+    await this.executeMiddlewareStack(this.middleware, context);
 
     // Split the content using SemanticMarkdownSplitter (HTML is converted to markdown by middleware)
     const chunks = await this.greedySplitter.splitText(
@@ -105,13 +102,5 @@ export class HtmlPipeline extends BasePipeline {
       errors: context.errors,
       chunks,
     };
-  }
-
-  /**
-   * Cleanup resources used by this pipeline, specifically the Playwright browser instance.
-   */
-  public async close(): Promise<void> {
-    await super.close(); // Call base class close (no-op by default)
-    await this.playwrightMiddleware.closeBrowser();
   }
 }
