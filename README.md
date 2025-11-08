@@ -44,7 +44,7 @@ Get started with Docs MCP Server in under 2 minutes:
 ### 1. Start the Server
 
 ```bash
-npx @arabold/docs-mcp-server@latest
+npx scrapegoat@latest
 ```
 
 The server will start on `http://localhost:6280`
