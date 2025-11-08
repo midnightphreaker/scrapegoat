@@ -13,7 +13,7 @@ services:
       context: .
       dockerfile: Dockerfile
     command: ["worker", "--host", "0.0.0.0", "--port", "8080"]
-    container_name: docs-mcp-worker
+    container_name: scrapegoat-worker
     restart: unless-stopped
     network_mode: host
     env_file:
@@ -51,7 +51,7 @@ services:
         "--server-url",
         "http://localhost:8080/api",
       ]
-    container_name: scrapegoat
+    container_name: scrapegoat-mcp
     restart: unless-stopped
     network_mode: host
     env_file:
@@ -82,7 +82,7 @@ services:
         "--server-url",
         "http://localhost:8080/api",
       ]
-    container_name: docs-mcp-web
+    container_name: scrapegoat-web
     restart: unless-stopped
     network_mode: host
     env_file:
