@@ -1,4 +1,4 @@
-import { Client } from "pg";
+import { Client, type Pool } from "pg";
 import { DocumentStore } from "../DocumentStore";
 import type { EmbeddingModelConfig } from "../embeddings/EmbeddingConfig";
 
@@ -24,6 +24,7 @@ function generateTestDatabaseName(): string {
  */
 export interface TestDatabase {
   store: DocumentStore;
+  pool: Pool;
   databaseName: string;
   connectionString: string;
   cleanup: () => Promise<void>;
@@ -82,6 +83,9 @@ export async function createTestDatabase(
   const store = new DocumentStore(connectionString, embeddingConfig);
   await store.initialize();
 
+  // Access the pool from the store for raw SQL queries in tests
+  const pool = (store as any).pool;
+
   // Cleanup function to drop the test database
   const cleanup = async () => {
     try {
@@ -114,6 +118,7 @@ export async function createTestDatabase(
 
   return {
     store,
+    pool,
     databaseName,
     connectionString,
     cleanup,

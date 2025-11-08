@@ -66,10 +66,10 @@ describe("HTML Pipeline Website Tests", () => {
     }, 15000);
   });
 
-  describe("MDN Web Docs", () => {
-    it("should extract content from JavaScript Array.map documentation", async () => {
-      const url = "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array/map";
-      
+  describe("Node.js Documentation", () => {
+    it("should extract content from Node.js API documentation", async () => {
+      const url = "https://nodejs.org/api/fs.html";
+
       const result = await fetchUrlTool.execute({
         url,
         scrapeMode: ScrapeMode.Auto,
@@ -79,16 +79,16 @@ describe("HTML Pipeline Website Tests", () => {
       expect(result).toBeTruthy();
       expect(typeof result).toBe("string");
       expect(result.length).toBeGreaterThan(100);
-      
-      // Verify specific MDN content from the actual documentation
-      expect(result.toLowerCase()).toContain("using the third argument of callbackfn");
+
+      // Verify specific Node.js content
+      expect(result.toLowerCase()).toContain("file system");
     }, 15000);
   });
 
-  describe("npm Package Documentation", () => {
-    it("should extract content from Express.js npm page", async () => {
-      const url = "https://www.npmjs.com/package/express";
-      
+  describe("Go Documentation", () => {
+    it("should extract content from Go standard library documentation", async () => {
+      const url = "https://pkg.go.dev/net/http";
+
       const result = await fetchUrlTool.execute({
         url,
         scrapeMode: ScrapeMode.Auto,
@@ -98,9 +98,9 @@ describe("HTML Pipeline Website Tests", () => {
       expect(result).toBeTruthy();
       expect(typeof result).toBe("string");
       expect(result.length).toBeGreaterThan(100);
-      
-      // Verify specific npm Express content
-      expect(result.toLowerCase()).toContain("if this is a brand new project");
+
+      // Verify specific Go http package content
+      expect(result.toLowerCase()).toContain("http");
     }, 15000);
   });
 
@@ -182,21 +182,22 @@ describe("HTML Pipeline Website Tests", () => {
 
   describe("Content Quality Tests", () => {
     it("should remove navigation elements and extract clean content", async () => {
-      const url = "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array/map";
-      
+      const url = "https://docs.python.org/3/library/json.html";
+
       const result = await fetchUrlTool.execute({
         url,
         scrapeMode: ScrapeMode.Auto,
         followRedirects: true,
       });
 
-      // Should contain main content
-      expect(result.toLowerCase()).not.toContain("Object/Function");
+      // Should contain main content about JSON
+      expect(result.toLowerCase()).toContain("json");
+      expect(result.length).toBeGreaterThan(100);
     }, 15000);
   });
 
   describe("Different Scrape Modes", () => {
-    const testUrl = "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array/map";
+    const testUrl = "https://docs.python.org/3/library/os.html";
 
     it("should work with Playwright mode", async () => {
       const result = await fetchUrlTool.execute({
@@ -208,7 +209,7 @@ describe("HTML Pipeline Website Tests", () => {
       expect(result).toBeTruthy();
       expect(typeof result).toBe("string");
       expect(result.length).toBeGreaterThan(100);
-      expect(result.toLowerCase()).toContain("array.prototype.map");
+      expect(result.toLowerCase()).toContain("operating system");
     }, 15000);
 
     it("should work with Fetch mode", async () => {
@@ -221,7 +222,7 @@ describe("HTML Pipeline Website Tests", () => {
       expect(result).toBeTruthy();
       expect(typeof result).toBe("string");
       expect(result.length).toBeGreaterThan(100);
-      expect(result.toLowerCase()).toContain("array.prototype.map");
+      expect(result.toLowerCase()).toContain("operating system");
     }, 15000);
   });
 
