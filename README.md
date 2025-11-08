@@ -1,17 +1,4 @@
-# Scrapegoat: PostgreSQL-Powered Documentation Server
-
-> **✅ PRODUCTION READY - Phase 5 Complete**
->
-> PostgreSQL-powered MCP server for enterprise documentation search. Built for production-grade scalability and performance with pgvector hybrid search.
->
-> **Status:** Production Ready
-> - ✅ PostgreSQL 14+ with pgvector for vector search
-> - ✅ Hybrid search (HNSW + GIN indexes + RRF)
-> - ✅ Enterprise-grade connection pooling and MVCC
-> - ✅ Comprehensive production documentation
-> - ✅ 100% test pass rate (164/164 tests)
->
-> **Production ready** - Security hardening, performance benchmarks, and deployment guides included.
+# Docs MCP Server: Your AI's Up-to-Date Documentation Expert
 
 AI coding assistants often struggle with outdated documentation and hallucinations. The **Docs MCP Server** solves this by providing a personal, always-current knowledge base for your AI. It **indexes 3rd party documentation** from various sources (websites, GitHub, npm, PyPI, local files) and offers powerful, version-aware search tools via the Model Context Protocol (MCP).
 
@@ -35,19 +22,13 @@ LLM-assisted coding promises speed and efficiency, but often falls short due to:
 
 ## ✨ Key Features
 
-### PostgreSQL-Powered Architecture
-- **PostgreSQL 14+ with pgvector:** Enterprise-grade database with native vector search support
-- **Hybrid Search:** Combines vector similarity (HNSW index) + full-text search (GIN index) using Reciprocal Rank Fusion (RRF)
-- **Production Scalability:** Handle millions of documents with proper indexing, connection pooling, and MVCC
-- **Advanced Vector Indexing:** HNSW (Hierarchical Navigable Small World) for approximate nearest neighbor search
-
-### Core Features
 - **Accurate & Version-Aware AI Responses:** Provides up-to-date, version-specific documentation to reduce AI hallucinations and improve code accuracy.
 - **Broad Source Compatibility:** Scrapes documentation from websites, GitHub repos, package manager sites (npm, PyPI), and local file directories.
 - **Advanced Search & Processing:** Intelligently chunks documentation semantically, generates embeddings, and combines vector similarity with full-text search.
-- **Flexible Embedding Models:** Supports various providers including OpenAI (and compatible APIs), Google Gemini/Vertex AI, Azure OpenAI, AWS Bedrock, and Infinity (local embedding server). Vector search is optional.
+- **Flexible Embedding Models:** Supports various providers including OpenAI (and compatible APIs), Google Gemini/Vertex AI, Azure OpenAI, and AWS Bedrock. Vector search is optional.
 - **Enterprise Authentication:** Optional OAuth2/OIDC authentication with dynamic client registration for secure deployments.
 - **Web Interface:** Easy-to-use web interface for searching and managing documentation.
+- **Local & Private:** Runs entirely on your machine, ensuring data and queries remain private.
 - **Free & Open Source:** Community-driven and freely available.
 - **Simple Deployment:** Easy setup via Docker or `npx`.
 - **Seamless Integration:** Works with MCP-compatible clients (like Claude, Cline, Roo).
@@ -56,92 +37,60 @@ LLM-assisted coding promises speed and efficiency, but often falls short due to:
 >
 > Semantic chunking splits documentation into meaningful sections based on structure—like headings, code blocks, and tables—rather than arbitrary text size. Docs MCP Server preserves logical boundaries, keeps code and tables intact, and removes navigation clutter from HTML docs. This ensures LLMs receive coherent, context-rich information for more accurate and relevant answers.
 
-## Prerequisites
+## 🚀 Quick Start (MCP Setup)
 
-Before installing Scrapegoat, ensure you have:
+Get started with Docs MCP Server in under 2 minutes:
 
-### Required
-- **PostgreSQL 14+** with pgvector extension
-  - Quick Start: Use Docker with `pgvector/pgvector:pg16` image
-  - Manual Setup: See [PostgreSQL Setup Guide](docs/POSTGRESQL_SETUP.md)
-- **Node.js 20+**
+### 1. Start the Server
 
-### Optional
-- **Embedding API Key** (for vector search)
-  - OpenAI, Google Vertex AI, Azure OpenAI, or AWS Bedrock
-  - Full-text search works without embeddings
-- **Docker** (recommended for easy deployment)
+```bash
+npx @arabold/docs-mcp-server@latest
+```
 
-## How to Run Scrapegoat
+The server will start on `http://localhost:6280`
+
+### 2. Add to Your MCP Client
+
+**For Claude Code:**
+```bash
+claude mcp add-json scrapegoat '{"type":"http","url":"http://localhost:6280/mcp"}'
+```
+
+**For Claude Desktop or other MCP clients**, add to your MCP settings file:
+```json
+{
+  "mcpServers": {
+    "docs-mcp-server": {
+      "type": "sse",
+      "url": "http://localhost:6280/sse"
+    }
+  }
+}
+```
+
+### 3. Index Documentation
+
+Use the web interface at `http://localhost:6280` or use MCP tools to scrape documentation:
+```
+scrape_docs: https://docs.python.org/3.12/ (library: python, version: 3.12.0)
+```
+
+### 4. Search & Use
+
+Now your AI assistant can search the indexed documentation:
+```
+search_docs: list comprehension (library: python, version: 3.12.0)
+```
+
+That's it! Your AI now has access to up-to-date, version-specific documentation.
+
+## How to Run the Docs MCP Server
 
 Choose your deployment method:
 
-- [Quick Start (Docker)](#quick-start-docker)
-- [Standalone Server](#standalone-server-recommended)
+- [Standalone Server (Recommended)](#standalone-server-recommended)
 - [Embedded Server](#embedded-server)
 - [Advanced: Docker Compose (Scaling)](#advanced-docker-compose-scaling)
-- [Production Deployment](#production-deployment)
-
-## Quick Start (Docker)
-
-The fastest way to get started with PostgreSQL and Scrapegoat:
-
-```bash
-# 1. Start PostgreSQL with pgvector
-docker run -d \
-  --name scrapegoat-db \
-  -e POSTGRES_USER=scrapegoat \
-  -e POSTGRES_PASSWORD=your_password \
-  -e POSTGRES_DB=scrapegoat \
-  -v scrapegoat-data:/var/lib/postgresql/data \
-  -p 5432:5432 \
-  pgvector/pgvector:pg16
-
-# 2. Start Scrapegoat
-docker run -d \
-  --name scrapegoat \
-  --link scrapegoat-db:postgres \
-  -e DATABASE_URL=postgresql://scrapegoat:your_password@postgres:5432/scrapegoat \
-  -e OPENAI_API_KEY=sk-proj-your-key-here \
-  -p 6280:6280 \
-  ghcr.io/denmaster/scrapegoat:latest \
-  --protocol http --host 0.0.0.0 --port 6280
-
-# 3. Access the web interface
-open http://localhost:6280
-```
-
-**Connection String Format:**
-```
-postgresql://username:password@hostname:port/database
-```
-
-### Production Example
-
-**Den.Lan Infrastructure Setup:**
-
-Scrapegoat is deployed on **http://docs.den.lan** using:
-- **PostgreSQL**: postgres.den.lan:5432 (dedicated pgvector database)
-- **Embeddings**: embed.den.lan (Infinity server with nomic-ai/nomic-embed-text-v1.5)
-- **Web UI**: Port 80 (nginx reverse proxy to internal port 6280)
-
-```bash
-# Example production configuration
-DATABASE_URL=postgresql://scrapegoat_user:secure_password@postgres.den.lan:5432/scrapegoat
-INFINITY_API_URL=http://embed.den.lan
-DOCS_MCP_EMBEDDING_MODEL=infinity:nomic-ai/nomic-embed-text-v1.5
-NODE_ENV=production
-PORT=6280
-HOST=0.0.0.0
-```
-
-This setup provides:
-- ✅ Free unlimited embeddings (local Infinity server)
-- ✅ Enterprise PostgreSQL with pgvector
-- ✅ Production-ready with systemd service
-- ✅ Nginx reverse proxy for port 80 access
-
-For complete deployment options, see [Deployment Guide](docs/DEPLOYMENT.md).
 
 ## Standalone Server (Recommended)
 
@@ -150,53 +99,30 @@ Run a standalone server that includes both MCP endpoints and web interface in a 
 ### Option 1: Docker
 
 1. **Install Docker.**
-2. **Start PostgreSQL with pgvector:**
-
-   ```bash
-   docker run -d \
-     --name scrapegoat-db \
-     -e POSTGRES_USER=scrapegoat \
-     -e POSTGRES_PASSWORD=your_secure_password \
-     -e POSTGRES_DB=scrapegoat \
-     -v scrapegoat-data:/var/lib/postgresql/data \
-     -p 5432:5432 \
-     pgvector/pgvector:pg16
-   ```
-
-3. **Start Scrapegoat server:**
+2. **Start the server:**
 
    ```bash
    docker run --rm \
-     --link scrapegoat-db:postgres \
-     -e DATABASE_URL=postgresql://scrapegoat:your_secure_password@postgres:5432/scrapegoat \
-     -e OPENAI_API_KEY="your-openai-api-key" \
+     -v docs-mcp-data:/data \
      -p 6280:6280 \
-     ghcr.io/denmaster/scrapegoat:latest \
+     ghcr.io/arabold/docs-mcp-server:latest \
      --protocol http --host 0.0.0.0 --port 6280
    ```
 
-   **Note:** `DATABASE_URL` is required. `OPENAI_API_KEY` is optional for vector search.
+   **Optional:** Add `-e OPENAI_API_KEY="your-openai-api-key"` to enable vector search for improved results.
 
 ### Option 2: npx
 
-1. **Install Node.js 20.x or later.**
-2. **Set up PostgreSQL with pgvector** (see [PostgreSQL Setup Guide](docs/POSTGRESQL_SETUP.md))
-3. **Configure environment:**
+1. **Install Node.js 22.x or later.**
+2. **Start the server:**
 
    ```bash
-   export DATABASE_URL=postgresql://scrapegoat:password@localhost:5432/scrapegoat
-   export OPENAI_API_KEY="your-openai-api-key"  # Optional for vector search
-   ```
-
-4. **Start the server:**
-
-   ```bash
-   npx @denmaster/scrapegoat@latest
+   npx @arabold/docs-mcp-server@latest
    ```
 
    This will run the server on port 6280 by default.
 
-   **Note:** `DATABASE_URL` is required. The database will be auto-initialized on first run.
+   **Optional:** Prefix with `OPENAI_API_KEY="your-openai-api-key"` to enable vector search for improved results.
 
 ### Configure Your MCP Client
 
@@ -205,7 +131,7 @@ Add this to your MCP settings (VS Code, Claude Desktop, etc.):
 ```json
 {
   "mcpServers": {
-    "scrapegoat": {
+    "docs-mcp-server": {
       "type": "sse",
       "url": "http://localhost:6280/sse",
       "disabled": false,
@@ -233,23 +159,18 @@ Open `http://localhost:6280` in your browser to manage documentation and monitor
 
 ### CLI Usage with Standalone Server
 
-You can also use CLI commands to interact with the PostgreSQL database:
+You can also use CLI commands to interact with the local database:
 
 ```bash
-# Set database connection
-export DATABASE_URL=postgresql://scrapegoat:password@localhost:5432/scrapegoat
-
 # List indexed libraries
-OPENAI_API_KEY="your-key" npx @denmaster/scrapegoat@latest list
+OPENAI_API_KEY="your-key" npx @arabold/docs-mcp-server@latest list
 
 # Search documentation
-OPENAI_API_KEY="your-key" npx @denmaster/scrapegoat@latest search react "useState hook"
+OPENAI_API_KEY="your-key" npx @arabold/docs-mcp-server@latest search react "useState hook"
 
 # Scrape new documentation (connects to running server's worker)
-npx @denmaster/scrapegoat@latest scrape react https://react.dev/reference/react --server-url http://localhost:6280/api
+npx @arabold/docs-mcp-server@latest scrape react https://react.dev/reference/react --server-url http://localhost:6280/api
 ```
-
-**Note:** All CLI commands require `DATABASE_URL` to be set.
 
 ### Adding Library Documentation
 
@@ -261,7 +182,7 @@ npx @denmaster/scrapegoat@latest scrape react https://react.dev/reference/react 
 
 Once a job completes, the docs are searchable via your AI assistant or the Web UI.
 
-![Scrapegoat Web Interface](docs/scrapegoat.png)
+![Docs MCP Server Web Interface](docs/docs-mcp-server.png)
 
 **Benefits:**
 
@@ -283,13 +204,9 @@ Add this to your MCP settings (VS Code, Claude Desktop, etc.):
 ```json
 {
   "mcpServers": {
-    "scrapegoat": {
+    "docs-mcp-server": {
       "command": "npx",
-      "args": ["@denmaster/scrapegoat@latest"],
-      "env": {
-        "DATABASE_URL": "postgresql://scrapegoat:password@localhost:5432/scrapegoat",
-        "OPENAI_API_KEY": "sk-proj-..."
-      },
+      "args": ["@arabold/docs-mcp-server@latest"],
       "disabled": false,
       "autoApprove": []
     }
@@ -297,8 +214,23 @@ Add this to your MCP settings (VS Code, Claude Desktop, etc.):
 }
 ```
 
-**Required:** `DATABASE_URL` must be set to connect to PostgreSQL.
-**Optional:** `OPENAI_API_KEY` enables vector search for improved results.
+**Optional:** To enable vector search for improved results, add an `env` section with your API key:
+
+```json
+{
+  "mcpServers": {
+    "docs-mcp-server": {
+      "command": "npx",
+      "args": ["@arabold/docs-mcp-server@latest"],
+      "env": {
+        "OPENAI_API_KEY": "sk-proj-..." // Your OpenAI API key
+      },
+      "disabled": false,
+      "autoApprove": []
+    }
+  }
+}
+```
 
 Restart your application after updating the config.
 
@@ -317,7 +249,7 @@ Please scrape the React documentation from https://react.dev/reference/react for
 Start a temporary web interface that shares the same database:
 
 ```bash
-OPENAI_API_KEY="your-key" npx @denmaster/scrapegoat@latest web --port 6281
+OPENAI_API_KEY="your-key" npx @arabold/docs-mcp-server@latest web --port 6281
 ```
 
 Then open `http://localhost:6281` to manage documentation. Stop the web interface when done (`Ctrl+C`).
@@ -327,14 +259,11 @@ Then open `http://localhost:6281` to manage documentation. Stop the web interfac
 Use CLI commands directly (avoid running scrape jobs concurrently with embedded server):
 
 ```bash
-# Set database connection
-export DATABASE_URL=postgresql://scrapegoat:password@localhost:5432/scrapegoat
-
 # List libraries
-OPENAI_API_KEY="your-key" npx @denmaster/scrapegoat@latest list
+OPENAI_API_KEY="your-key" npx @arabold/docs-mcp-server@latest list
 
 # Search documentation
-OPENAI_API_KEY="your-key" npx @denmaster/scrapegoat@latest search react "useState hook"
+OPENAI_API_KEY="your-key" npx @arabold/docs-mcp-server@latest search react "useState hook"
 ```
 
 **Benefits:**
@@ -371,9 +300,9 @@ You can index documentation from your local filesystem by using a `file://` URL 
     docker run --rm \
       -e OPENAI_API_KEY="your-key" \
       -v /absolute/path/to/docs:/docs:ro \
-      -v scrapegoat-data:/data \
+      -v docs-mcp-data:/data \
       -p 6280:6280 \
-      ghcr.io/denmaster/scrapegoat:latest \
+      ghcr.io/arabold/docs-mcp-server:latest \
       scrape mylib file:///docs/my-library
     ```
   - In the Web UI, enter the path as `file:///docs/my-library` (matching the container path).
@@ -388,8 +317,8 @@ For production deployments or when you need to scale processing, use Docker Comp
 
 ```bash
 # Clone the repository (to get docker-compose.yml)
-git clone http://gitlab.den.lan/pub/scrapegoat.git
-cd scrapegoat
+git clone https://github.com/arabold/docs-mcp-server.git
+cd docs-mcp-server
 
 # Set your environment variables
 export OPENAI_API_KEY="your-key-here"
@@ -409,7 +338,7 @@ docker compose up -d
 ```json
 {
   "mcpServers": {
-    "scrapegoat": {
+    "docs-mcp-server": {
       "type": "sse",
       "url": "http://localhost:6280/sse",
       "disabled": false,
@@ -437,30 +366,9 @@ docker compose up -d
 
 This architecture allows independent scaling of processing (workers) and user interfaces.
 
-## Production Deployment
-
-For production environments, see the comprehensive [Deployment Guide](docs/DEPLOYMENT.md) which covers:
-
-- Cloud deployment (AWS RDS, Azure Database, GCP Cloud SQL)
-- Docker Compose multi-service architecture
-- Production configuration and security hardening
-- Monitoring, backup, and recovery procedures
-- Health checks and troubleshooting
-
 ## Configuration
 
-Scrapegoat requires PostgreSQL with pgvector. Configure via environment variables:
-
-### Required Configuration
-
-```bash
-# Database connection (REQUIRED)
-DATABASE_URL=postgresql://username:password@hostname:port/database
-```
-
-### Optional Configuration
-
-To enable vector search for improved hybrid search results, configure an embedding provider:
+The Docs MCP Server can run without any configuration and will use full-text search only. To enable vector search for improved results, configure an embedding provider via environment variables.
 
 ### Command Line Argument Overrides
 
@@ -488,32 +396,30 @@ Many CLI arguments can be overridden using environment variables. This is useful
 export DOCS_MCP_PORT=8080
 export DOCS_MCP_HOST=0.0.0.0
 export DOCS_MCP_EMBEDDING_MODEL=text-embedding-3-small
-npx @denmaster/scrapegoat@latest
+npx @arabold/docs-mcp-server@latest
 
 # Override with CLI arguments (takes precedence)
-DOCS_MCP_PORT=8080 npx @denmaster/scrapegoat@latest --port 9090
+DOCS_MCP_PORT=8080 npx @arabold/docs-mcp-server@latest --port 9090
 ```
 
 ### Embedding Provider Configuration
 
-Configure embedding providers via environment variables. Set these in your shell, Docker, or MCP client config.
+The Docs MCP Server is configured via environment variables. Set these in your shell, Docker, or MCP client config.
 
-| Variable                           | Description                                           | Required |
-| ---------------------------------- | ----------------------------------------------------- | -------- |
-| `DATABASE_URL`                     | PostgreSQL connection string                          | **Yes**  |
-| `DOCS_MCP_EMBEDDING_MODEL`         | Embedding model to use (see below for options).       | No       |
-| `OPENAI_API_KEY`                   | OpenAI API key for embeddings.                        | No       |
-| `OPENAI_API_BASE`                  | Custom OpenAI-compatible API endpoint (e.g., Ollama). | No       |
-| `INFINITY_API_URL`                 | Infinity embedding server URL (e.g., http://embed.den.lan). | No       |
-| `GOOGLE_API_KEY`                   | Google API key for Gemini embeddings.                 | No       |
-| `GOOGLE_APPLICATION_CREDENTIALS`   | Path to Google service account JSON for Vertex AI.    | No       |
-| `AWS_ACCESS_KEY_ID`                | AWS key for Bedrock embeddings.                       | No       |
-| `AWS_SECRET_ACCESS_KEY`            | AWS secret for Bedrock embeddings.                    | No       |
-| `AWS_REGION`                       | AWS region for Bedrock.                               | No       |
-| `AZURE_OPENAI_API_KEY`             | Azure OpenAI API key.                                 | No       |
-| `AZURE_OPENAI_API_INSTANCE_NAME`   | Azure OpenAI instance name.                           | No       |
-| `AZURE_OPENAI_API_DEPLOYMENT_NAME` | Azure OpenAI deployment name.                         | No       |
-| `AZURE_OPENAI_API_VERSION`         | Azure OpenAI API version.                             | No       |
+| Variable                           | Description                                           |
+| ---------------------------------- | ----------------------------------------------------- |
+| `DOCS_MCP_EMBEDDING_MODEL`         | Embedding model to use (see below for options).       |
+| `OPENAI_API_KEY`                   | OpenAI API key for embeddings.                        |
+| `OPENAI_API_BASE`                  | Custom OpenAI-compatible API endpoint (e.g., Ollama). |
+| `GOOGLE_API_KEY`                   | Google API key for Gemini embeddings.                 |
+| `GOOGLE_APPLICATION_CREDENTIALS`   | Path to Google service account JSON for Vertex AI.    |
+| `AWS_ACCESS_KEY_ID`                | AWS key for Bedrock embeddings.                       |
+| `AWS_SECRET_ACCESS_KEY`            | AWS secret for Bedrock embeddings.                    |
+| `AWS_REGION`                       | AWS region for Bedrock.                               |
+| `AZURE_OPENAI_API_KEY`             | Azure OpenAI API key.                                 |
+| `AZURE_OPENAI_API_INSTANCE_NAME`   | Azure OpenAI instance name.                           |
+| `AZURE_OPENAI_API_DEPLOYMENT_NAME` | Azure OpenAI deployment name.                         |
+| `AZURE_OPENAI_API_VERSION`         | Azure OpenAI API version.                             |
 
 See [examples above](#alternative-using-docker) for usage.
 
@@ -523,7 +429,6 @@ Set `DOCS_MCP_EMBEDDING_MODEL` to one of:
 
 - `text-embedding-3-small` (default, OpenAI)
 - `openai:snowflake-arctic-embed2` (OpenAI-compatible, Ollama)
-- `infinity:nomic-ai/nomic-embed-text-v1.5` (Infinity local server)
 - `vertex:text-embedding-004` (Google Vertex AI)
 - `gemini:embedding-001` (Google Gemini)
 - `aws:amazon.titan-embed-text-v1` (AWS Bedrock)
@@ -537,10 +442,9 @@ Here are complete configuration examples for different embedding providers:
 **OpenAI (Default):**
 
 ```bash
-DATABASE_URL="postgresql://scrapegoat:password@localhost:5432/scrapegoat" \
 OPENAI_API_KEY="sk-proj-your-openai-api-key" \
 DOCS_MCP_EMBEDDING_MODEL="text-embedding-3-small" \
-npx @denmaster/scrapegoat@latest
+npx @arabold/docs-mcp-server@latest
 ```
 
 **Ollama (Local):**
@@ -549,7 +453,7 @@ npx @denmaster/scrapegoat@latest
 OPENAI_API_KEY="ollama" \
 OPENAI_API_BASE="http://localhost:11434/v1" \
 DOCS_MCP_EMBEDDING_MODEL="nomic-embed-text" \
-npx @denmaster/scrapegoat@latest
+npx @arabold/docs-mcp-server@latest
 ```
 
 **LM Studio (Local):**
@@ -558,16 +462,7 @@ npx @denmaster/scrapegoat@latest
 OPENAI_API_KEY="lmstudio" \
 OPENAI_API_BASE="http://localhost:1234/v1" \
 DOCS_MCP_EMBEDDING_MODEL="text-embedding-qwen3-embedding-4b" \
-npx @denmaster/scrapegoat@latest
-```
-
-**Infinity (Local Embedding Server):**
-
-```bash
-DATABASE_URL="postgresql://scrapegoat:password@localhost:5432/scrapegoat" \
-INFINITY_API_URL="http://embed.den.lan" \
-DOCS_MCP_EMBEDDING_MODEL="infinity:nomic-ai/nomic-embed-text-v1.5" \
-npx @denmaster/scrapegoat@latest
+npx @arabold/docs-mcp-server@latest
 ```
 
 **Google Gemini:**
@@ -575,7 +470,7 @@ npx @denmaster/scrapegoat@latest
 ```bash
 GOOGLE_API_KEY="your-google-api-key" \
 DOCS_MCP_EMBEDDING_MODEL="gemini:embedding-001" \
-npx @denmaster/scrapegoat@latest
+npx @arabold/docs-mcp-server@latest
 ```
 
 **Google Vertex AI:**
@@ -583,7 +478,7 @@ npx @denmaster/scrapegoat@latest
 ```bash
 GOOGLE_APPLICATION_CREDENTIALS="/path/to/your/gcp-service-account.json" \
 DOCS_MCP_EMBEDDING_MODEL="vertex:text-embedding-004" \
-npx @denmaster/scrapegoat@latest
+npx @arabold/docs-mcp-server@latest
 ```
 
 **AWS Bedrock:**
@@ -593,7 +488,7 @@ AWS_ACCESS_KEY_ID="your-aws-access-key-id" \
 AWS_SECRET_ACCESS_KEY="your-aws-secret-access-key" \
 AWS_REGION="us-east-1" \
 DOCS_MCP_EMBEDDING_MODEL="aws:amazon.titan-embed-text-v1" \
-npx @denmaster/scrapegoat@latest
+npx @arabold/docs-mcp-server@latest
 ```
 
 **Azure OpenAI:**
@@ -604,23 +499,12 @@ AZURE_OPENAI_API_INSTANCE_NAME="your-instance-name" \
 AZURE_OPENAI_API_DEPLOYMENT_NAME="your-deployment-name" \
 AZURE_OPENAI_API_VERSION="2024-02-01" \
 DOCS_MCP_EMBEDDING_MODEL="microsoft:text-embedding-ada-002" \
-npx @denmaster/scrapegoat@latest
+npx @arabold/docs-mcp-server@latest
 ```
 
-## Documentation
-
-Complete documentation is available in the `docs/` directory:
-
-- **[PostgreSQL Setup Guide](docs/POSTGRESQL_SETUP.md)** - Database installation and configuration
-- **[Deployment Guide](docs/DEPLOYMENT.md)** - Production deployment strategies
-- **[Configuration Reference](docs/CONFIGURATION.md)** - All environment variables
-- **[Migration Guide](docs/MIGRATION.md)** - SQLite to PostgreSQL migration
-- **[Performance Tuning](docs/PERFORMANCE.md)** - Optimization and benchmarks
-- **[Troubleshooting](docs/TROUBLESHOOTING.md)** - Common issues and solutions
-- **[Security Checklist](docs/SECURITY_CHECKLIST.md)** - Production security hardening
-- **[Authentication Guide](docs/authentication.md)** - OAuth2/OIDC enterprise auth
-
 For more architectural details, see the [ARCHITECTURE.md](ARCHITECTURE.md).
+
+For enterprise authentication and security features, see the [Authentication Guide](docs/authentication.md).
 
 ## Telemetry
 
@@ -650,13 +534,13 @@ You can disable telemetry collection entirely:
 **Option 1: CLI Flag**
 
 ```bash
-npx @denmaster/scrapegoat@latest --no-telemetry
+npx @arabold/docs-mcp-server@latest --no-telemetry
 ```
 
 **Option 2: Environment Variable**
 
 ```bash
-DOCS_MCP_TELEMETRY=false npx @denmaster/scrapegoat@latest
+DOCS_MCP_TELEMETRY=false npx @arabold/docs-mcp-server@latest
 ```
 
 **Option 3: Docker**
@@ -666,7 +550,7 @@ docker run \
   -e DOCS_MCP_TELEMETRY=false \
   -v docs-mcp-data:/data \
   -p 6280:6280 \
-  ghcr.io/denmaster/scrapegoat:latest
+  ghcr.io/arabold/docs-mcp-server:latest
 ```
 
 For more details about our telemetry practices, see the [Telemetry Guide](docs/telemetry.md).
