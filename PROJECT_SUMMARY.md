@@ -11,7 +11,7 @@
 
 ## Executive Summary
 
-Scrapegoat represents a complete architectural transformation of the docs-mcp-server project, migrating from SQLite to PostgreSQL/pgvector to enable enterprise-grade documentation indexing and search capabilities. This migration delivers production-ready scalability, advanced hybrid search, and comprehensive operational tooling.
+Scrapegoat represents a complete architectural transformation of the scrapegoat project, migrating from SQLite to PostgreSQL/pgvector to enable enterprise-grade documentation indexing and search capabilities. This migration delivers production-ready scalability, advanced hybrid search, and comprehensive operational tooling.
 
 **Key Achievements:**
 - Complete PostgreSQL migration with zero data loss
@@ -894,7 +894,7 @@ function reciprocalRankFusion(
 1. **Backup SQLite data**:
    ```bash
    # Export current SQLite data
-   npx @arabold/docs-mcp-server@latest export --output backup.json
+   npx @denmaster/scrapegoat@latest export --output backup.json
    ```
 
 2. **Set up PostgreSQL**:
@@ -918,10 +918,10 @@ function reciprocalRankFusion(
 4. **Re-index documentation**:
    ```bash
    # Option 1: Import from backup (if export was implemented)
-   npx @arabold/docs-mcp-server@latest import --input backup.json
+   npx @denmaster/scrapegoat@latest import --input backup.json
 
    # Option 2: Re-scrape documentation (recommended for clean start)
-   npx @arabold/docs-mcp-server@latest scrape react https://react.dev/reference/react
+   npx @denmaster/scrapegoat@latest scrape react https://react.dev/reference/react
    ```
 
 **Full Migration Guide**: See [docs/MIGRATION.md](docs/MIGRATION.md) for comprehensive instructions.
@@ -947,7 +947,7 @@ docker run -d \
   -e DATABASE_URL=postgresql://scrapegoat:your_password@postgres:5432/scrapegoat \
   -e OPENAI_API_KEY=your_key_here \
   -p 6280:6280 \
-  ghcr.io/arabold/docs-mcp-server:latest \
+  ghcr.io/denmaster/scrapegoat:latest \
   --protocol http --host 0.0.0.0 --port 6280
 
 # 3. Access web interface
@@ -977,8 +977,8 @@ open http://localhost:6280
 
 ```bash
 # Clone repository
-git clone https://github.com/arabold/docs-mcp-server.git
-cd docs-mcp-server
+git clone https://github.com/denmaster/scrapegoat.git
+cd scrapegoat
 
 # Configure environment
 export OPENAI_API_KEY=your_key_here
@@ -1089,7 +1089,7 @@ docker compose up -d
 
 ## Conclusion
 
-The Scrapegoat PostgreSQL migration project successfully transformed docs-mcp-server from a SQLite-based prototype into a production-ready, enterprise-grade documentation search system. With 100% test pass rate, comprehensive documentation, and advanced hybrid search capabilities, Scrapegoat is ready for production deployment.
+The Scrapegoat PostgreSQL migration project successfully transformed scrapegoat from a SQLite-based prototype into a production-ready, enterprise-grade documentation search system. With 100% test pass rate, comprehensive documentation, and advanced hybrid search capabilities, Scrapegoat is ready for production deployment.
 
 **Key Achievements:**
 - ✅ Complete PostgreSQL migration with zero data loss

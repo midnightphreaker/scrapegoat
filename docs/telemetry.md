@@ -95,7 +95,7 @@ The system uses a persistent installation identifier for consistent analytics:
 **Installation ID Generation** (`src/telemetry/TelemetryConfig.ts`)
 
 - Creates UUID-based installation identifier stored in `installation.id`
-- Uses `envPaths` standard for cross-platform directory location (`~/.local/share/docs-mcp-server/`)
+- Uses `envPaths` standard for cross-platform directory location (`~/.local/share/scrapegoat/`)
 - Supports `DOCS_MCP_STORE_PATH` environment variable override for Docker deployments
 - Provides consistent identification across application runs without user tracking
 - Falls back to new UUID generation if file is corrupted or missing

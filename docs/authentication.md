@@ -48,7 +48,7 @@ The server includes a built-in OAuth2 proxy that enables seamless integration wi
 ```mermaid
 sequenceDiagram
     participant Client as MCP Client
-    participant Server as docs-mcp-server
+    participant Server as scrapegoat
     participant Provider as OAuth2/OIDC Provider
 
     Note over Client,Provider: OAuth2 Authentication with DCR Support
@@ -94,7 +94,7 @@ Authentication is configured by pointing the Docs MCP Server to your external OA
 
 ```bash
 # Configure Docs MCP Server to validate tokens from your OAuth2/OIDC provider
-npx docs-mcp-server
+npx scrapegoat
   --auth-enabled
   --auth-issuer-url "https://auth.your-domain.com"
   --auth-audience "https://mcp.your-domain.com"
@@ -133,7 +133,7 @@ To enable OAuth2 authentication, configure the Docs MCP Server to connect to you
 
 ```bash
 # Configure Docs MCP Server to validate tokens from your OAuth2 provider
-npx docs-mcp-server
+npx scrapegoat
   --auth-enabled
   --auth-issuer-url "https://your-provider.example.com"
   --auth-audience "https://mcp.your-domain.com"
@@ -148,7 +148,7 @@ npx docs-mcp-server
 **Auth0**:
 
 ```bash
-npx docs-mcp-server
+npx scrapegoat
   --auth-enabled
   --auth-issuer-url "https://your-tenant.auth0.com"
   --auth-audience "https://mcp.your-domain.com"
@@ -157,7 +157,7 @@ npx docs-mcp-server
 **Clerk**:
 
 ```bash
-npx docs-mcp-server
+npx scrapegoat
   --auth-enabled
   --auth-issuer-url "https://your-app.clerk.accounts.dev"
   --auth-audience "https://mcp.your-domain.com"
@@ -166,7 +166,7 @@ npx docs-mcp-server
 **Keycloak**:
 
 ```bash
-npx docs-mcp-server
+npx scrapegoat
   --auth-enabled
   --auth-issuer-url "https://keycloak.your-domain.com/auth/realms/your-realm"
   --auth-audience "https://mcp.your-domain.com"
@@ -175,7 +175,7 @@ npx docs-mcp-server
 **Azure AD**:
 
 ```bash
-npx docs-mcp-server
+npx scrapegoat
   --auth-enabled
   --auth-issuer-url "https://login.microsoftonline.com/your-tenant-id/v2.0"
   --auth-audience "https://mcp.your-domain.com"
@@ -203,7 +203,7 @@ The server exposes RFC 9728 compliant metadata at `/.well-known/oauth-protected-
   "authorization_servers": ["https://your-provider.example.com"],
   "scopes_supported": ["openid", "profile", "email"],
   "resource_name": "Documentation MCP Server",
-  "resource_documentation": "https://github.com/arabold/docs-mcp-server#readme",
+  "resource_documentation": "https://github.com/denmaster/scrapegoat#readme",
   "bearer_methods_supported": ["header"]
 }
 ```
@@ -272,14 +272,14 @@ All tools are available to authenticated users:
 
 ```bash
 # Start server without authentication
-npx docs-mcp-server --port 6280
+npx scrapegoat --port 6280
 ```
 
 ### Production with Auth
 
 ```bash
 # Configure Docs MCP Server to validate tokens from your OAuth2 provider
-npx docs-mcp-server
+npx scrapegoat
   --port 6280
   --auth-enabled
   --auth-issuer-url "https://keycloak.your-domain.com/realms/api"
@@ -328,7 +328,7 @@ The Docs MCP Server validates tokens issued by these providers but does not repl
 **Auth0**:
 
 ```bash
-npx docs-mcp-server
+npx scrapegoat
   --auth-enabled
   --auth-issuer-url "https://your-tenant.auth0.com"
   --auth-audience "https://mcp.your-domain.com"
@@ -337,7 +337,7 @@ npx docs-mcp-server
 **Clerk**:
 
 ```bash
-npx docs-mcp-server
+npx scrapegoat
   --auth-enabled
   --auth-issuer-url "https://your-app.clerk.accounts.dev"
   --auth-audience "https://mcp.your-domain.com"
@@ -359,7 +359,7 @@ Configure your provider's JWT template/claims to include the resource ID as the 
 
 - Must be a valid URI (URL or URN)
 - **URL examples**: `https://mcp.your-domain.com`, `http://localhost:6280` (dev only)
-- **URN examples**: `urn:docs-mcp-server:api`, `urn:company:service`
+- **URN examples**: `urn:scrapegoat:api`, `urn:company:service`
 - Used as the JWT audience claim for validation
 - Should be unique and not conflict with your actual server URL
 
@@ -402,7 +402,7 @@ When deployed behind an API gateway with authentication:
 Enable debug logging to troubleshoot authentication issues:
 
 ```bash
-DEBUG=mcp:auth npx docs-mcp-server --auth-enabled --auth-issuer-url "..."
+DEBUG=mcp:auth npx scrapegoat --auth-enabled --auth-issuer-url "..."
 ```
 
 ## Security Considerations

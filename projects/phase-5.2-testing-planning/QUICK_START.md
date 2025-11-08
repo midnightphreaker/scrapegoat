@@ -8,7 +8,7 @@ Before you begin, ensure:
 
 ```bash
 # 1. Navigate to project directory
-cd /home/mp/Workspace/docs-mcp-server
+cd /home/mp/Workspace/scrapegoat
 
 # 2. Verify you're on the right branch
 git status
@@ -461,9 +461,9 @@ open coverage/index.html
 - Research: `/home/mp/Workspace/scrapegoat/projects/phase-5.2-testing-planning/research/test-migration-strategy.md`
 
 **Key Resources**:
-- Test utilities: `/home/mp/Workspace/docs-mcp-server/src/store/__tests__/testUtils.ts`
-- Test config: `/home/mp/Workspace/docs-mcp-server/vitest.config.ts`
-- Docker setup: `/home/mp/Workspace/docs-mcp-server/docker-compose.test.yml`
+- Test utilities: `/home/mp/Workspace/scrapegoat/src/store/__tests__/testUtils.ts`
+- Test config: `/home/mp/Workspace/scrapegoat/vitest.config.ts`
+- Docker setup: `/home/mp/Workspace/scrapegoat/docker-compose.test.yml`
 
 ---
 

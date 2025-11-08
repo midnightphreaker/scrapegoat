@@ -1,6 +1,6 @@
 # Scrapegoat Project Status
 
-**PostgreSQL-powered fork of docs-mcp-server**
+**PostgreSQL-powered fork of scrapegoat**
 
 **Repository**: http://gitlab.den.lan/pub/scrapegoat.git
 **Branch**: postgres-fork
@@ -12,7 +12,7 @@
 
 ## Project Overview
 
-Scrapegoat is a PostgreSQL-powered documentation indexing and search system, forked from arabold/docs-mcp-server. It replaces SQLite with PostgreSQL/pgvector for scalable, production-ready documentation search with advanced hybrid search capabilities.
+Scrapegoat is a PostgreSQL-powered documentation indexing and search system, forked from denmaster/scrapegoat. It replaces SQLite with PostgreSQL/pgvector for scalable, production-ready documentation search with advanced hybrid search capabilities.
 
 ### Key Features
 
@@ -723,7 +723,7 @@ Co-Authored-By: Claude <noreply@anthropic.com>"
 
 - **GitLab**: http://gitlab.den.lan/pub/scrapegoat.git
 - **Branch**: postgres-fork
-- **Upstream**: github.com/arabold/docs-mcp-server (original SQLite version)
+- **Upstream**: github.com/denmaster/scrapegoat (original SQLite version)
 
 ### Tools
 

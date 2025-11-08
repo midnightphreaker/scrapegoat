@@ -11,7 +11,7 @@ Phase C completes the PostgreSQL migration of the Scrapegoat project by rewritin
 ## Project Context
 
 ### What is Scrapegoat?
-PostgreSQL fork of the docs-mcp-server project, migrating from SQLite to PostgreSQL with pgvector for vector search capabilities.
+PostgreSQL fork of the scrapegoat project, migrating from SQLite to PostgreSQL with pgvector for vector search capabilities.
 
 ### Previous Phases
 - ✅ **Phase A**: Fixed PostgreSQL FTS - 24/24 DocumentStore tests passing

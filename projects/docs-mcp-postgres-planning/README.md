@@ -2,7 +2,7 @@
 
 ## Project Overview
 
-A complete fork of [arabold/docs-mcp-server](https://github.com/arabold/docs-mcp-server) replacing SQLite/sqlite-vec with PostgreSQL/pgvector for enterprise-grade documentation indexing and search.
+A complete fork of [denmaster/scrapegoat](https://github.com/denmaster/scrapegoat) replacing SQLite/sqlite-vec with PostgreSQL/pgvector for enterprise-grade documentation indexing and search.
 
 **Status**: Planning Complete ✅
 **Target Version**: 1.0.0 (Fork)
@@ -58,7 +58,7 @@ A complete fork of [arabold/docs-mcp-server](https://github.com/arabold/docs-mcp
 
 ## Quick Links
 
-- Original Repository: https://github.com/arabold/docs-mcp-server
+- Original Repository: https://github.com/denmaster/scrapegoat
 - PostgreSQL Documentation: https://www.postgresql.org/docs/
 - pgvector Documentation: https://github.com/pgvector/pgvector
 - MCP Protocol: https://modelcontextprotocol.io/
@@ -66,7 +66,7 @@ A complete fork of [arabold/docs-mcp-server](https://github.com/arabold/docs-mcp
 ## Executive Summary
 
 ### Project Overview
-Complete fork of arabold/docs-mcp-server replacing SQLite/sqlite-vec with PostgreSQL/pgvector. Targets enterprise users requiring production-grade scalability, concurrent access, and advanced vector search capabilities.
+Complete fork of denmaster/scrapegoat replacing SQLite/sqlite-vec with PostgreSQL/pgvector. Targets enterprise users requiring production-grade scalability, concurrent access, and advanced vector search capabilities.
 
 ### Key Decisions
 - **Complete SQLite Removal**: No dual-database support, clean break (ADR-001)

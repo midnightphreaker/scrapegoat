@@ -6,7 +6,7 @@ Comprehensive documentation for Scrapegoat, the PostgreSQL-powered documentation
 
 ### Getting Started
 - [PostgreSQL Setup Guide](./POSTGRESQL_SETUP.md) - Install and configure PostgreSQL with pgvector
-- [Migration Guide](./MIGRATION.md) - Migrate from SQLite-based docs-mcp-server
+- [Migration Guide](./MIGRATION.md) - Migrate from SQLite-based scrapegoat
 - [Configuration Reference](./CONFIGURATION.md) - Complete environment variable reference
 
 ### Operations

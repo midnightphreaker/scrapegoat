@@ -1,6 +1,6 @@
 # Custom Instructions
 
-- The repository for this project is located on GitHub at `arabold/docs-mcp-server`.
+- The repository for this project is located on GitHub at `denmaster/scrapegoat`.
 - You must read the `README.md` to understand the project structure and setup.
 - You must read the `ARCHITECTURE.md` file before making changes across multiple services.
 - You must follow DRY, KISS, YAGNI, and SOLID principles.

@@ -1,6 +1,6 @@
 # Phase 5.2 Planning: Critical Path Tests & Setup Documentation
 
-**Project**: Scrapegoat - PostgreSQL fork of docs-mcp-server
+**Project**: Scrapegoat - PostgreSQL fork of scrapegoat
 **Phase**: 5.2 - Testing Migration & Documentation
 **Timeline**: Days 3-5 of Phase 5 (Target: 2025-11-13)
 **Status**: Planning Complete - Ready for Implementation

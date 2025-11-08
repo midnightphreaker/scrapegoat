@@ -10,7 +10,7 @@ This PR merges the `postgres-fork` branch into `main`, completing the PostgreSQL
 
 ## Overview
 
-Scrapegoat is a PostgreSQL-powered fork of docs-mcp-server that replaces SQLite with PostgreSQL/pgvector for production-ready documentation search. This migration delivers:
+Scrapegoat is a PostgreSQL-powered fork of scrapegoat that replaces SQLite with PostgreSQL/pgvector for production-ready documentation search. This migration delivers:
 
 - 10x search performance improvement at scale
 - Advanced hybrid search (vector + full-text + RRF)
@@ -286,11 +286,11 @@ export DATABASE_URL=postgresql://scrapegoat:test_password@localhost:5432/scrapeg
 export OPENAI_API_KEY=your_test_key
 
 # Start server
-npx @arabold/docs-mcp-server@latest
+npx @denmaster/scrapegoat@latest
 
 # In another terminal, test CLI
-npx @arabold/docs-mcp-server@latest list
-npx @arabold/docs-mcp-server@latest scrape test https://example.com
+npx @denmaster/scrapegoat@latest list
+npx @denmaster/scrapegoat@latest scrape test https://example.com
 ```
 
 ### Test Web Interface

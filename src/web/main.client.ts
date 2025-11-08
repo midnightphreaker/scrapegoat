@@ -11,9 +11,9 @@ import htmx from "htmx.org";
 import { fallbackReleaseLabel, isVersionNewer } from "./utils/versionCheck";
 
 const LATEST_RELEASE_ENDPOINT =
-  "https://api.github.com/repos/arabold/docs-mcp-server/releases/latest";
+  "https://api.github.com/repos/arabold/scrapegoat/releases/latest";
 const LATEST_RELEASE_FALLBACK_URL =
-  "https://github.com/arabold/docs-mcp-server/releases/latest";
+  "https://github.com/arabold/scrapegoat/releases/latest";
 
 interface VersionUpdateConfig {
   currentVersion: string | null;
@@ -51,7 +51,7 @@ document.addEventListener("alpine:init", () => {
         const response = await fetch(LATEST_RELEASE_ENDPOINT, {
           headers: {
             Accept: "application/vnd.github+json",
-            "User-Agent": "docs-mcp-server-ui",
+            "User-Agent": "scrapegoat-ui",
           },
         });
 

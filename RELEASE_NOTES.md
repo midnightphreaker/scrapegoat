@@ -9,7 +9,7 @@
 
 ## 🎉 Overview
 
-Scrapegoat v1.0.0-postgres represents a complete architectural transformation of the docs-mcp-server project, migrating from SQLite to PostgreSQL/pgvector for enterprise-grade scalability and performance. This release delivers production-ready documentation search with advanced hybrid search capabilities.
+Scrapegoat v1.0.0-postgres represents a complete architectural transformation of the scrapegoat project, migrating from SQLite to PostgreSQL/pgvector for enterprise-grade scalability and performance. This release delivers production-ready documentation search with advanced hybrid search capabilities.
 
 **This is a major release with breaking changes.** SQLite support has been removed. PostgreSQL 14+ with pgvector is now required.
 
@@ -287,7 +287,7 @@ docker run -d \
   -e DATABASE_URL=postgresql://scrapegoat:your_password@postgres:5432/scrapegoat \
   -e OPENAI_API_KEY=your_key_here \
   -p 6280:6280 \
-  ghcr.io/arabold/docs-mcp-server:latest \
+  ghcr.io/denmaster/scrapegoat:latest \
   --protocol http --host 0.0.0.0 --port 6280
 
 # 3. Access web interface
@@ -304,7 +304,7 @@ export DATABASE_URL=postgresql://scrapegoat:password@localhost:5432/scrapegoat
 export OPENAI_API_KEY=your_key_here
 
 # 3. Start Scrapegoat
-npx @arabold/docs-mcp-server@latest
+npx @denmaster/scrapegoat@latest
 ```
 
 ### Upgrading from SQLite (v0.x)
@@ -358,7 +358,7 @@ If using embedded mode, update your MCP client config:
   "mcpServers": {
     "scrapegoat": {
       "command": "npx",
-      "args": ["@arabold/docs-mcp-server@latest"],
+      "args": ["@denmaster/scrapegoat@latest"],
       "env": {
         "DATABASE_URL": "postgresql://scrapegoat:password@localhost:5432/scrapegoat",
         "OPENAI_API_KEY": "sk-proj-..."
@@ -371,25 +371,25 @@ If using embedded mode, update your MCP client config:
 **Step 5: Re-Index Documentation**
 
 Using the web interface:
-1. Start Scrapegoat: `npx @arabold/docs-mcp-server@latest`
+1. Start Scrapegoat: `npx @denmaster/scrapegoat@latest`
 2. Open http://localhost:6280
 3. Queue scrape jobs for each library
 4. Monitor progress in Job Queue
 
 Using CLI:
 ```bash
-npx @arabold/docs-mcp-server@latest scrape react https://react.dev/reference/react
-npx @arabold/docs-mcp-server@latest scrape vue https://vuejs.org/api/
+npx @denmaster/scrapegoat@latest scrape react https://react.dev/reference/react
+npx @denmaster/scrapegoat@latest scrape vue https://vuejs.org/api/
 ```
 
 **Step 6: Verify Migration**
 
 ```bash
 # List indexed libraries
-npx @arabold/docs-mcp-server@latest list
+npx @denmaster/scrapegoat@latest list
 
 # Test search
-npx @arabold/docs-mcp-server@latest search react "useState hook"
+npx @denmaster/scrapegoat@latest search react "useState hook"
 ```
 
 **Complete upgrade guide**: [docs/MIGRATION.md](docs/MIGRATION.md)
@@ -562,7 +562,7 @@ This release represents a major architectural transformation made possible by:
 
 - **PostgreSQL Team**: For the excellent database engine
 - **pgvector Team**: For the native vector search extension
-- **Original docs-mcp-server**: By arabold (https://github.com/arabold/docs-mcp-server)
+- **Original scrapegoat**: By arabold (https://github.com/denmaster/scrapegoat)
 - **AI-Assisted Development**: Vast majority of code generated using Claude with MCP
 
 ---

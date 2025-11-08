@@ -1,6 +1,6 @@
 # Phase 5.2 Completion Planning
 
-**Project**: Scrapegoat (PostgreSQL fork of docs-mcp-server)
+**Project**: Scrapegoat (PostgreSQL fork of scrapegoat)
 **Phase**: 5.2 - Test Suite Completion and Documentation
 **Status**: In Progress (14/24 tests passing)
 **Planning Date**: 2025-11-08
