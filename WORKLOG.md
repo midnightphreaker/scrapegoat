@@ -361,3 +361,64 @@ Phase 6 successfully implements all Crawl4AI options per Section 0 of CURRENT_PL
 **Commit Message**: `test: update all test files to use fetcher property instead of ScrapeMode enum`
 
 ---
+
+## [2025-11-09 07:27:24] - Phase 8 Complete: Dependency Cleanup
+
+**Files Modified**:
+1. `package.json`
+   - Removed `"playwright": "^1.52.0"` from dependencies (line 74)
+   - Removed `"postinstall"` script (line 40)
+   - Added `"@langchain/core": "^1.0.3"` to dependencies (to resolve peer dependency conflict)
+
+2. `package-lock.json`
+   - Regenerated after clean install
+
+**Size Reduction**:
+- node_modules before: 592M
+- node_modules after: 527M
+- **Savings: 65MB (11% reduction)**
+
+**Verification**:
+- Executed `rm -rf node_modules package-lock.json`
+- Ran `npm install --legacy-peer-deps` successfully
+- Ran `npm install @langchain/core --legacy-peer-deps` to resolve peer deps
+- Ran `npm run build` - build succeeded
+- All TypeScript compilation passes
+
+**Implementation Summary**:
+- ✅ Playwright dependency completely removed
+- ✅ Postinstall script removed
+- ✅ Dependencies resolved correctly
+- ✅ Project builds successfully
+- ✅ 65MB disk space savings
+
+**Next Steps**: Phase 9 - Database Migration
+
+**Commit Message**: `refactor(phase8): remove Playwright dependency from package.json`
+
+---
+
+## [2025-11-09 07:28:47] - Phase 9 Complete: Database Migration
+
+**Files Created**:
+1. `db/migrations/013-remove-browser-fetcher.sql`
+   - Updates pages table: `fetcher_type = 'crawl4ai' WHERE fetcher_type = 'browser'`
+   - Updates column comment to reflect valid fetcher types (auto, http, crawl4ai, file)
+   - Includes verification query to check for any remaining 'browser' entries
+
+**Migration Purpose**:
+- Migrates historical data from 'browser' fetcher type to 'crawl4ai'
+- Updates schema documentation to remove 'browser' from valid types
+- Ensures database consistency with application code changes
+
+**Implementation Notes**:
+- Migration is idempotent - safe to run multiple times
+- Uses simple UPDATE statement with WHERE clause
+- No data loss - only type conversion
+- Includes comment explaining verification query
+
+**Next Steps**: Phase 10 - Integration Testing
+
+**Commit Message**: `feat(migration): add database migration to remove browser fetcher type`
+
+---
