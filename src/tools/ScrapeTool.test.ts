@@ -2,7 +2,6 @@ import { beforeEach, describe, expect, it, type Mock, vi } from "vitest";
 import { PipelineManager } from "../pipeline/PipelineManager";
 import type { PipelineJob } from "../pipeline/types";
 import { PipelineJobStatus } from "../pipeline/types";
-import { ScrapeMode } from "../scraper/types";
 import { ScrapeTool, type ScrapeToolOptions } from "./ScrapeTool";
 
 // Mock dependencies
@@ -119,7 +118,7 @@ describe("ScrapeTool", () => {
         maxDepth: 2, // Overridden
         maxConcurrency: 5, // Test override
         ignoreErrors: false, // Overridden
-        scrapeMode: ScrapeMode.Auto, // Use enum
+        fetcher: "auto", // Use auto fetcher selection
       },
     );
     expect(mockManagerInstance.waitForJobCompletion).toHaveBeenCalledWith(MOCK_JOB_ID);

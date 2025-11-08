@@ -3,7 +3,7 @@ import { HttpFetcher } from "../fetcher";
 import type { RawContent } from "../fetcher/types";
 import { HtmlPipeline } from "../pipelines/HtmlPipeline";
 import { MarkdownPipeline } from "../pipelines/MarkdownPipeline";
-import { ScrapeMode, type ScraperOptions } from "../types";
+import type { ScraperOptions } from "../types";
 import { GitHubWikiScraperStrategy } from "./GitHubWikiScraperStrategy";
 
 // Mock the fetcher and pipelines
@@ -381,7 +381,7 @@ describe("GitHubWikiScraperStrategy", () => {
       expect(result.document?.metadata.title).toBe("Home");
     });
 
-    it("should force ScrapeMode.Fetch for consistent behavior", async () => {
+    it("should force HTTP fetcher for consistent behavior", async () => {
       const rawContent: RawContent = {
         content: "<html><body><h1>Test</h1></body></html>",
         mimeType: "text/html",
@@ -400,22 +400,22 @@ describe("GitHubWikiScraperStrategy", () => {
       htmlPipelineInstance.canProcess.mockReturnValue(true);
       htmlPipelineInstance.process.mockImplementation(
         async (_content: any, opts: any) => {
-          expect(opts.scrapeMode).toBe("fetch");
+          expect(opts.fetcher).toBe("http");
           return processedContent;
         },
       );
 
-      const optionsWithPlaywright = {
+      const optionsWithCrawl4ai = {
         ...options,
-        scrapeMode: ScrapeMode.Playwright,
+        fetcher: "crawl4ai" as const,
       };
 
       const item = { url: "https://github.com/owner/repo/wiki/Test", depth: 1 };
-      await (strategy as any).processItem(item, optionsWithPlaywright);
+      await (strategy as any).processItem(item, optionsWithCrawl4ai);
 
       expect(htmlPipelineInstance.process).toHaveBeenCalledWith(
         rawContent,
-        expect.objectContaining({ scrapeMode: "fetch" }),
+        expect.objectContaining({ fetcher: "http" }),
         expect.any(Object),
       );
     });
