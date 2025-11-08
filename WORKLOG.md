@@ -155,3 +155,133 @@ This log tracks all changes made during the comprehensive refactoring to remove 
 **Commit Message**: `refactor(phase4): remove Playwright browser installation utilities`
 
 ---
+
+## [2025-11-09 07:45:00] - Phase 5 Complete: Tool and Strategy Updates
+
+**Files Modified**:
+1. `src/tools/ScrapeTool.ts`
+   - Removed ScrapeMode import
+   - Removed scrapeMode parameter from ScrapeToolOptions interface
+   - Removed scrapeMode from enqueueJob call
+   - Updated 'browser' fetcher type to exclude it from type union
+   - Updated JSDoc comments
+
+2. `src/tools/FetchUrlTool.ts`
+   - Removed ScrapeMode import
+   - Removed scrapeMode parameter from FetchUrlToolOptions
+   - Added fetcher parameter (FetcherType)
+   - Updated execute() method to use fetcher instead of scrapeMode
+   - Propagated fetcher to pipeline.process()
+
+3. `src/scraper/strategies/GitHubRepoScraperStrategy.ts`
+   - Removed ScrapeMode import
+   - Removed scrapeMode override in processItem()
+   - Updated comment about GitHub raw content processing
+   - Now uses standard pipeline processing without forcing specific modes
+
+4. `src/scraper/strategies/GitHubWikiScraperStrategy.ts`
+   - Removed ScrapeMode import
+   - Removed scrapeMode override in processItem()
+   - Simplified to use standard pipeline processing
+
+5. `src/store/DocumentManagementService.ts`
+   - Removed ScrapeMode import
+   - Removed scrapeMode from scraperOptions in processDocument()
+   - Simplified pipeline processing options
+
+6. `src/cli/commands/fetchUrl.ts`
+   - Removed ScrapeMode import, added FetcherType import
+   - Updated fetchUrlAction parameter from scrapeMode to fetcher
+   - Updated createFetchUrlCommand to use --fetcher flag instead of --scrape-mode
+   - Updated validation logic for fetcher types
+
+7. `src/cli/commands/scrape.ts`
+   - Removed ScrapeMode import, added FetcherType import
+   - Updated scrapeAction parameter from scrapeMode to fetcher
+   - Updated createScrapeCommand to use --fetcher flag instead of --scrape-mode
+   - Updated telemetry tracking to use fetcher
+   - Updated validation logic for fetcher types
+
+8. `src/store/types.ts`
+   - Removed ScrapeMode import
+   - Removed scrapeMode from VersionScraperOptions interface
+   - Removed 'browser' from fetcher type union in VersionScraperOptions
+
+9. `src/telemetry/eventTypes.ts`
+   - Changed scrapeMode to fetcher in WebScrapeStartedProperties interface
+
+10. `src/pipeline/trpc/router.ts`
+    - Updated telemetry tracking from scrapeMode to fetcher in enqueueJob procedure
+
+**Verification**:
+- Ran `npm run build` to verify TypeScript compilation
+- Build correctly fails at ScrapeFormContent.tsx (web UI component)
+- All backend TypeScript code successfully compiled
+- Phase 5 complete - only web UI components remain
+
+**Next Steps**: Phase 6 - Web UI Updates + Crawl4AI Options (update ScrapeFormContent, add all Crawl4AI configuration fields per Section 0)
+
+**Commit Messages**:
+- `refactor(phase5): remove ScrapeMode from tools and strategies`
+- `refactor(phase5-complete): remove ScrapeMode from all CLI commands and types`
+
+---
+
+## [2025-11-09 10:30:00] - Phase 6 Complete: Web UI Updates + Crawl4AI Options
+
+**Files Modified**:
+1. `src/web/components/Fetcher/Crawl4AIOptions.tsx`
+   - **Fixed default values** per Section 0 specification:
+     - enableScreenshot: true (added 'checked' attribute)
+     - enableMedia: true (added 'checked' attribute)
+     - enableLinks: true (added 'checked' attribute)
+     - screenshotMode: 'fullpage' (changed from 'viewport', added 'checked' to fullpage option)
+     - cacheMode: 'fresh' (default value)
+   - **Added Alpine.js x-data initialization** with correct defaults:
+     - `enableScreenshot: true, enableMedia: true, enableLinks: true`
+     - `screenshotMode: 'fullpage', cacheMode: 'fresh'`
+   - **Added Advanced Crawl4AI Settings section** (expandable details element):
+     - waitFor: CSS selector input for dynamic content
+     - waitForTimeout: number input (0-60000ms, default 30000)
+     - customJs: textarea for custom JavaScript execution
+     - cacheMode: select dropdown (fresh/enabled/disabled/bypass, default 'fresh')
+     - crawl4ai_headers: textarea for JSON headers
+   - **Updated section title** from "Crawl4AI Options" to "Content Enhancement"
+   - **Fixed screenshotMode value**: changed 'full' to 'fullpage' to match backend
+   - **Added comprehensive tooltips** explaining each option with defaults
+   - All field names prefixed with 'crawl4ai_' for advanced settings
+
+2. `src/web/components/Fetcher/FetcherSelector.tsx`
+   - **Removed 'browser' option** from dropdown (lines 42-44)
+   - Updated JSDoc comment to reflect removal of Browser option
+   - Now only shows: Auto-detect, HTTP Fetch, Crawl4AI
+
+3. `src/web/components/ScrapeFormContent.tsx`
+   - **Removed ScrapeMode import** (line 1)
+   - **Removed 'browser' from fetcherHelp** object in Alpine.js data
+   - **Removed enableScreenshot, enableMedia, enableLinks** from Alpine.js data (now in Crawl4AIOptions)
+   - **Removed entire scrapeMode section** (lines 278-315):
+     - Deleted scrapeMode dropdown
+     - Deleted ScrapeMode.Auto/Fetch/Playwright references
+     - Removed associated tooltip
+   - Updated fetcherHelp to only include: auto, http, crawl4ai
+
+**Verification**:
+- Ran `npm run build` to verify TypeScript compilation
+- Build succeeds with no errors
+- All web UI components compile correctly
+- Scope default already set to 'subpages' (verified line 229)
+
+**Implementation Summary**:
+Phase 6 successfully implements all Crawl4AI options per Section 0 of CURRENT_PLAN.md:
+- ✅ Content Enhancement options (6-8): enableScreenshot, screenshotMode, enableMedia, enableLinks
+- ✅ Advanced Settings options (9-13): waitFor, waitForTimeout, customJs, cacheMode, headers
+- ✅ All defaults set correctly as specified
+- ✅ screenshotMode conditional display (only shown when enableScreenshot is checked)
+- ✅ Removed all ScrapeMode and 'browser' references from web UI
+
+**Next Steps**: Phase 7 - Test Suite Updates (update all test files referencing ScrapeMode or fetcher='browser')
+
+**Commit Message**: `refactor(phase6): update web UI - remove browser/ScrapeMode, add complete Crawl4AI options`
+
+---

@@ -1,4 +1,3 @@
-import { ScrapeMode } from "../../scraper/types";
 import Alert from "./Alert";
 import Tooltip from "./Tooltip";
 import FetcherSelector from "./Fetcher/FetcherSelector";
@@ -33,9 +32,6 @@ const ScrapeFormContent = ({
         hasPath: false,
         headers: [],
         fetcher: 'auto',
-        enableScreenshot: false,
-        enableMedia: false,
-        enableLinks: false,
         fetcherHelp: '',
         checkUrlPath() {
           try {
@@ -49,7 +45,6 @@ const ScrapeFormContent = ({
           const helps = {
             auto: 'Automatically selects the best fetcher for the URL',
             http: 'Fast HTTP-only fetching, no JavaScript execution',
-            browser: 'Full browser with JavaScript support, slower',
             crawl4ai: 'AI-optimized markdown with optional screenshots and media'
           };
           this.fetcherHelp = helps[this.fetcher] || '';
@@ -274,44 +269,6 @@ const ScrapeFormContent = ({
                 Default patterns are pre-filled. Edit to customize or clear to
                 exclude nothing.
               </p>
-            </div>
-            <div>
-              <div class="flex items-center">
-                <label
-                  for="scrapeMode"
-                  class="block text-sm font-medium text-gray-700 dark:text-gray-300"
-                >
-                  Scrape Mode
-                </label>
-                <Tooltip
-                  text={
-                    <div>
-                      <ul class="list-disc pl-5">
-                        <li>'Auto' automatically selects the best method,</li>
-                        <li>
-                          'Fetch' uses simple HTTP requests (faster but may miss
-                          dynamic content),
-                        </li>
-                        <li>
-                          'Playwright' uses a headless browser (slower but
-                          better for JS-heavy sites).
-                        </li>
-                      </ul>
-                    </div>
-                  }
-                />
-              </div>
-              <select
-                name="scrapeMode"
-                id="scrapeMode"
-                class="mt-0.5 block w-full max-w-sm pl-2 pr-10 py-1 text-base border border-gray-300 dark:border-[#3c3c3c] focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm rounded-md bg-white dark:bg-[#181818] text-gray-900 dark:text-white"
-              >
-                <option value={ScrapeMode.Auto} selected>
-                  Auto (Default)
-                </option>
-                <option value={ScrapeMode.Fetch}>Fetch</option>
-                <option value={ScrapeMode.Playwright}>Playwright</option>
-              </select>
             </div>
             <div>
               <div class="flex items-center mb-1">

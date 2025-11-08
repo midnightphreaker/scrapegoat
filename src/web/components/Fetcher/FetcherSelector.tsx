@@ -7,11 +7,10 @@ interface FetcherSelectorProps {
 
 /**
  * Dropdown selector for choosing content fetcher type
- * 
+ *
  * Provides options for auto-detection or explicit fetcher selection:
  * - Auto: Automatically selects the best fetcher (default)
  * - HTTP: Fast HTTP-only fetching
- * - Browser: Full browser with JavaScript support
  * - Crawl4AI: AI-optimized markdown with enhanced features
  */
 const FetcherSelector = ({ name = "fetcher", defaultValue = "auto" }: FetcherSelectorProps) => {
@@ -38,9 +37,6 @@ const FetcherSelector = ({ name = "fetcher", defaultValue = "auto" }: FetcherSel
         </option>
         <option value="http" selected={defaultValue === "http"}>
           HTTP Fetch (fast)
-        </option>
-        <option value="browser" selected={defaultValue === "browser"}>
-          Browser (JavaScript support)
         </option>
         <option value="crawl4ai" selected={defaultValue === "crawl4ai"}>
           Crawl4AI (AI-optimized)
