@@ -789,3 +789,35 @@ The Playwright removal refactoring is **complete and ready for merge**. All phas
 **Commit**: `fix(issue-1): implement missing Crawl4AI options in backend`
 
 ---
+
+## [2025-11-09 15:00:00] - Issue #3 FIXED: Remove 'browser' from MCP Tool Enum
+
+**Priority**: HIGH (API contract issue)
+
+**Problem**: MCP tool still accepted 'browser' fetcher value in Zod enum, allowing clients to pass deprecated parameter.
+
+**Files Modified**:
+- `src/mcp/mcpServer.ts`
+  - Line 69: Removed "browser" from fetcher enum: `["auto", "http", "browser", "crawl4ai"]` → `["auto", "http", "crawl4ai"]`
+  - Line 73: Updated description to remove 'browser' mention
+
+**Changes**:
+- MCP scrape_docs tool now only accepts: 'auto', 'http', 'crawl4ai'
+- Zod validation will reject 'browser' value
+- Description updated to remove deprecated fetcher reference
+- Backward compatibility maintained in AutoDetectFetcher (internal redirect)
+
+**Impact**:
+- MCP clients can no longer pass `fetcher: 'browser'` via API
+- Clean API contract without deprecated values
+- Internal backward compatibility redirect still handles old code
+
+**Verification**:
+- Ran `npm run build` - compilation succeeded
+- Zod enum correctly restricts to 3 valid values
+
+**Status**: ✅ FIXED and VERIFIED
+
+**Commit**: `fix(issue-3): remove browser from MCP tool enum`
+
+---
