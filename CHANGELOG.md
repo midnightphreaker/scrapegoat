@@ -1,3 +1,44 @@
+## [Unreleased]
+
+### Features
+
+- **Web UI Redesign (Context7 Design System)**:
+  - Complete redesign using Context7.com design system
+  - Applied emerald-600 (#059669) as primary accent color
+  - Updated all components to use Context7 color palette, typography, and spacing
+  - Replaced dark mode with clean, modern light theme
+  - Updated logo to lowercase "scrapegoat" in black
+  - Added collapsible "Advanced Options" panel in Queue New Scrape Job form
+  - Smooth animations and transitions (150ms) throughout UI
+  - System font stack for optimal performance
+
+- **MCP Health Status Indicator**:
+  - Real-time MCP server connection status in top bar (desktop and mobile)
+  - Green pulsing indicator for connected state
+  - Red pulsing indicator for disconnected state
+  - Dynamic configuration from `/api/config` endpoint
+  - 30-second polling interval with automatic health checks
+  - Click connected indicator: Shows popup with Claude Desktop configuration JSON
+  - Click disconnected indicator: Triggers connection retry with "Connecting..." state
+  - Copy-to-clipboard functionality for easy MCP setup
+  - New `/api/health/mcp` endpoint with 2-second timeout
+  - Alpine.js component for client-side state management
+
+### Changed
+
+- **Web UI Styling**: Removed 172+ dark mode classes from 23 components
+- **Color System**: Migrated from purple/pink accents to emerald-600 primary color
+- **Typography**: System fonts for better performance and native OS integration
+- **Layout**: Improved card shadows, borders, and spacing using Context7 standards
+- **Build Size**: Reduced CSS from 81KB to 77KB
+
+### Documentation
+
+- Added [NEW_STYLE.md](NEW_STYLE.md) - Complete Context7 design system reference (737 lines)
+- Documented MCP health status feature and configuration
+
+---
+
 # [2.0.0](https://github.com/denmaster/scrapegoat/compare/v1.26.2...v2.0.0) (2025-11-09)
 
 ## BREAKING CHANGES
