@@ -88,23 +88,28 @@ export class Crawl4AIFetcher implements ContentFetcher {
       // Merge options: explicit options > environment defaults > false
       const enableScreenshot = options?.crawl4ai?.enableScreenshot ?? envScreenshots;
       const screenshotMode: "viewport" | "full" =
-        options?.crawl4ai?.screenshotMode ?? envScreenshotMode;
+        options?.crawl4ai?.screenshotMode === "fullpage"
+          ? "full"
+          : (options?.crawl4ai?.screenshotMode ?? envScreenshotMode);
       const enableMedia = options?.crawl4ai?.enableMedia ?? envMedia;
       const enableLinks = options?.crawl4ai?.enableLinks ?? envLinks;
 
-      // Build Crawl4AI request
+      // Build Crawl4AI request with all options from Section 0
       const crawl4aiConfig: Crawl4AIConfig = {
-        cacheMode: "enabled",
-        useFitMarkdown: true, // Use BM25-filtered markdown for better quality
-        removeOverlays: true,
+        cacheMode: options?.crawl4ai?.cacheMode ?? "fresh", // Default: 'fresh' per Section 0
+        useFitMarkdown: true, // Hardcoded: BM25-filtered markdown (CURRENT_PLAN.md Section 0, option 15)
+        removeOverlays: true, // Hardcoded: Auto-remove popups/modals (Section 0, option 14)
         screenshot: enableScreenshot ? screenshotMode : false,
         extractMedia: enableMedia,
-        waitForTimeout: options?.timeout || CRAWL4AI_TIMEOUT,
+        waitFor: options?.crawl4ai?.waitFor, // CSS selector to wait for (default: undefined)
+        waitForTimeout: options?.crawl4ai?.waitForTimeout ?? 30000, // Default: 30000ms per Section 0
+        customJs: options?.crawl4ai?.customJs, // Custom JavaScript (default: undefined)
       };
 
       const request: Crawl4AIRequest = {
         url: source,
         config: crawl4aiConfig,
+        headers: options?.crawl4ai?.headers, // Custom HTTP headers (default: undefined)
       };
 
       const featuresLog = [
