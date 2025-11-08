@@ -1,15 +1,15 @@
 {
-  "name": "@arabold/docs-mcp-server",
-  "version": "1.26.2",
-  "description": "MCP server for fetching and searching documentation",
+  "name": "scrapegoat",
+  "version": "1.0.0",
+  "description": "Documentation search and indexing server with MCP support",
   "type": "module",
   "bin": {
-    "docs-mcp-server": "dist/index.js"
+    "scrapegoat": "dist/index.js"
   },
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/arabold/docs-mcp-server.git"
+    "url": "http://gitlab.den.lan/pub/scrapegoat.git"
   },
   "files": [
     "dist",
