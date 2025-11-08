@@ -7,13 +7,14 @@ import type { FastifyInstance } from "fastify";
 import type { IPipeline } from "../pipeline/trpc/interfaces";
 import type { IDocumentManagement } from "../store/trpc/interfaces";
 import { SearchTool } from "../tools";
-
 import { CancelJobTool } from "../tools/CancelJobTool";
 import { ClearCompletedJobsTool } from "../tools/ClearCompletedJobsTool";
 import { ListJobsTool } from "../tools/ListJobsTool";
 import { ListLibrariesTool } from "../tools/ListLibrariesTool";
 import { RemoveTool } from "../tools/RemoveTool";
 import { ScrapeTool } from "../tools/ScrapeTool";
+import { appConfig, validateConfig } from "../utils/config";
+import { logger } from "../utils/logger";
 import { registerIndexRoute } from "../web/routes/index";
 import { registerCancelJobRoute } from "../web/routes/jobs/cancel";
 import { registerClearCompletedJobsRoute } from "../web/routes/jobs/clear-completed";
@@ -53,4 +54,93 @@ export async function registerWebService(
   registerNewJobRoutes(server, scrapeTool);
   registerCancelJobRoute(server, cancelJobTool);
   registerClearCompletedJobsRoute(server, clearCompletedJobsTool);
+
+  /**
+   * GET /api/health/mcp
+   * Check MCP server health
+   */
+  server.get("/api/health/mcp", async (request, reply) => {
+    try {
+      const mcpHost = appConfig.mcpHost || "localhost";
+      const mcpPort = appConfig.mcpPort || 6280;
+      const mcpUrl = `http://${mcpHost}:${mcpPort}`;
+
+      // Simple reachability check
+      try {
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 2000);
+
+        await fetch(mcpUrl, {
+          method: "HEAD",
+          signal: controller.signal,
+        });
+
+        clearTimeout(timeoutId);
+
+        reply.send({
+          status: "ok",
+          connected: true,
+          url: mcpUrl,
+          port: mcpPort,
+        });
+      } catch (error) {
+        reply.status(503).send({
+          status: "down",
+          connected: false,
+          error: "MCP server not reachable",
+        });
+      }
+    } catch (error) {
+      logger.error(`MCP health check failed: ${error}`);
+      reply.status(503).send({
+        status: "down",
+        connected: false,
+        error: error instanceof Error ? error.message : "Unknown error",
+      });
+    }
+  });
+
+  /**
+   * GET /api/config
+   * Get application configuration (read-only, sanitized)
+   */
+  server.get("/api/config", async (request, reply) => {
+    try {
+      const validation = validateConfig(appConfig);
+
+      reply.send({
+        config: {
+          fetcher: {
+            defaultFetcher: appConfig.fetcher.defaultFetcher,
+            http: {
+              timeout: appConfig.fetcher.http.timeout,
+              maxRetries: appConfig.fetcher.http.maxRetries,
+            },
+            crawl4ai: {
+              serviceUrl: appConfig.fetcher.crawl4ai.serviceUrl,
+              enabled: appConfig.fetcher.crawl4ai.enabled,
+              timeout: appConfig.fetcher.crawl4ai.timeout,
+              features: appConfig.fetcher.crawl4ai.features,
+              defaultScreenshotMode: appConfig.fetcher.crawl4ai.defaultScreenshotMode,
+            },
+          },
+          storage: appConfig.storage,
+          monitoring: {
+            enabled: appConfig.monitoring.enabled,
+            exportInterval: appConfig.monitoring.exportInterval,
+          },
+        },
+        mcp: {
+          enabled: appConfig.enableMcpServer,
+          host: appConfig.mcpHost || "localhost",
+          port: appConfig.mcpPort || 6280,
+          url: `http://${appConfig.mcpHost || "localhost"}:${appConfig.mcpPort || 6280}`,
+        },
+        validation,
+      });
+    } catch (error) {
+      logger.error(`Error retrieving config: ${error}`);
+      reply.status(500).send({ error: "Failed to retrieve configuration" });
+    }
+  });
 }
