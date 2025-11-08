@@ -1,11 +1,12 @@
 import type { Document } from "@langchain/core/documents";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { DocumentStore } from "./DocumentStore";
+import { createTestDatabase, type TestDatabase } from "./__tests__/testUtils";
+import type { DocumentStore } from "./DocumentStore";
 import { EmbeddingConfig } from "./embeddings/EmbeddingConfig";
 import { VersionStatus } from "./types";
 
 // Mock only the embedding service to generate deterministic embeddings for testing
-// This allows us to test ranking logic while using real SQLite database
+// This allows us to test ranking logic while using real PostgreSQL database
 vi.mock("./embeddings/EmbeddingFactory", async (importOriginal) => {
   const actual = await importOriginal<typeof import("./embeddings/EmbeddingFactory")>();
 
@@ -67,6 +68,7 @@ vi.mock("./embeddings/EmbeddingFactory", async (importOriginal) => {
  * Uses explicit embedding configuration and tests hybrid search functionality
  */
 describe("DocumentStore - With Embeddings", () => {
+  let testDb: TestDatabase;
   let store: DocumentStore;
 
   beforeEach(async () => {
@@ -75,14 +77,14 @@ describe("DocumentStore - With Embeddings", () => {
       "openai:text-embedding-3-small",
     );
 
-    // Create a fresh in-memory database for each test with explicit config
-    store = new DocumentStore(":memory:", embeddingConfig);
-    await store.initialize();
+    // Create a fresh PostgreSQL test database for each test with explicit config
+    testDb = await createTestDatabase(embeddingConfig);
+    store = testDb.store;
   });
 
   afterEach(async () => {
-    if (store) {
-      await store.shutdown();
+    if (testDb) {
+      await testDb.cleanup();
     }
   });
 
@@ -497,6 +499,7 @@ describe("DocumentStore - With Embeddings", () => {
  * Tests the fallback behavior when no embedding configuration is provided
  */
 describe("DocumentStore - Without Embeddings (FTS-only)", () => {
+  let testDb: TestDatabase;
   let store: DocumentStore;
   let originalEnv: NodeJS.ProcessEnv;
 
@@ -515,20 +518,22 @@ describe("DocumentStore - Without Embeddings (FTS-only)", () => {
     // Restore original environment
     process.env = originalEnv;
 
-    if (store) {
-      await store.shutdown();
+    if (testDb) {
+      await testDb.cleanup();
     }
   });
 
   describe("Initialization without embeddings", () => {
     it("should initialize successfully without embedding credentials", async () => {
-      store = new DocumentStore(":memory:");
-      await expect(store.initialize()).resolves.not.toThrow();
+      testDb = await createTestDatabase(null);
+      store = testDb.store;
+      // Store is already initialized by createTestDatabase
+      expect(store).toBeDefined();
     });
 
     it("should store documents without vectorization", async () => {
-      store = new DocumentStore(":memory:");
-      await store.initialize();
+      testDb = await createTestDatabase(null);
+      store = testDb.store;
 
       const testDocuments: Document[] = [
         {
@@ -552,8 +557,8 @@ describe("DocumentStore - Without Embeddings (FTS-only)", () => {
 
   describe("FTS-only Search", () => {
     beforeEach(async () => {
-      store = new DocumentStore(":memory:");
-      await store.initialize();
+      testDb = await createTestDatabase(null);
+      store = testDb.store;
 
       const testDocuments: Document[] = [
         {
@@ -620,6 +625,7 @@ describe("DocumentStore - Without Embeddings (FTS-only)", () => {
  * These tests focus on core database functionality
  */
 describe("DocumentStore - Common Functionality", () => {
+  let testDb: TestDatabase;
   let store: DocumentStore;
 
   // Use embeddings for these tests
@@ -627,13 +633,13 @@ describe("DocumentStore - Common Functionality", () => {
     const embeddingConfig = EmbeddingConfig.parseEmbeddingConfig(
       "openai:text-embedding-3-small",
     );
-    store = new DocumentStore(":memory:", embeddingConfig);
-    await store.initialize();
+    testDb = await createTestDatabase(embeddingConfig);
+    store = testDb.store;
   });
 
   afterEach(async () => {
-    if (store) {
-      await store.shutdown();
+    if (testDb) {
+      await testDb.cleanup();
     }
   });
 
@@ -728,21 +734,20 @@ describe("DocumentStore - Common Functionality", () => {
           SELECT COUNT(*) as count
           FROM documents d
           JOIN pages p ON d.page_id = p.id
-          JOIN versions v ON p.version_id = v.id  
+          JOIN versions v ON p.version_id = v.id
           JOIN libraries l ON v.library_id = l.id
-          WHERE l.name = ? AND COALESCE(v.name, '') = ?
+          WHERE l.name = $1 AND COALESCE(v.name, '') = $2
         `;
         const params: any[] = [library.toLowerCase(), version.toLowerCase()];
 
         if (targetUrl) {
-          query += " AND p.url = ?";
+          query += " AND p.url = $3";
           params.push(targetUrl);
         }
 
-        const result = (store as any).db.prepare(query).get(...params) as {
-          count: number;
-        };
-        return result.count;
+        const client = (store as any).client;
+        const result = await client.query(query, params);
+        return parseInt(result.rows[0].count, 10);
       }
 
       // Add initial documents
