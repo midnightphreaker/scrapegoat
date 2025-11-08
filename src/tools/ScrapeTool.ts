@@ -1,5 +1,6 @@
 import * as semver from "semver";
 import type { IPipeline } from "../pipeline/trpc/interfaces";
+import type { Crawl4AIOptions } from "../scraper/fetcher/types";
 import {
   DEFAULT_MAX_CONCURRENCY,
   DEFAULT_MAX_DEPTH,
@@ -55,12 +56,7 @@ export interface ScrapeToolOptions {
     /**
      * Crawl4AI-specific options
      */
-    crawl4ai?: {
-      enableScreenshot?: boolean;
-      screenshotMode?: "viewport" | "full";
-      enableMedia?: boolean;
-      enableLinks?: boolean;
-    };
+    crawl4ai?: Crawl4AIOptions;
   };
   /** If false, returns jobId immediately without waiting. Defaults to true. */
   waitForCompletion?: boolean;
