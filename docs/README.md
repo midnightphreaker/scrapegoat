@@ -1,91 +1,106 @@
 # Scrapegoat Documentation
 
-Comprehensive documentation for Scrapegoat, the PostgreSQL-powered documentation indexing and search system.
+Welcome to the Scrapegoat documentation! This directory contains comprehensive guides for installation, architecture, configuration, and development.
+
+## Documentation Overview
+
+### Getting Started
+
+- **[INSTALL.md](../INSTALL.md)** - Complete installation guide
+  - Prerequisites and system requirements
+  - Step-by-step installation process
+  - Database setup with pgvector
+  - Service installation with systemd
+  - nginx reverse proxy configuration
+  - Verification and testing steps
+
+### Understanding Scrapegoat
+
+- **[ARCHITECTURE.md](ARCHITECTURE.md)** - System architecture and design
+  - Three-service architecture overview
+  - Database schema and vector search
+  - Fetcher pipeline (HTTP, Playwright, Crawl4AI)
+  - Storage pipeline for documents and screenshots
+  - Communication patterns and data flow
+  - Port allocation and routing
+
+### Configuration
+
+- **[NGINX.md](NGINX.md)** - Reverse proxy configuration
+  - Complete nginx setup guide
+  - Location block precedence explained
+  - SSL/TLS configuration
+  - Endpoint routing table
+  - Common issues and solutions
+
+### Problem Solving
+
+- **[TROUBLESHOOTING.md](TROUBLESHOOTING.md)** - Common issues and solutions
+  - Service startup issues
+  - Database connection problems
+  - MCP integration issues
+  - Crawl4AI Docker problems
+  - nginx routing issues
+  - Performance optimization
+
+### Development
+
+- **[CONTRIBUTING.md](CONTRIBUTING.md)** - Development guide
+  - Development environment setup
+  - Project structure overview
+  - Development workflow
+  - Testing guidelines
+  - Code standards and style guide
+  - Pull request process
+
+### Quick Reference
+
+- **[QUICK_REFERENCE.md](QUICK_REFERENCE.md)** - Command reference
+  - Service management commands
+  - Database operations
+  - API operations
+  - Docker commands
+  - Troubleshooting commands
 
 ## Quick Links
 
-### Getting Started
-- [PostgreSQL Setup Guide](./POSTGRESQL_SETUP.md) - Install and configure PostgreSQL with pgvector
-- [Migration Guide](./MIGRATION.md) - Migrate from SQLite-based scrapegoat
-- [Configuration Reference](./CONFIGURATION.md) - Complete environment variable reference
+### Installation
+- [Prerequisites](../INSTALL.md#prerequisites)
+- [Database Setup](../INSTALL.md#database-setup)
+- [Service Installation](../INSTALL.md#service-installation-linux-systemd)
+- [Verification](../INSTALL.md#verification)
 
-### Operations
-- [Deployment Guide](./DEPLOYMENT.md) - Production deployment procedures
-- [Performance Tuning](./PERFORMANCE.md) - Optimize indexes, queries, and connection pools
-- [Troubleshooting](./TROUBLESHOOTING.md) - Common issues and solutions
+### Configuration
+- [Environment Variables](../INSTALL.md#environment-configuration)
+- [nginx Setup](NGINX.md#complete-nginx-configuration)
+- [SSL/TLS](NGINX.md#ssltls-configuration)
 
-### Security
-- [Security Checklist](./SECURITY_CHECKLIST.md) - Security review and best practices
+### Troubleshooting
+- [Service Issues](TROUBLESHOOTING.md#service-issues)
+- [Database Problems](TROUBLESHOOTING.md#database-problems)
+- [MCP Issues](TROUBLESHOOTING.md#mcp-connection-issues)
 
-## Documentation Status
+### Development
+- [Development Setup](CONTRIBUTING.md#development-setup)
+- [Project Structure](CONTRIBUTING.md#project-structure)
+- [Testing](CONTRIBUTING.md#testing)
+- [Code Standards](CONTRIBUTING.md#code-standards)
 
-| Document | Status | Purpose |
-|----------|--------|---------|
-| [MIGRATION.md](./MIGRATION.md) | ✅ Complete | SQLite to PostgreSQL migration guide |
-| [POSTGRESQL_SETUP.md](./POSTGRESQL_SETUP.md) | 🚧 Coming in Phase 5.2 | Database installation and setup |
-| [CONFIGURATION.md](./CONFIGURATION.md) | 🚧 Coming in Phase 5.2 | Environment variables and settings |
-| [PERFORMANCE.md](./PERFORMANCE.md) | 🚧 Coming in Phase 5.3 | Performance tuning and optimization |
-| [TROUBLESHOOTING.md](./TROUBLESHOOTING.md) | 🚧 Coming in Phase 5.3 | Common issues and solutions |
-| [DEPLOYMENT.md](./DEPLOYMENT.md) | 🚧 Coming in Phase 5.4 | Production deployment guide |
-| [SECURITY_CHECKLIST.md](./SECURITY_CHECKLIST.md) | 🚧 Coming in Phase 5.4 | Security review checklist |
+## Getting Help
 
-## Architecture Overview
+If you can't find what you're looking for:
 
-Scrapegoat uses PostgreSQL with pgvector for advanced documentation search:
+1. Check the [Troubleshooting Guide](TROUBLESHOOTING.md)
+2. Search [GitHub Issues](https://github.com/yourusername/scrapegoat/issues)
+3. Ask in [GitHub Discussions](https://github.com/yourusername/scrapegoat/discussions)
+4. Review the [Architecture Documentation](ARCHITECTURE.md)
 
-```
-┌─────────────────────────────────────────────────────────────┐
-│                      Scrapegoat                             │
-├─────────────────────────────────────────────────────────────┤
-│                                                             │
-│  ┌──────────────┐    ┌──────────────┐   ┌──────────────┐  │
-│  │   Scraper    │───▶│   Splitter   │──▶│  Embeddings  │  │
-│  │   Pipeline   │    │   Pipeline   │   │   Service    │  │
-│  └──────────────┘    └──────────────┘   └──────────────┘  │
-│         │                    │                   │         │
-│         └────────────────────┴───────────────────┘         │
-│                             │                              │
-│                             ▼                              │
-│                 ┌───────────────────────┐                  │
-│                 │   DocumentStore       │                  │
-│                 │   (PostgreSQL)        │                  │
-│                 └───────────────────────┘                  │
-│                             │                              │
-│              ┌──────────────┴──────────────┐              │
-│              │                             │              │
-│              ▼                             ▼              │
-│    ┌─────────────────┐          ┌─────────────────┐      │
-│    │  Vector Search  │          │  Full-Text      │      │
-│    │  (pgvector)     │          │  Search (GIN)   │      │
-│    │  HNSW Index     │          │  FTS Index      │      │
-│    └─────────────────┘          └─────────────────┘      │
-│              │                             │              │
-│              └──────────────┬──────────────┘              │
-│                             │                              │
-│                             ▼                              │
-│                 ┌───────────────────────┐                  │
-│                 │  Hybrid Search (RRF)  │                  │
-│                 └───────────────────────┘                  │
-└─────────────────────────────────────────────────────────────┘
-```
+## Additional Resources
 
-### Key Features
-
-- **Hybrid Search**: Combines vector similarity (pgvector) with full-text search (GIN indexes) using Reciprocal Rank Fusion
-- **HNSW Indexing**: Approximate nearest neighbor search for fast vector similarity
-- **GIN Indexing**: Fast full-text search with stemming and phrase matching
-- **Connection Pooling**: Efficient PostgreSQL connection management
-- **Scalability**: Handle millions of documents with proper indexing
-
-## Support
-
-- **GitHub Issues**: [Report bugs and request features](https://github.com/yourusername/scrapegoat/issues)
-- **Discussions**: [Ask questions and share ideas](https://github.com/yourusername/scrapegoat/discussions)
-
-## Contributing
-
-Contributions welcome! See the main [README.md](../README.md) for development setup.
-
----
-
-*Documentation is actively being developed as part of Phase 5. Check back for updates.*
+- [Main README](../README.md) - Project overview and quick start
+- [CHANGELOG](../CHANGELOG.md) - Version history and changes
+- [.env.example](../.env.example) - Configuration reference
+- [GitHub Repository](https://github.com/yourusername/scrapegoat)
+- [Model Context Protocol](https://modelcontextprotocol.io/) - MCP specification
+- [Crawl4AI Documentation](https://github.com/unclecode/crawl4ai)
+- [pgvector Documentation](https://github.com/pgvector/pgvector)
