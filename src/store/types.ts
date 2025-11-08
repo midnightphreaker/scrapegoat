@@ -1,4 +1,3 @@
-import type { ScrapeMode } from "../scraper/types";
 import type { DocumentMetadata } from "../types";
 
 /** Default vector dimension used across the application */
@@ -114,14 +113,13 @@ export interface VersionScraperOptions {
   excludePatterns?: string[];
 
   // Processing options
-  scrapeMode?: ScrapeMode;
   headers?: Record<string, string>;
 
   /**
-   * Explicit fetcher selection: 'auto', 'http', 'browser', 'crawl4ai', or 'file'.
+   * Explicit fetcher selection: 'auto', 'http', 'crawl4ai', or 'file'.
    * Stored for reproducibility and audit trail.
    */
-  fetcher?: "auto" | "http" | "browser" | "crawl4ai" | "file";
+  fetcher?: "auto" | "http" | "crawl4ai" | "file";
 
   /**
    * @deprecated Use fetcher: 'crawl4ai' instead.

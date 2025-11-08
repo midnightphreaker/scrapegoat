@@ -95,7 +95,7 @@ export interface WebScrapeStartedProperties extends BaseTelemetryProperties {
   maxPages: number;
   maxConcurrency?: number;
   ignoreErrors?: boolean;
-  scrapeMode?: string;
+  fetcher?: string;
   hasCustomHeaders?: boolean;
 }
 

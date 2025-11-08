@@ -73,7 +73,7 @@ export function createPipelineRouter(trpc: unknown) {
             maxPages: input.options.maxPages || 1000,
             maxConcurrency: input.options.maxConcurrency,
             ignoreErrors: input.options.ignoreErrors,
-            scrapeMode: input.options.scrapeMode,
+            fetcher: input.options.fetcher,
             hasCustomHeaders: !!(
               input.options.headers && Object.keys(input.options.headers).length > 0
             ),
