@@ -100,7 +100,18 @@ export abstract class BaseScraperStrategy implements ScraperStrategy {
               const finalUrlStr = result.finalUrl as string;
               const original = new URL(options.url);
               const finalUrlObj = new URL(finalUrlStr);
-              if (
+              const scope = options.scope || "subpages";
+
+              // For "subpages" scope, always use original URL to respect user's intended path
+              // For "hostname" and "domain" scopes, follow redirects for protocol/host changes
+              if (scope === "subpages") {
+                this.canonicalBaseUrl = original;
+                if (finalUrlObj.href !== original.href) {
+                  logger.debug(
+                    `Ignoring redirect for subpages scope: ${original.href} (redirected to ${finalUrlObj.href})`,
+                  );
+                }
+              } else if (
                 finalUrlObj.href !== original.href &&
                 (finalUrlObj.protocol === "http:" || finalUrlObj.protocol === "https:")
               ) {
