@@ -290,10 +290,6 @@ export async function startWebServer(
               timeout: appConfig.fetcher.http.timeout,
               maxRetries: appConfig.fetcher.http.maxRetries,
             },
-            browser: {
-              timeout: appConfig.fetcher.browser.timeout,
-              maxRetries: appConfig.fetcher.browser.maxRetries,
-            },
             crawl4ai: {
               serviceUrl: appConfig.fetcher.crawl4ai.serviceUrl,
               enabled: appConfig.fetcher.crawl4ai.enabled,

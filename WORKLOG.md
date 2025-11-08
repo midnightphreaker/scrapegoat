@@ -821,3 +821,46 @@ The Playwright removal refactoring is **complete and ready for merge**. All phas
 **Commit**: `fix(issue-3): remove browser from MCP tool enum`
 
 ---
+
+## [2025-11-09 15:15:00] - Issue #4 FIXED: Remove Browser Config Validation
+
+**Priority**: HIGH (dead code / validation error)
+
+**Problem**: Config validation and API endpoints still referenced `config.fetcher.browser` which no longer exists after Playwright removal.
+
+**Files Modified**:
+
+1. `src/utils/config.ts`
+   - Removed BrowserFetcherConfig interface definition (lines 161-165)
+   - Removed browser field from FetcherConfig interface (line 176)
+   - Removed browser config from defaultConfig object (lines 236-240)
+   - Removed 'browser' from validFetcherTypes array (line 288)
+   - Removed browser timeout validation (lines 301-303)
+   - Removed browser maxRetries validation (lines 317-319)
+
+2. `src/web/web.ts`
+   - Removed browser config from /web/api/config endpoint (lines 293-296)
+
+**Changes Summary**:
+- BrowserFetcherConfig interface completely removed
+- FetcherConfig now only has: defaultFetcher, http, crawl4ai
+- Default config no longer initializes browser settings
+- Validation no longer checks browser timeout or maxRetries
+- Web API config endpoint no longer exposes browser configuration
+- Valid fetcher types: 'auto', 'http', 'crawl4ai', 'file' (browser removed)
+
+**Impact**:
+- Clean configuration structure without deprecated browser fetcher
+- No validation errors referencing non-existent browser config
+- Web API returns correct configuration without browser section
+
+**Verification**:
+- Ran `npm run build` - compilation succeeded
+- Config validation updated correctly
+- No references to browser fetcher config remain
+
+**Status**: ✅ FIXED and VERIFIED
+
+**Commit**: `fix(issue-4): remove browser config validation and references`
+
+---

@@ -158,12 +158,6 @@ export interface HttpFetcherConfig {
 /**
  * Browser fetcher configuration
  */
-export interface BrowserFetcherConfig {
-  timeout: number;
-  maxRetries: number;
-  headless: boolean;
-}
-
 /**
  * Fetcher configuration
  */
@@ -172,8 +166,6 @@ export interface FetcherConfig {
   defaultFetcher: FetcherType;
   /** HTTP fetcher configuration */
   http: HttpFetcherConfig;
-  /** Browser fetcher configuration */
-  browser: BrowserFetcherConfig;
   /** Crawl4AI configuration */
   crawl4ai: Crawl4AIConfig;
 }
@@ -233,11 +225,6 @@ export function loadConfig(): Config {
         maxRetries: Number.parseInt(process.env.HTTP_MAX_RETRIES || "3", 10),
         followRedirects: process.env.HTTP_FOLLOW_REDIRECTS !== "false",
       },
-      browser: {
-        timeout: Number.parseInt(process.env.BROWSER_TIMEOUT || "30000", 10),
-        maxRetries: Number.parseInt(process.env.BROWSER_MAX_RETRIES || "2", 10),
-        headless: process.env.BROWSER_HEADLESS !== "false",
-      },
       crawl4ai: {
         serviceUrl: process.env.CRAWL4AI_SERVICE_URL || "http://localhost:8001",
         enabled: process.env.CRAWL4AI_ENABLED !== "false",
@@ -282,13 +269,7 @@ export function validateConfig(config: Config): ValidationResult {
   const errors: string[] = [];
 
   // Validate fetcher config
-  const validFetcherTypes: FetcherType[] = [
-    "auto",
-    "http",
-    "browser",
-    "crawl4ai",
-    "file",
-  ];
+  const validFetcherTypes: FetcherType[] = ["auto", "http", "crawl4ai", "file"];
   if (!validFetcherTypes.includes(config.fetcher.defaultFetcher)) {
     errors.push(`Invalid default fetcher: ${config.fetcher.defaultFetcher}`);
   }
@@ -296,10 +277,6 @@ export function validateConfig(config: Config): ValidationResult {
   // Validate timeouts (must be positive and reasonable)
   if (config.fetcher.http.timeout < 1000 || config.fetcher.http.timeout > 120000) {
     errors.push("HTTP timeout must be between 1000 and 120000ms");
-  }
-
-  if (config.fetcher.browser.timeout < 1000 || config.fetcher.browser.timeout > 300000) {
-    errors.push("Browser timeout must be between 1000 and 300000ms");
   }
 
   if (
@@ -312,10 +289,6 @@ export function validateConfig(config: Config): ValidationResult {
   // Validate retry counts
   if (config.fetcher.http.maxRetries < 0 || config.fetcher.http.maxRetries > 10) {
     errors.push("HTTP max retries must be between 0 and 10");
-  }
-
-  if (config.fetcher.browser.maxRetries < 0 || config.fetcher.browser.maxRetries > 10) {
-    errors.push("Browser max retries must be between 0 and 10");
   }
 
   if (config.fetcher.crawl4ai.maxRetries < 0 || config.fetcher.crawl4ai.maxRetries > 10) {
