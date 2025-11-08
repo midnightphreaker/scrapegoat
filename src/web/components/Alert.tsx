@@ -77,7 +77,7 @@ const Alert = ({ type, title, message }: AlertProps) => {
     default: // Default to info style
       defaultTitle = "Info:";
       colorClasses =
-        "text-blue-800 border-blue-300 bg-blue-50 dark:bg-[#242424] dark:text-blue-400 dark:border-blue-800";
+        "text-accent-800 border-accent-300 bg-accent-50 dark:bg-[#242424] dark:text-accent-400 dark:border-accent-800";
       iconSvg = (
         <svg
           class="flex-shrink-0 inline w-4 h-4 me-3"
