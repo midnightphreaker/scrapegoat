@@ -13,7 +13,7 @@ import { ListJobsTool } from "../tools/ListJobsTool";
 import { ListLibrariesTool } from "../tools/ListLibrariesTool";
 import { RemoveTool } from "../tools/RemoveTool";
 import { ScrapeTool } from "../tools/ScrapeTool";
-import { appConfig, validateConfig } from "../utils/config";
+import { appConfig, DEFAULT_HTTP_PORT, validateConfig } from "../utils/config";
 import { logger } from "../utils/logger";
 import { registerIndexRoute } from "../web/routes/index";
 import { registerCancelJobRoute } from "../web/routes/jobs/cancel";
@@ -61,8 +61,8 @@ export async function registerWebService(
    */
   server.get("/api/health/mcp", async (request, reply) => {
     try {
-      const mcpHost = appConfig.mcpHost || "localhost";
-      const mcpPort = appConfig.mcpPort || 6280;
+      const mcpHost = "localhost";
+      const mcpPort = DEFAULT_HTTP_PORT;
       const mcpUrl = `http://${mcpHost}:${mcpPort}`;
 
       // Simple reachability check
@@ -131,10 +131,10 @@ export async function registerWebService(
           },
         },
         mcp: {
-          enabled: appConfig.enableMcpServer,
-          host: appConfig.mcpHost || "localhost",
-          port: appConfig.mcpPort || 6280,
-          url: `http://${appConfig.mcpHost || "localhost"}:${appConfig.mcpPort || 6280}`,
+          enabled: true, // MCP server runs as a separate service
+          host: "localhost",
+          port: DEFAULT_HTTP_PORT,
+          url: `http://localhost:${DEFAULT_HTTP_PORT}`,
         },
         validation,
       });
