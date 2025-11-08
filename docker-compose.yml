@@ -15,6 +15,7 @@ services:
     command: ["worker", "--host", "0.0.0.0", "--port", "8080"]
     container_name: docs-mcp-worker
     restart: unless-stopped
+    network_mode: host
     env_file:
       - .env
     volumes:
@@ -48,12 +49,11 @@ services:
         "--port",
         "6280",
         "--server-url",
-        "http://worker:8080/api",
+        "http://localhost:8080/api",
       ]
     container_name: scrapegoat
     restart: unless-stopped
-    ports:
-      - "6280:6280"
+    network_mode: host
     env_file:
       - .env
     depends_on:
@@ -80,12 +80,11 @@ services:
         "--port",
         "6281",
         "--server-url",
-        "http://worker:8080/api",
+        "http://localhost:8080/api",
       ]
     container_name: docs-mcp-web
     restart: unless-stopped
-    ports:
-      - "6281:6281"
+    network_mode: host
     env_file:
       - .env
     depends_on:
