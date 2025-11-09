@@ -4,6 +4,8 @@ Fast reference for common Scrapegoat operations and commands.
 
 ## Service Management
 
+**Note**: Scrapegoat uses a unified CLI application. In production, these three systemd services run the same binary (`node dist/index.js`) with different commands (`mcp`, `web`, `worker`) to enable specific features.
+
 ### Start Services
 ```bash
 sudo systemctl start scrapegoat-mcp
@@ -47,14 +49,14 @@ sudo journalctl -u scrapegoat-mcp -n 50
 
 ### Start Development Servers
 ```bash
-# Run all services
+# Run unified server with all features (recommended)
 npm run dev
 
 # Or run separately:
-# Terminal 1: Server (includes MCP)
+# Terminal 1: Server (MCP + Worker + hot reload)
 npm run dev:server
 
-# Terminal 2: Web UI
+# Terminal 2: Web UI (compilation watch mode)
 npm run dev:web
 ```
 

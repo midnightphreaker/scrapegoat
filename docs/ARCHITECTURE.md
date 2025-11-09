@@ -4,40 +4,67 @@
 
 Scrapegoat is a documentation scraping and indexing service with Model Context Protocol (MCP) integration. It provides AI assistants with the ability to search, retrieve, and index web documentation using vector similarity search.
 
-## Three-Service Architecture
+## Unified CLI Architecture
 
-### 1. MCP Server (Port 6280)
+Scrapegoat uses a single unified CLI application with a modular AppServer that can enable or disable different features based on configuration. This architecture allows flexible deployment: run all features in one process for development, or run specialized instances for production.
 
-**Purpose**: Provides MCP protocol endpoints for AI integration
+### Entry Point
 
-**Responsibilities**:
-- Handle MCP protocol communication
-- Expose search and retrieval tools to AI clients
-- Manage MCP resource lifecycle
-- Provide health status indicators
+**Single entry point**: `src/index.ts` → `src/cli/main.ts` → `createCliProgram()`
 
-**Key Files**:
-- `src/mcp/index.ts` - Main MCP server
-- `src/tools/` - MCP tool definitions
+All functionality runs through the same binary with different CLI commands configuring the AppServer differently.
+
+### CLI Commands
+
+The application supports multiple command modes:
+
+#### Default Command (No Arguments)
+```bash
+node dist/index.js
+```
+
+Runs unified server with **all features enabled**:
+- Web interface (port 6281)
+- MCP server (port 6280)
+- API server (port 8080)
+- Background worker
+
+**Use case**: Development mode, single-server deployments
+
+#### MCP Command
+```bash
+node dist/index.js mcp
+```
+
+Runs **MCP server only** with optional worker integration.
+
+**AppServer Configuration**:
+- `enableMcpServer: true`
+- `enableWebInterface: false`
+- `enableApiServer: false`
+- `enableWorker: true` (if no external worker URL configured)
 
 **Endpoints**:
 - `GET /health` - Health check
 - `POST /mcp` - MCP protocol endpoint (SSE)
 
-### 2. Web Service (Port 6281)
-
-**Purpose**: Human-facing web UI and API
-
-**Responsibilities**:
-- Serve web interface
-- Handle user authentication (future)
-- Provide REST API for web clients
-- Display search results and statistics
-
 **Key Files**:
-- `src/web/index.ts` - Web server
-- `src/web/routes/` - HTTP routes
-- `src/web/components/` - UI components
+- `src/cli/commands/mcp.ts` - MCP command implementation
+- `src/mcp/` - MCP server logic
+- `src/tools/` - MCP tool definitions
+
+#### Web Command
+```bash
+node dist/index.js web
+```
+
+Runs **web interface only** with optional worker integration.
+
+**AppServer Configuration**:
+- `enableWebInterface: true`
+- `enableMcpServer: false`
+- `enableApiServer: false`
+- `enableWorker: true` (if no external worker URL configured)
 
 **Endpoints**:
 - `GET /` - Web UI
@@ -45,9 +72,22 @@ Scrapegoat is a documentation scraping and indexing service with Model Context P
 - `GET /api/config` - Application configuration
 - `GET /api/metrics` - Prometheus metrics
 
-### 3. Worker API (Port 8080)
+**Key Files**:
+- `src/cli/commands/web.ts` - Web command implementation
+- `src/web/` - Web server logic and UI components
 
-**Purpose**: Background processing and indexing operations
+#### Worker Command
+```bash
+node dist/index.js worker
+```
+
+Runs **API server and worker only** for background processing.
+
+**AppServer Configuration**:
+- `enableApiServer: true`
+- `enableWorker: true`
+- `enableWebInterface: false`
+- `enableMcpServer: false`
 
 **Responsibilities**:
 - Execute indexing jobs
@@ -57,9 +97,49 @@ Scrapegoat is a documentation scraping and indexing service with Model Context P
 - Store screenshots and metadata
 
 **Key Files**:
-- `src/worker/index.ts` - Worker server
+- `src/cli/commands/worker.ts` - Worker command implementation
 - `src/pipeline/` - Indexing pipeline
 - `src/lib/fetchers/` - Fetcher implementations
+
+### AppServer: Modular Core
+
+The `AppServer` is the modular core that all CLI commands configure and use.
+
+**Configuration Interface** (`src/app/AppServerConfig.ts`):
+```typescript
+interface AppServerConfig {
+  enableWebInterface: boolean;  // Enable web UI
+  enableMcpServer: boolean;     // Enable MCP protocol
+  enableApiServer: boolean;     // Enable tRPC API
+  enableWorker: boolean;        // Enable background processing
+  port: number;                 // HTTP port
+  host: string;                 // Bind address
+  externalWorkerUrl?: string;   // External worker URL
+  readOnly?: boolean;           // Read-only mode
+  auth?: AuthConfig;            // Authentication config
+}
+```
+
+**Key Files**:
+- `src/app/AppServer.ts` - Core server implementation
+- `src/app/AppServerConfig.ts` - Configuration interface
+
+### Production Deployment
+
+In production with systemd, you run **three instances of the same binary** with different CLI arguments:
+
+```ini
+# /etc/systemd/system/scrapegoat-mcp.service
+ExecStart=/usr/bin/node dist/index.js mcp
+
+# /etc/systemd/system/scrapegoat-web.service
+ExecStart=/usr/bin/node dist/index.js web
+
+# /etc/systemd/system/scrapegoat-worker.service
+ExecStart=/usr/bin/node dist/index.js worker
+```
+
+This is **not** three separate services/binaries, but three instances of the unified application running in different modes.
 
 ## Database Schema
 
@@ -256,27 +336,58 @@ LIMIT 10;
 
 ## Port Allocation
 
-| Service | Port | Purpose |
-|---------|------|---------|
+| Component | Default Port | Purpose |
+|-----------|--------------|---------|
 | MCP Server | 6280 | MCP protocol endpoint |
-| Web Service | 6281 | Web UI and human API |
-| Worker API | 8080 | Background indexing |
+| Web Interface | 6281 | Web UI and human-facing API |
+| Worker API | 8080 | Background indexing API |
 | Crawl4AI | 11235 | Docker scraping service |
 | PostgreSQL | 5432 | Database server |
 
+**Note**: In unified mode (default command), all HTTP services run on their respective ports within the same process. In production deployments, each CLI command runs in a separate process on its designated port.
+
 ## Communication Patterns
 
-### MCP → Database
-Direct SQL queries via Drizzle ORM for search operations.
+### Unified Architecture Communication
 
-### Web → Database
-Direct SQL queries via Drizzle ORM for display operations.
+Since all features can run in the same process or in separate processes, communication patterns depend on deployment mode:
 
-### Worker → Everything
-- tRPC procedures for external API
-- Fetcher pipeline for content retrieval
-- Storage pipeline for persistence
-- Crawl4AI via HTTP for advanced scraping
+#### Single Process (Development)
+```
+Default Command → AppServer → {
+  MCP Module → Database (via Drizzle)
+  Web Module → Database (via Drizzle)
+  Worker Module → {
+    Fetcher Pipeline → Crawl4AI (HTTP)
+    Storage Pipeline → Database (via Drizzle)
+  }
+}
+```
+
+All modules share the same database connection pool and runtime.
+
+#### Multi-Process (Production)
+```
+MCP Process → Database (Drizzle)
+Web Process → Database (Drizzle)
+Worker Process → {
+  API (tRPC) ← HTTP requests from MCP/Web
+  Fetcher Pipeline → Crawl4AI (HTTP)
+  Storage Pipeline → Database (Drizzle)
+}
+```
+
+Each process runs independently with its own connection pool.
+
+### Module Communication
+
+- **MCP Module**: Direct database queries via Drizzle ORM for search operations
+- **Web Module**: Direct database queries via Drizzle ORM for display operations
+- **Worker Module**:
+  - Exposes tRPC procedures for external API calls
+  - Fetcher pipeline for content retrieval
+  - Storage pipeline for database persistence
+  - HTTP client for Crawl4AI integration
 
 ## Security Considerations
 
@@ -301,14 +412,34 @@ Direct SQL queries via Drizzle ORM for display operations.
 ## Scalability
 
 ### Horizontal Scaling
-- Run multiple Worker instances
-- Load balance requests
-- Shared PostgreSQL database
+
+The unified architecture supports flexible horizontal scaling:
+
+**Worker Scaling**:
+- Run multiple worker instances (`node dist/index.js worker`)
+- Load balance indexing requests across workers
+- Shared PostgreSQL database for coordination
+
+**MCP/Web Scaling**:
+- Run multiple MCP or web instances if needed
+- Configure `externalWorkerUrl` to point to dedicated worker pool
+- Use nginx or load balancer for request distribution
+
+**Example Multi-Instance Setup**:
+```bash
+# Single worker pool
+node dist/index.js worker --port 8080
+
+# Multiple MCP instances using shared worker
+node dist/index.js mcp --port 6280
+node dist/index.js mcp --port 6283
+```
 
 ### Vertical Scaling
-- Increase PostgreSQL resources
-- Tune IVFFlat index parameters
+- Increase PostgreSQL resources (CPU, memory, storage)
+- Tune IVFFlat index parameters (`lists` parameter)
 - Optimize embedding batch sizes
+- Increase Node.js memory limits (`--max-old-space-size`)
 
 ## Related Documentation
 

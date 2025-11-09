@@ -60,9 +60,22 @@ npm run dev:web
 ```
 scrapegoat/
 ├── src/
-│   ├── mcp/              # MCP Server (port 6280)
-│   ├── web/              # Web Service (port 6281)
-│   ├── worker/           # Worker API (port 8080)
+│   ├── index.ts          # Application entry point
+│   ├── cli/              # CLI commands and main execution
+│   │   ├── main.ts       # CLI entry and global shutdown
+│   │   ├── index.ts      # CLI program setup
+│   │   └── commands/     # Command implementations
+│   │       ├── default.ts   # Unified mode (all features)
+│   │       ├── mcp.ts       # MCP-only mode
+│   │       ├── web.ts       # Web-only mode
+│   │       ├── worker.ts    # Worker-only mode
+│   │       └── ...          # Other commands
+│   ├── app/              # Modular AppServer
+│   │   ├── AppServer.ts     # Core server implementation
+│   │   └── AppServerConfig.ts # Configuration interface
+│   ├── mcp/              # MCP module
+│   ├── web/              # Web interface module
+│   ├── worker/           # Worker module
 │   ├── lib/              # Shared libraries
 │   │   ├── fetchers/     # Content fetchers
 │   │   └── storage/      # Storage pipeline
@@ -74,8 +87,10 @@ scrapegoat/
 │   └── tools/            # MCP tools
 ├── tests/                # Test files
 ├── docs/                 # Documentation
-└── dist/                 # Compiled output
+└── dist/                 # Compiled output (single unified binary)
 ```
+
+**Architecture**: Scrapegoat is a unified CLI application. All features (MCP, Web, Worker) are modules within the same codebase, enabled/disabled by the AppServer based on CLI command. Production deployment runs multiple instances of the same compiled binary with different commands.
 
 ## Development Workflow
 

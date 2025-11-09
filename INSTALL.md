@@ -130,6 +130,8 @@ npm run build
 
 ### 7. Service Installation (Linux Systemd)
 
+Scrapegoat uses a unified CLI application. In production, you run three instances of the same binary with different CLI commands to separate concerns. Each instance runs in its own systemd service.
+
 #### Create Service Files
 
 **MCP Server** (`/etc/systemd/system/scrapegoat-mcp.service`):

@@ -49,13 +49,14 @@ For detailed installation instructions, see [INSTALL.md](INSTALL.md).
 
 ## Architecture
 
-Scrapegoat runs three specialized services:
+Scrapegoat uses a unified CLI application with modular AppServer that can enable or disable different features:
 
-- **MCP Server** (port 6280): AI integration via Model Context Protocol
-- **Web Service** (port 6281): Web UI and human-facing API  
-- **Worker API** (port 8080): Background indexing and processing
+- **Unified Mode** (default): All features in one process - ideal for development
+- **MCP Mode** (`mcp` command): MCP protocol server for AI integration (port 6280)
+- **Web Mode** (`web` command): Web UI and human-facing API (port 6281)
+- **Worker Mode** (`worker` command): Background indexing and processing (port 8080)
 
-All services connect to a shared PostgreSQL database with pgvector for vector similarity search.
+In production, you typically run three instances of the same binary with different CLI commands. All modes connect to a shared PostgreSQL database with pgvector for vector similarity search.
 
 See [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) for detailed system design.
 
@@ -152,7 +153,7 @@ See [docs/CONTRIBUTING.md](docs/CONTRIBUTING.md) for development guidelines.
 
 ### Using systemd
 
-Install as systemd services:
+Run three instances of the application in different modes:
 
 ```bash
 # Copy service files to /etc/systemd/system/
@@ -162,6 +163,8 @@ sudo cp systemd/*.service /etc/systemd/system/
 sudo systemctl enable scrapegoat-{mcp,web,worker}
 sudo systemctl start scrapegoat-{mcp,web,worker}
 ```
+
+Each service runs the same binary (`node dist/index.js`) with different CLI commands (`mcp`, `web`, `worker`).
 
 ### Using nginx
 
