@@ -19,7 +19,8 @@ RUN apt-get update \
 COPY package*.json ./
 
 # Install all dependencies (including dev dependencies for building)
-RUN npm ci
+# Using --legacy-peer-deps to resolve @langchain dependency conflicts
+RUN npm ci --legacy-peer-deps
 
 # Copy source code
 COPY . .
@@ -28,7 +29,7 @@ COPY . .
 RUN npm run build
 
 # Install production dependencies in a clean directory
-RUN rm -rf node_modules && npm ci --omit=dev
+RUN rm -rf node_modules && npm ci --omit=dev --legacy-peer-deps
 
 # Production stage
 FROM node:22-slim
