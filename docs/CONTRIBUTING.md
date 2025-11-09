@@ -6,7 +6,7 @@ Thank you for your interest in contributing to Scrapegoat! This guide will help 
 
 ### Prerequisites
 
-- Node.js 18+
+- Node.js 20+
 - PostgreSQL 14+ with pgvector
 - Docker (for Crawl4AI development)
 - Git
@@ -44,14 +44,15 @@ docker run -d \
 Run services in development mode with hot reload:
 
 ```bash
-# Terminal 1: MCP Server
-npm run dev:mcp
+# Run all services (recommended)
+npm run dev
 
-# Terminal 2: Web Service
+# Or run separately:
+# Terminal 1: Server (includes MCP)
+npm run dev:server
+
+# Terminal 2: Web UI
 npm run dev:web
-
-# Terminal 3: Worker API
-npm run dev:worker
 ```
 
 ## Project Structure

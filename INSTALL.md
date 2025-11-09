@@ -5,7 +5,7 @@ This guide provides step-by-step instructions for installing and configuring Scr
 ## Prerequisites
 
 ### Required Software
-- **Node.js**: Version 18 or higher
+- **Node.js**: Version 20 or higher
 - **PostgreSQL**: Version 14 or higher
 - **Docker**: For Crawl4AI service (optional but recommended)
 - **nginx**: For reverse proxy (recommended for production)
@@ -143,7 +143,7 @@ Type=simple
 User=scrapegoat
 WorkingDirectory=/opt/scrapegoat
 Environment=NODE_ENV=production
-ExecStart=/usr/bin/node dist/mcp/index.js
+ExecStart=/usr/bin/node dist/index.js mcp
 Restart=always
 RestartSec=10
 
@@ -162,7 +162,7 @@ Type=simple
 User=scrapegoat
 WorkingDirectory=/opt/scrapegoat
 Environment=NODE_ENV=production
-ExecStart=/usr/bin/node dist/web/index.js
+ExecStart=/usr/bin/node dist/index.js web
 Restart=always
 RestartSec=10
 
@@ -181,7 +181,7 @@ Type=simple
 User=scrapegoat
 WorkingDirectory=/opt/scrapegoat
 Environment=NODE_ENV=production
-ExecStart=/usr/bin/node dist/worker/index.js
+ExecStart=/usr/bin/node dist/index.js worker
 Restart=always
 RestartSec=10
 
@@ -312,14 +312,15 @@ Add to Claude Desktop config (`~/Library/Application Support/Claude/claude_deskt
 For development without systemd:
 
 ```bash
-# Terminal 1: MCP Server
-npm run dev:mcp
+# Run all services in one process (recommended)
+npm run dev
 
-# Terminal 2: Web Service
+# Or run services separately:
+# Terminal 1: Server (includes MCP)
+npm run dev:server
+
+# Terminal 2: Web UI
 npm run dev:web
-
-# Terminal 3: Worker API
-npm run dev:worker
 ```
 
 ## Troubleshooting

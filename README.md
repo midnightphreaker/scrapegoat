@@ -17,7 +17,7 @@ Scrapegoat enables AI assistants to search, retrieve, and index web documentatio
 
 ### Prerequisites
 
-- Node.js 18+
+- Node.js 20+
 - PostgreSQL 14+ with pgvector extension
 - Docker (optional, for Crawl4AI)
 
@@ -135,14 +135,15 @@ Choose the appropriate fetcher for your content:
 Run in development mode with hot reload:
 
 ```bash
-# Terminal 1: MCP Server
-npm run dev:mcp
+# Run all services
+npm run dev
 
-# Terminal 2: Web Service
+# Or run separately:
+# Terminal 1: Server (includes MCP)
+npm run dev:server
+
+# Terminal 2: Web UI
 npm run dev:web
-
-# Terminal 3: Worker API
-npm run dev:worker
 ```
 
 See [docs/CONTRIBUTING.md](docs/CONTRIBUTING.md) for development guidelines.

@@ -47,14 +47,15 @@ sudo journalctl -u scrapegoat-mcp -n 50
 
 ### Start Development Servers
 ```bash
-# Terminal 1
-npm run dev:mcp
+# Run all services
+npm run dev
 
-# Terminal 2
+# Or run separately:
+# Terminal 1: Server (includes MCP)
+npm run dev:server
+
+# Terminal 2: Web UI
 npm run dev:web
-
-# Terminal 3
-npm run dev:worker
 ```
 
 ### Build
