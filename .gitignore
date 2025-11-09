@@ -8,3 +8,9 @@ public/assets/
 !*.env.example
 *.code-workspace
 .tsbuildinfo
+
+# Serena memory directory
+.serena/
+
+# Python cache
+__pycache__/

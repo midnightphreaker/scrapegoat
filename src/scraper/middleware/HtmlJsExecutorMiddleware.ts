@@ -114,11 +114,16 @@ export class HtmlJsExecutorMiddleware implements ContentProcessorMiddleware {
         }
       };
 
-      // TODO: Plumb timeout options from context.options if available
+      // Configure sandbox options with timeout from context if available
+      // Timeout options are read from context.options and passed to the sandbox
+      // Default timeout is handled by the sandbox utility (5000ms)
       const sandboxOptions = {
         html: context.content,
         url: context.source,
         fetchScriptContent: fetchScriptContentCallback,
+        timeout:
+          (context.options as { timeout?: number; fetchTimeout?: number })?.timeout ||
+          (context.options as { timeout?: number; fetchTimeout?: number })?.fetchTimeout,
       };
 
       const result = await executeJsInSandbox(sandboxOptions);

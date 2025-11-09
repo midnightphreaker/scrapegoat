@@ -3,13 +3,13 @@
  * Implements file-based storage with database path references.
  */
 
-import { createHash } from "crypto";
-import { mkdir, readFile, unlink, writeFile } from "fs/promises";
-import { join } from "path";
+import { createHash } from "node:crypto";
+import { mkdir, readFile, unlink, writeFile } from "node:fs/promises";
+import { join } from "node:path";
 import { logger } from "./logger";
 
 const DEFAULT_SCREENSHOT_DIR = "./public/screenshots";
-const MAX_SCREENSHOT_SIZE = 5 * 1024 * 1024; // 5MB
+const _MAX_SCREENSHOT_SIZE = 5 * 1024 * 1024; // 5MB
 
 export interface SaveScreenshotOptions {
   library: string;
@@ -31,7 +31,8 @@ export async function saveScreenshot(options: SaveScreenshotOptions): Promise<st
   const buffer = typeof data === "string" ? Buffer.from(data, "base64") : data;
 
   // Validate size
-  const maxSize = parseInt(process.env.SCREENSHOT_MAX_SIZE_MB || "5") * 1024 * 1024;
+  const maxSize =
+    Number.parseInt(process.env.SCREENSHOT_MAX_SIZE_MB || "5", 10) * 1024 * 1024;
   if (buffer.length > maxSize) {
     throw new Error(
       `Screenshot too large: ${(buffer.length / 1024 / 1024).toFixed(2)}MB (max: ${maxSize / 1024 / 1024}MB)`,
@@ -110,7 +111,7 @@ export async function getScreenshotSize(path: string): Promise<number | null> {
   const fullPath = path.startsWith("/") ? join("./public", path) : path;
 
   try {
-    const { stat } = await import("fs/promises");
+    const { stat } = await import("node:fs/promises");
     const stats = await stat(fullPath);
     return stats.size;
   } catch {

@@ -4,7 +4,7 @@ import time
 from typing import Optional
 from crawl4ai import AsyncWebCrawler
 
-from .models import CrawlConfig, CrawlData, CrawlMetadata
+from .models import CrawlConfig, CrawlData, CrawlMetadata, MediaItem, LinkItem
 
 
 class Crawler:
@@ -55,6 +55,10 @@ class Crawler:
         if config.custom_js:
             params["js_code"] = config.custom_js
 
+        # Add screenshot configuration if enabled
+        if config.screenshot:
+            params["screenshot"] = config.screenshot
+
         # Run the crawl
         result = await self.crawler.arun(url, **params)
 
@@ -76,18 +80,114 @@ class Crawler:
             crawl_time=crawl_time
         )
 
+        # Extract screenshot if available (base64-encoded PNG string)
+        screenshot = None
+        if config.screenshot and hasattr(result, 'screenshot') and result.screenshot:
+            screenshot = result.screenshot
+
+        # Extract and transform media items if requested
+        media = None
+        if config.extract_media and hasattr(result, 'media') and result.media:
+            media = self._extract_media(result.media)
+
+        # Extract and transform links
+        links = None
+        if hasattr(result, 'links') and result.links:
+            links = self._extract_links(result.links)
+
         # Build response
         data = CrawlData(
             markdown=markdown,
             raw_markdown=raw_markdown,
             fit_markdown=fit_markdown,
             metadata=metadata,
-            screenshot=None,  # TODO: Phase 3
-            media=None,       # TODO: Phase 3
-            links=None        # TODO: Phase 3
+            screenshot=screenshot,
+            media=media,
+            links=links
         )
 
         return data
+
+    def _extract_media(self, media_dict: dict) -> list[MediaItem]:
+        """
+        Extract and transform media items from Crawl4AI result.
+
+        Args:
+            media_dict: Dictionary with media types as keys (e.g., "images", "videos", "audio")
+                       Each value is a list of dicts with src, alt, score, etc.
+
+        Returns:
+            List of MediaItem objects
+        """
+        media_items = []
+
+        # Process images
+        for img in media_dict.get("images", []):
+            if isinstance(img, dict) and "src" in img:
+                media_items.append(MediaItem(
+                    type="image",
+                    url=img["src"],
+                    alt=img.get("alt"),
+                    width=img.get("width"),
+                    height=img.get("height")
+                ))
+
+        # Process videos
+        for video in media_dict.get("videos", []):
+            if isinstance(video, dict) and "src" in video:
+                media_items.append(MediaItem(
+                    type="video",
+                    url=video["src"],
+                    alt=video.get("alt"),
+                    width=video.get("width"),
+                    height=video.get("height")
+                ))
+
+        # Process audio
+        for audio in media_dict.get("audio", []):
+            if isinstance(audio, dict) and "src" in audio:
+                media_items.append(MediaItem(
+                    type="audio",
+                    url=audio["src"],
+                    alt=audio.get("alt"),
+                    width=None,  # Audio doesn't have dimensions
+                    height=None
+                ))
+
+        return media_items if media_items else None
+
+    def _extract_links(self, links_dict: dict) -> list[LinkItem]:
+        """
+        Extract and transform links from Crawl4AI result.
+
+        Args:
+            links_dict: Dictionary with "internal" and "external" keys
+                       Each value is a list of dicts with href, text, title, etc.
+
+        Returns:
+            List of LinkItem objects
+        """
+        link_items = []
+
+        # Process internal links
+        for link in links_dict.get("internal", []):
+            if isinstance(link, dict) and "href" in link:
+                link_items.append(LinkItem(
+                    url=link["href"],
+                    text=link.get("text", ""),
+                    rel=link.get("rel")
+                ))
+
+        # Process external links
+        for link in links_dict.get("external", []):
+            if isinstance(link, dict) and "href" in link:
+                link_items.append(LinkItem(
+                    url=link["href"],
+                    text=link.get("text", ""),
+                    rel=link.get("rel")
+                ))
+
+        return link_items if link_items else None
 
     def get_uptime(self) -> float:
         """Get service uptime in seconds."""
