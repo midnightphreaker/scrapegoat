@@ -32,6 +32,8 @@ Scrapegoat enables AI assistants to search, retrieve, and index web documentatio
 - PostgreSQL 14+ with pgvector extension
 - Docker (optional, for Crawl4AI)
 
+> **⚠️ Important**: This project requires Zod v3.x for MCP SDK compatibility. Do not upgrade to Zod v4 until MCP SDK adds support (tracked in [PR #869](https://github.com/modelcontextprotocol/typescript-sdk/pull/869)).
+
 ### Installation
 
 ```bash

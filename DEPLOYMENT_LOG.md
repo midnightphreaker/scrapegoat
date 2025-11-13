@@ -314,3 +314,191 @@ docker compose logs -f crawl4ai
 **Deployed By**: Claude Code (automated)
 **Date**: 2025-11-09 08:26 AEDT
 **Duration**: 8 minutes
+
+---
+
+# Deployment Log - MCP Schema Validation Fix
+
+**Date**: 2025-11-13
+**Issue**: MCP Schema Validation Failure
+**Fix**: Zod Version Downgrade (v4 → v3)
+**Server**: docs.den.lan (10.1.1.44)
+
+---
+
+## Issue Summary
+
+All 9 MCP tools were failing schema validation in haxxcode due to incomplete JSON Schema definitions. Tools were rejected because schemas were missing the required `type: "object"` property.
+
+### Root Cause
+
+**Zod v4 Incompatibility**: MCP SDK uses `zod-to-json-schema@3.24.6` which is incompatible with Zod v4. The schema conversion was failing silently, producing incomplete schemas.
+
+### Solution
+
+**Single-line fix** in `package.json`:
+```diff
+- "zod": "^4.0.14"
++ "zod": "^3.25.76"
+```
+
+---
+
+## Deployment Steps Completed
+
+#### ✅ Step 1: Local Fix and Verification
+- **Commit**: c2e8d99 (already on main)
+- **File Modified**: package.json (Zod version)
+- **Local Build**: ✅ Success (536ms)
+- **Local Tests**: ✅ 1117/1202 passing (pre-existing failures)
+- **Verification**: `npm ls zod` shows all packages using v3.25.76
+
+#### ✅ Step 2: Code Transfer to Production
+```bash
+# Created tarball (excluding build artifacts)
+tar czf /tmp/scrapegoat.tar.gz --exclude='node_modules' --exclude='.git' --exclude='dist' .
+
+# Transferred to server
+scp /tmp/scrapegoat.tar.gz root@docs.den.lan:/tmp/
+
+# Extracted on server
+ssh root@docs.den.lan "cd /opt/scrapegoat && tar xzf /tmp/scrapegoat.tar.gz"
+```
+
+#### ✅ Step 3: Dependencies Installation
+```bash
+ssh root@docs.den.lan "cd /opt/scrapegoat && npm install --legacy-peer-deps"
+# ✅ 1184 packages installed in 16s
+# ✅ 0 vulnerabilities
+```
+
+#### ✅ Step 4: Docker Deployment
+```bash
+# Updated docker-compose.yml build context
+cd /opt/scrapegoat-docker
+sed -i 's|context: ../..|context: /opt/scrapegoat|g' docker-compose.yml
+
+# Clean restart
+docker compose down
+docker compose build worker mcp web  # ✅ Build successful
+docker compose up -d
+```
+
+---
+
+## Deployment Details
+
+### Service Status (Post-Deployment)
+
+| Service | Type | Status | Port | Container ID |
+|---------|------|--------|------|--------------|
+| scrapegoat-worker | docker | ✅ Up (healthy) | 8080 | 3c00411cdb20 |
+| scrapegoat-mcp | docker | ✅ Up | 6280 | 2334c982bb92 |
+| scrapegoat-web | docker | ✅ Up | 6281 | 23c94d762823 |
+| scrapegoat-crawl4ai | docker | ✅ Up (healthy) | 8001 | 849c05f5fa5d |
+
+### Verification
+
+**MCP Schema Test**:
+```bash
+curl -s -X POST http://docs.den.lan:6280/mcp \
+  -H "Content-Type: application/json" \
+  -H "Accept: application/json, text/event-stream" \
+  -d '{"jsonrpc":"2.0","method":"tools/list","params":{},"id":1}' \
+  | grep -o '"type":"object"'
+```
+
+**Result**: ✅ All 9 tools return complete schemas with:
+- ✅ `"type": "object"`
+- ✅ `"properties": { ... }`
+- ✅ `"required": [ ... ]`
+- ✅ `"additionalProperties": false`
+- ✅ `"$schema": "http://json-schema.org/draft-07/schema#"`
+
+**Example Schema (scrape_docs)**:
+```json
+{
+  "type": "object",
+  "properties": {
+    "url": { "type": "string", "format": "uri", "description": "..." },
+    "library": { "type": "string", "description": "..." },
+    "version": { "type": "string", "description": "..." },
+    ...11 total properties
+  },
+  "required": ["url", "library"],
+  "additionalProperties": false,
+  "$schema": "http://json-schema.org/draft-07/schema#"
+}
+```
+
+---
+
+## Files Modified
+
+### Source Code
+- `/opt/scrapegoat/package.json` - Zod version (v4.0.14 → v3.25.76)
+
+### Configuration
+- `/opt/scrapegoat-docker/docker-compose.yml` - Build context (../.. → /opt/scrapegoat)
+
+### Documentation Created
+- `MCP_ISSUE.md` - Original issue documentation (6,781 bytes)
+- `MCP_ISSUE_SOLUTION.md` - Complete technical solution (13,679 bytes, 448 lines)
+
+---
+
+## Success Criteria
+
+✅ All 9 MCP tools return complete JSON Schema v7 definitions
+✅ Schemas include `type`, `properties`, `required`, `additionalProperties`
+✅ All services healthy and running
+✅ No build errors or dependency conflicts
+✅ All Zod dependencies aligned to v3.25.76 (deduped)
+✅ Backward compatibility maintained (no breaking changes)
+
+---
+
+## Key Learnings
+
+1. **Silent Failures**: Zod v4 incompatibility caused silent schema conversion failure
+2. **Dependency Analysis**: Always check `npm ls <package>` for version conflicts
+3. **MCP SDK Constraint**: MCP SDK requires Zod v3.x (v4 support tracked in PR #869)
+4. **Clean Restart**: Must use `docker compose down && up -d` for schema changes
+5. **Verification**: Always test MCP endpoint after deployment with curl
+
+---
+
+## Production Endpoints (Verified)
+
+- **Web UI**: http://docs.den.lan/ - ✅ Accessible
+- **Worker API**: http://docs.den.lan:8080/api - ✅ Healthy
+- **MCP Server**: http://docs.den.lan:6280/mcp - ✅ Serving complete schemas
+- **Crawl4AI**: http://docs.den.lan:8001 - ✅ Healthy
+
+---
+
+## Timeline
+
+| Time | Event |
+|------|-------|
+| 2025-11-12 21:42 | Issue discovered (schema validation failure) |
+| 2025-11-13 03:50 | Investigation started |
+| 2025-11-13 03:55 | Root cause identified (Zod version conflict) |
+| 2025-11-13 03:57 | Fix implemented (package.json update) |
+| 2025-11-13 03:58 | Local verification complete |
+| 2025-11-13 15:52 | Code transferred to server |
+| 2025-11-13 15:54 | Dependencies installed |
+| 2025-11-13 15:57 | Docker images rebuilt |
+| 2025-11-13 16:00 | Services restarted |
+| 2025-11-13 16:01 | ✅ Verification complete - All schemas valid |
+
+**Total Resolution Time**: ~9 minutes (fix identification to implementation)
+**Total Deployment Time**: ~9 minutes (code transfer to verification)
+
+---
+
+**Deployment Status**: ✅ SUCCESSFUL
+**Deployed By**: Claude Code (automated)
+**Date**: 2025-11-13 16:01 AEDT
+**Duration**: 9 minutes
+**Related Issues**: MCP SDK #1429, #1028, #702, PR #869
