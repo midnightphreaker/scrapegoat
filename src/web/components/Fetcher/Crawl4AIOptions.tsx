@@ -26,7 +26,7 @@ const Crawl4AIOptions = () => {
         cacheMode: 'fresh'
       }"
     >
-      <h4 class="font-semibold text-gray-800 mb-3">Crawl4AI Content Enhancement</h4>
+      <h4 class="font-semibold text-stone-800 mb-3">Crawl4AI Content Enhancement</h4>
 
       {/* Screenshot capture toggle */}
       <div>
@@ -36,9 +36,9 @@ const Crawl4AIOptions = () => {
             name="enableScreenshot"
             x-model="enableScreenshot"
             checked
-            class="h-4 w-4 rounded border-gray-200 text-primary-600 focus:ring-primary-600 transition-colors duration-150"
+            class="h-4 w-4 rounded border-stone-200 text-primary-600 focus:ring-primary-600 transition-colors duration-150"
           />
-          <span class="text-sm text-gray-800">Capture screenshots</span>
+          <span class="text-sm text-stone-800">Capture screenshots</span>
           <Tooltip text="Save a PNG screenshot of each page. Useful for visual documentation. (Default: enabled)" />
         </label>
 
@@ -48,7 +48,7 @@ const Crawl4AIOptions = () => {
           x-transition
           class="ml-6 mt-2 space-y-2"
         >
-          <p class="text-xs text-gray-500">Screenshot mode:</p>
+          <p class="text-xs text-stone-500">Screenshot mode:</p>
           <div class="flex gap-4">
             <label class="flex items-center gap-2 cursor-pointer">
               <input
@@ -56,9 +56,9 @@ const Crawl4AIOptions = () => {
                 name="screenshotMode"
                 value="viewport"
                 x-model="screenshotMode"
-                class="border-gray-200 text-primary-600 focus:ring-primary-600 transition-colors duration-150"
+                class="border-stone-200 text-primary-600 focus:ring-primary-600 transition-colors duration-150"
               />
-              <span class="text-sm text-gray-800">Viewport</span>
+              <span class="text-sm text-stone-800">Viewport</span>
               <Tooltip text="Captures only the visible viewport (faster, smaller file size)" />
             </label>
             <label class="flex items-center gap-2 cursor-pointer">
@@ -68,9 +68,9 @@ const Crawl4AIOptions = () => {
                 value="fullpage"
                 x-model="screenshotMode"
                 checked
-                class="border-gray-200 text-primary-600 focus:ring-primary-600 transition-colors duration-150"
+                class="border-stone-200 text-primary-600 focus:ring-primary-600 transition-colors duration-150"
               />
-              <span class="text-sm text-gray-800">Full page</span>
+              <span class="text-sm text-stone-800">Full page</span>
               <Tooltip text="Captures the entire page by scrolling (slower, larger file size). (Default)" />
             </label>
           </div>
@@ -84,9 +84,9 @@ const Crawl4AIOptions = () => {
           name="enableMedia"
           x-model="enableMedia"
           checked
-          class="h-4 w-4 rounded border-gray-200 text-primary-600 focus:ring-primary-600 transition-colors duration-150"
+          class="h-4 w-4 rounded border-stone-200 text-primary-600 focus:ring-primary-600 transition-colors duration-150"
         />
-        <span class="text-sm text-gray-800">
+        <span class="text-sm text-stone-800">
           Extract media (images, videos, audio)
         </span>
         <Tooltip text="Extract metadata about images, videos, and audio elements found on the page. (Default: enabled)" />
@@ -99,15 +99,15 @@ const Crawl4AIOptions = () => {
           name="enableLinks"
           x-model="enableLinks"
           checked
-          class="h-4 w-4 rounded border-gray-200 text-primary-600 focus:ring-primary-600 transition-colors duration-150"
+          class="h-4 w-4 rounded border-stone-200 text-primary-600 focus:ring-primary-600 transition-colors duration-150"
         />
-        <span class="text-sm text-gray-800">Extract links</span>
+        <span class="text-sm text-stone-800">Extract links</span>
         <Tooltip text="Extract all hyperlinks from the page with their text and URLs. (Default: enabled)" />
       </label>
 
       {/* Advanced Crawl4AI Settings */}
-      <details class="bg-stone-50 p-4 rounded-lg mt-4 border border-gray-200">
-        <summary class="cursor-pointer text-sm font-medium text-gray-800">
+      <details class="bg-stone-50 p-4 rounded-lg mt-4 border border-stone-200">
+        <summary class="cursor-pointer text-sm font-medium text-stone-800">
           Advanced Crawl4AI Settings
         </summary>
         <div class="mt-3 space-y-3">
@@ -116,7 +116,7 @@ const Crawl4AIOptions = () => {
             <div class="flex items-center mb-2">
               <label
                 for="crawl4ai_waitFor"
-                class="block text-sm font-medium text-gray-800"
+                class="block text-sm font-medium text-stone-800"
               >
                 Wait For Selector
               </label>
@@ -127,7 +127,7 @@ const Crawl4AIOptions = () => {
               name="crawl4ai_waitFor"
               id="crawl4ai_waitFor"
               placeholder="e.g., .content-loaded"
-              class="block w-full max-w-md px-3 py-2 border border-gray-200 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-primary-600 focus:border-primary-600 text-sm bg-white text-gray-800 transition-colors duration-150"
+              class="block w-full max-w-md px-3 py-2 border border-stone-200 rounded-xl shadow-sm focus:outline-none focus:ring-2 focus:ring-primary-600 focus:border-primary-600 text-sm bg-white text-stone-800 transition-colors duration-150"
             />
           </div>
 
@@ -136,7 +136,7 @@ const Crawl4AIOptions = () => {
             <div class="flex items-center mb-2">
               <label
                 for="crawl4ai_waitForTimeout"
-                class="block text-sm font-medium text-gray-800"
+                class="block text-sm font-medium text-stone-800"
               >
                 Wait Timeout (ms)
               </label>
@@ -149,7 +149,7 @@ const Crawl4AIOptions = () => {
               min="0"
               max="60000"
               placeholder="30000"
-              class="block w-full max-w-xs px-3 py-2 border border-gray-200 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-primary-600 focus:border-primary-600 text-sm bg-white text-gray-800 transition-colors duration-150"
+              class="block w-full max-w-xs px-3 py-2 border border-stone-200 rounded-xl shadow-sm focus:outline-none focus:ring-2 focus:ring-primary-600 focus:border-primary-600 text-sm bg-white text-stone-800 transition-colors duration-150"
             />
           </div>
 
@@ -158,7 +158,7 @@ const Crawl4AIOptions = () => {
             <div class="flex items-center mb-2">
               <label
                 for="crawl4ai_customJs"
-                class="block text-sm font-medium text-gray-800"
+                class="block text-sm font-medium text-stone-800"
               >
                 Custom JavaScript
               </label>
@@ -169,7 +169,7 @@ const Crawl4AIOptions = () => {
               id="crawl4ai_customJs"
               rows="3"
               placeholder="e.g., document.querySelector('.cookie-banner')?.remove();"
-              class="block w-full max-w-md px-3 py-2 border border-gray-200 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-primary-600 focus:border-primary-600 text-sm bg-white text-gray-800 font-mono transition-colors duration-150"
+              class="block w-full max-w-md px-3 py-2 border border-stone-200 rounded-xl shadow-sm focus:outline-none focus:ring-2 focus:ring-primary-600 focus:border-primary-600 text-sm bg-white text-stone-800 font-mono transition-colors duration-150"
             ></textarea>
           </div>
 
@@ -178,7 +178,7 @@ const Crawl4AIOptions = () => {
             <div class="flex items-center mb-2">
               <label
                 for="crawl4ai_cacheMode"
-                class="block text-sm font-medium text-gray-800"
+                class="block text-sm font-medium text-stone-800"
               >
                 Cache Mode
               </label>
@@ -188,7 +188,7 @@ const Crawl4AIOptions = () => {
               name="crawl4ai_cacheMode"
               id="crawl4ai_cacheMode"
               x-model="cacheMode"
-              class="block w-full max-w-xs px-3 py-2 border border-gray-200 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-primary-600 focus:border-primary-600 text-sm bg-white text-gray-800 transition-colors duration-150"
+              class="block w-full max-w-xs px-3 py-2 border border-stone-200 rounded-xl shadow-sm focus:outline-none focus:ring-2 focus:ring-primary-600 focus:border-primary-600 text-sm bg-white text-stone-800 transition-colors duration-150"
             >
               <option value="fresh" selected>Fresh (always fetch new)</option>
               <option value="enabled">Enabled (use cache)</option>
@@ -202,7 +202,7 @@ const Crawl4AIOptions = () => {
             <div class="flex items-center mb-2">
               <label
                 for="crawl4ai_headers"
-                class="block text-sm font-medium text-gray-800"
+                class="block text-sm font-medium text-stone-800"
               >
                 Custom Headers (JSON)
               </label>
@@ -213,7 +213,7 @@ const Crawl4AIOptions = () => {
               id="crawl4ai_headers"
               rows="3"
               placeholder='{"Authorization": "Bearer token"}'
-              class="block w-full max-w-md px-3 py-2 border border-gray-200 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-primary-600 focus:border-primary-600 text-sm bg-white text-gray-800 font-mono transition-colors duration-150"
+              class="block w-full max-w-md px-3 py-2 border border-stone-200 rounded-xl shadow-sm focus:outline-none focus:ring-2 focus:ring-primary-600 focus:border-primary-600 text-sm bg-white text-stone-800 font-mono transition-colors duration-150"
             ></textarea>
           </div>
         </div>

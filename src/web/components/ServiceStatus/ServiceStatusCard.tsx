@@ -25,13 +25,13 @@ interface ServiceStatusCardProps {
 const ServiceStatusCard = ({ health }: ServiceStatusCardProps) => {
   return (
     <div
-      class="mt-4 p-4 bg-white rounded-lg shadow-sm border border-gray-200"
+      class="mt-4 p-4 bg-white rounded-lg shadow-sm border border-stone-200"
       hx-get="/api/health/all"
       hx-trigger="load, every 30s"
       hx-swap="outerHTML"
       hx-target="this"
     >
-      <h3 class="text-lg font-semibold text-gray-900 mb-4">
+      <h3 class="text-lg font-semibold text-stone-900 mb-4">
         Service Health
       </h3>
 
@@ -45,7 +45,7 @@ const ServiceStatusCard = ({ health }: ServiceStatusCardProps) => {
           />
 
           {health.crawl4ai && health.crawl4ai.status !== "down" && (
-            <div class="mt-4 pt-4 border-t border-gray-200 text-sm text-gray-600">
+            <div class="mt-4 pt-4 border-t border-stone-200 text-sm text-stone-600">
               {health.crawl4ai.version && (
                 <p>
                   <span class="font-medium">Version:</span>{" "}
@@ -64,16 +64,16 @@ const ServiceStatusCard = ({ health }: ServiceStatusCardProps) => {
       ) : (
         <div class="space-y-2">
           <div class="animate-pulse flex items-center gap-2">
-            <div class="w-3 h-3 bg-gray-200 rounded-full" />
-            <div class="h-4 bg-gray-200 rounded w-32" />
+            <div class="w-3 h-3 bg-stone-200 rounded-full" />
+            <div class="h-4 bg-stone-200 rounded w-32" />
           </div>
           <div class="animate-pulse flex items-center gap-2">
-            <div class="w-3 h-3 bg-gray-200 rounded-full" />
-            <div class="h-4 bg-gray-200 rounded w-32" />
+            <div class="w-3 h-3 bg-stone-200 rounded-full" />
+            <div class="h-4 bg-stone-200 rounded w-32" />
           </div>
           <div class="animate-pulse flex items-center gap-2">
-            <div class="w-3 h-3 bg-gray-200 rounded-full" />
-            <div class="h-4 bg-gray-200 rounded w-32" />
+            <div class="w-3 h-3 bg-stone-200 rounded-full" />
+            <div class="h-4 bg-stone-200 rounded w-32" />
           </div>
         </div>
       )}

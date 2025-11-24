@@ -16,7 +16,7 @@ interface SearchResultListProps {
 const SearchResultList = ({ results }: SearchResultListProps) => {
   if (results.length === 0) {
     return (
-      <p class="text-gray-500 italic">No results found.</p>
+      <p class="text-stone-500 italic">No results found.</p>
     );
   }
   return (

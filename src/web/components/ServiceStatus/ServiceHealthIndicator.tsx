@@ -35,7 +35,7 @@ const ServiceHealthIndicator = ({
     <div class="flex items-center gap-2">
       <div class={`w-3 h-3 rounded-full ${colors[status]}`} />
       <span class={`font-medium ${textColors[status]}`}>{serviceName}</span>
-      <span class="text-sm text-gray-500">{icons[status]}</span>
+      <span class="text-sm text-stone-500">{icons[status]}</span>
     </div>
   );
 };

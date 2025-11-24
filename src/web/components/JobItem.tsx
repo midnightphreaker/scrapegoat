@@ -26,16 +26,16 @@ const JobItem = ({ job }: JobItemProps) => {
       job.status === PipelineJobStatus.RUNNING;
 
   return (
-    <div class="block p-3 bg-white rounded-lg border border-gray-200 shadow-sm">
+    <div class="block p-3 bg-white rounded-lg border border-stone-200 shadow-context7-md">
       <div class="flex items-start justify-between">
         <div class="flex-1">
-          <p class="text-sm font-medium text-gray-900">
+          <p class="text-sm font-semibold text-stone-800">
             <span safe>{job.library}</span>{" "}
             <VersionBadge version={job.version} />
           </p>
 
           {/* Timestamps */}
-          <div class="text-xs text-gray-500 mt-1">
+          <div class="text-xs text-stone-500 mt-1">
             {job.startedAt ? (
               <div>
                 Last Indexed:{" "}
@@ -71,7 +71,7 @@ const JobItem = ({ job }: JobItemProps) => {
               <StatusBadge status={job.dbStatus} />
             ) : (
               <span
-                class={`px-1.5 py-0.5 text-xs font-medium rounded ${
+                class={`px-2 py-1 text-sm font-semibold rounded-lg ${
                   job.status === PipelineJobStatus.COMPLETED
                     ? "bg-green-100 text-green-800"
                     : job.error
@@ -87,7 +87,7 @@ const JobItem = ({ job }: JobItemProps) => {
             {isActiveJob && (
               <button
                 type="button"
-                class="font-medium rounded-lg text-xs p-1 text-center inline-flex items-center transition-colors duration-150 ease-in-out border border-gray-300 bg-white text-red-600 hover:bg-red-50 focus:ring-4 focus:outline-none focus:ring-red-100"
+                class="font-medium rounded-lg text-xs p-1 text-center inline-flex items-center transition-colors duration-150 ease-in-out border border-stone-300 bg-white text-red-600 hover:bg-red-50 focus:ring-4 focus:outline-none focus:ring-red-100"
                 title="Stop this job"
                 x-data="{}"
                 x-on:click={`
@@ -152,7 +152,7 @@ const JobItem = ({ job }: JobItemProps) => {
           </div>
           {job.error ? (
             // Keep the error badge for clarity if an error occurred
-            <span class="bg-red-100 text-red-800 text-xs font-medium px-1.5 py-0.5 rounded">
+            <span class="bg-red-100 text-red-800 text-sm font-semibold px-2 py-1 rounded-lg">
               Error
             </span>
           ) : null}

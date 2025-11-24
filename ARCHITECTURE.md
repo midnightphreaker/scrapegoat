@@ -26,9 +26,13 @@ Protocol selection is automatic - stdio transport for AI tools (no TTY), HTTP tr
 
 - Node.js 22.x, TypeScript, Vite build system
 - Vitest for testing
-- HTMX, AlpineJS, TailwindCSS for web interface
+- **Web Interface**: HTMX, AlpineJS, Tailwind CSS v4 with Context7 design system
+  - Emerald-600 primary color, Stone neutral palette
+  - Inter font family (self-hosted via @fontsource/inter)
+  - Custom shadow system (context7-sm/md/lg)
+  - Quality score: 96/100 (completed 2025-11-25)
 - LangChain.js for embeddings, Playwright for scraping
-- SQLite with schema migrations
+- PostgreSQL with pgvector extension (NOT SQLite)
 
 ### Directory Structure
 

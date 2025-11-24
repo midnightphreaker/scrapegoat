@@ -41,6 +41,7 @@
   "dependencies": {
     "@fastify/formbody": "^8.0.2",
     "@fastify/static": "^8.2.0",
+    "@fontsource/inter": "^5.2.8",
     "@joplin/turndown-plugin-gfm": "^1.0.62",
     "@kitajs/html": "^4.2.9",
     "@kitajs/ts-html-plugin": "^4.1.1",

@@ -96,7 +96,7 @@ const Alert = ({ type, title, message }: AlertProps) => {
 
   return (
     <div
-      class={`flex items-center p-4 mb-4 text-sm border rounded-lg shadow-sm ${colorClasses}`}
+      class={`flex items-center p-4 mb-4 text-sm border rounded-lg shadow-context7-sm ${colorClasses}`}
       role="alert"
     >
       {iconSvg}

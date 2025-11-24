@@ -24,22 +24,22 @@ const MediaGallery = ({ media }: MediaGalleryProps) => {
   const audios = media.filter((m) => m.type === "audio");
 
   return (
-    <div class="mt-6 p-4 bg-white rounded-lg shadow-sm border border-gray-200">
-      <h3 class="text-lg font-semibold text-gray-900 mb-3">
+    <div class="mt-6 p-4 bg-white rounded-lg shadow-sm border border-stone-200">
+      <h3 class="text-lg font-semibold text-stone-900 mb-3">
         Extracted Media
       </h3>
 
       {/* Images section */}
       {images.length > 0 && (
         <div class="mb-6">
-          <h4 class="font-medium text-gray-700 mb-3">
+          <h4 class="font-medium text-stone-700 mb-3">
             Images ({images.length})
           </h4>
           <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
             {images.map((img, index) => (
               <div
                 key={index}
-                class="border border-gray-200 rounded-lg overflow-hidden hover:shadow-lg transition-shadow"
+                class="border border-stone-200 rounded-lg overflow-hidden hover:shadow-lg transition-shadow"
               >
                 <img
                   src={img.url}
@@ -48,7 +48,7 @@ const MediaGallery = ({ media }: MediaGalleryProps) => {
                   loading="lazy"
                 />
                 {img.alt && (
-                  <p class="text-xs p-2 text-gray-600 truncate">
+                  <p class="text-xs p-2 text-stone-600 truncate">
                     {img.alt}
                   </p>
                 )}
@@ -61,7 +61,7 @@ const MediaGallery = ({ media }: MediaGalleryProps) => {
       {/* Videos section */}
       {videos.length > 0 && (
         <div class="mb-6">
-          <h4 class="font-medium text-gray-700 mb-3">
+          <h4 class="font-medium text-stone-700 mb-3">
             Videos ({videos.length})
           </h4>
           <ul class="space-y-2">
@@ -84,7 +84,7 @@ const MediaGallery = ({ media }: MediaGalleryProps) => {
       {/* Audio section */}
       {audios.length > 0 && (
         <div>
-          <h4 class="font-medium text-gray-700 mb-3">
+          <h4 class="font-medium text-stone-700 mb-3">
             Audio ({audios.length})
           </h4>
           <ul class="space-y-2">
