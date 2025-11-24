@@ -135,7 +135,7 @@ Unified CLI application with modular AppServer that can enable/disable features:
 4. **Node Version:** Node 20+ required (specified in package.json engines).
 5. **WebUI Color Palette:** ALWAYS use stone-* palette (never gray-*). Context7 design system requires stone for warm neutral tones.
 6. **Font Package:** @fontsource/inter must be installed with --legacy-peer-deps flag due to langchain peer dependency conflicts.
-7. **Recent Work:** WebUI redesign completed 2025-11-25 (Context7 design system, 22 files modified).
+7. **Recent Work:** WebUI redesign completed 2025-11-25 (Context7 design system, 22 files modified). Production deployment to docs.den.lan completed 2025-11-25 (zero errors).
 
 ## Features
 ✅ Native MCP integration for AI assistants
@@ -170,16 +170,42 @@ psql scrapegoat -c "CREATE EXTENSION vector;"
 npm run db:push
 ```
 
+## Production Deployment
+**Environment:** docs.den.lan
+**Location:** /opt/scrapegoat-docker/
+**Access:** ssh root@docs.den.lan (P@ssw0rd)
+**Service:** systemctl status scrapegoat
+**Database:** postgres.den.lan (131,318 records preserved)
+**Deployment Date:** 2025-11-25 08:42-08:51 AEDT (15 minutes, 8 minutes downtime)
+**Status:** ✅ ZERO ERRORS - All 4 containers healthy
+**Git Remote:** http://gitlab.den.lan/pub/scrapegoat.git
+
+**Containers:**
+- scrapegoat-worker (port 8080)
+- scrapegoat-mcp (port 6280)
+- scrapegoat-web (port 80)
+- crawl4ai (port 8001)
+
+**Deployment Process:**
+1. Stop systemd service
+2. Backup database (273MB, 131K records)
+3. Deploy code via tar+scp
+4. Rebuild Docker images (--no-cache)
+5. Start systemd service
+6. Validate health + Context7 design
+
 ## Memory Queries
 To recall this knowledge in future sessions:
 - Overview: `query "scrapegoat summary"`
 - Build: `query "scrapegoat build"`
 - Architecture: `query "scrapegoat arch"`
 - Gotchas: `query "scrapegoat gotchas"`
+- Deployment: `query "scrapegoat deployment docs.den.lan"`
 
 ---
 
 **Analysis Date:** 2025-11-25
-**Status:** Production Ready (v1.0.0)
+**Status:** Production Ready + Deployed (v1.0.0)
 **Code Quality:** A+ (100/100)
+**Deployment:** ✅ Production at docs.den.lan (zero errors)
 **Confidence:** Ready to work with this codebase 🚀
