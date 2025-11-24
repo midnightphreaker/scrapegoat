@@ -45,11 +45,11 @@ const VersionDetailsRow = ({
     // Use flexbox for layout, add border between rows
     <div
       id={rowId}
-      class="flex justify-between items-center py-1 border-b border-gray-200 last:border-b-0"
+      class="flex justify-between items-center py-1 border-b border-stone-200 last:border-b-0 hover:bg-stone-50 transition-colors duration-150"
     >
       {/* Version Label */}
       <span
-        class="text-sm text-gray-900 w-1/4 truncate"
+        class="text-sm text-stone-800 font-medium w-1/4 truncate"
         title={versionLabel}
       >
         {version.ref.version ? (
@@ -60,7 +60,7 @@ const VersionDetailsRow = ({
       </span>
 
       {/* Stats Group */}
-      <div class="flex space-x-2 text-sm text-gray-600 w-3/4 justify-end items-center">
+      <div class="flex space-x-2 text-sm text-stone-600 w-3/4 justify-end items-center">
         <span title="Number of unique pages indexed">
           Pages:{" "}
           <span class="font-semibold" safe>

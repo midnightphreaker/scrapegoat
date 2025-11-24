@@ -18,13 +18,13 @@ const LibraryDetailCard = ({ library }: LibraryDetailCardProps) => {
   const versions = library.versions?.reverse() || [];
   const latestVersion = versions[0];
   return (
-    // Use Flowbite Card structure with updated padding and border, and white background
-    <div class="block p-4 bg-white rounded-lg shadow-sm border border-gray-200 mb-4">
-      <h3 class="text-lg font-medium text-gray-900 mb-1">
+    // Use Flowbite Card structure with Context7 shadow and border
+    <div class="block p-4 bg-white rounded-lg shadow-context7-md border border-stone-200 mb-4 hover:shadow-context7-lg transition-shadow duration-150">
+      <h3 class="text-lg font-semibold text-stone-800 mb-1">
         <span safe>{library.name}</span>
       </h3>
       {latestVersion?.sourceUrl ? (
-        <div class="text-sm text-gray-500">
+        <div class="text-sm text-stone-500">
           <a
             href={latestVersion.sourceUrl}
             target="_blank"
@@ -60,7 +60,7 @@ const LibraryDetailCard = ({ library }: LibraryDetailCardProps) => {
             );
           })
         ) : (
-          <p class="text-sm text-gray-500 italic">
+          <p class="text-sm text-stone-500 italic">
             No versions indexed.
           </p>
         )}

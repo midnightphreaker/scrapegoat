@@ -42,12 +42,12 @@ const ProgressBar = ({ progress, showText = true }: ProgressBarProps) => {
   return (
     <div class="w-full">
       {showText && (
-        <div class="flex justify-between text-xs text-gray-600 mb-1">
+        <div class="flex justify-between text-xs text-stone-600 mb-1">
           <span>Progress</span>
           <span safe>{getProgressText()}</span>
         </div>
       )}
-      <div class="w-full bg-gray-200 rounded-full h-2">
+      <div class="w-full bg-stone-200 rounded-full h-2">
         {isIndeterminate ? (
           // Indeterminate progress bar with animation
           <div

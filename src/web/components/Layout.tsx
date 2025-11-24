@@ -7,6 +7,7 @@
 import type { PropsWithChildren } from "@kitajs/html";
 import { readFileSync } from "node:fs";
 import { logger } from "../../utils/logger";
+import Context7Logo from "./Context7Logo";
 
 /**
  * Props for the Layout component.
@@ -153,10 +154,10 @@ const Layout = ({ title, version, children }: LayoutProps) => {
           `}
         </style>
       </head>
-      <body class="flex min-h-screen flex-col overflow-x-hidden antialiased" style="background-color: #003300;">
+      <body class="flex min-h-screen flex-col overflow-x-hidden antialiased bg-stone-50">
         {/* Full-width header with ScrapeGoat branding */}
         <header
-          class="sticky top-0 z-50 bg-white border-b border-gray-200 shadow-sm"
+          class="sticky top-0 z-50 bg-white border-b border-stone-200 shadow-context7-sm"
           x-data={versionInitializer}
           x-init="queueCheck()"
         >
@@ -166,14 +167,17 @@ const Layout = ({ title, version, children }: LayoutProps) => {
               <div class="flex items-center gap-3">
                 <a
                   href="/"
-                  class="text-2xl font-bold text-gray-900 hover:text-gray-700 transition-colors duration-150 font-brand"
+                  class="flex items-center gap-3 hover:opacity-90 transition-opacity duration-150"
                 >
-                  scrapegoat
+                  <Context7Logo className="w-10 h-11" />
+                  <span class="text-2xl font-bold text-stone-800 font-brand">
+                    scrapegoat
+                  </span>
                 </a>
                 {versionString ? (
                   <span
                     safe
-                    class="text-sm font-normal text-gray-500"
+                    class="text-sm font-normal text-stone-500"
                     title={`Version ${versionString}`}
                   >
                     v{versionString}
@@ -217,12 +221,12 @@ const Layout = ({ title, version, children }: LayoutProps) => {
                   {/* Checking State */}
                   <div
                     x-show="status === 'checking'"
-                    class="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-gray-50 border border-gray-200"
+                    class="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-stone-50 border border-stone-200"
                   >
                     <span class="relative flex h-2.5 w-2.5">
-                      <span class="animate-pulse inline-flex h-2.5 w-2.5 rounded-full bg-gray-400"></span>
+                      <span class="animate-pulse inline-flex h-2.5 w-2.5 rounded-full bg-stone-400"></span>
                     </span>
-                    <span class="text-sm font-medium text-gray-700" x-text="`MCP: ${displayText}`"></span>
+                    <span class="text-sm font-medium text-stone-700" x-text="`MCP: ${displayText}`"></span>
                   </div>
 
                   {/* Configuration Popup Modal */}
@@ -234,11 +238,11 @@ const Layout = ({ title, version, children }: LayoutProps) => {
                   >
                     <div class="bg-white rounded-lg shadow-xl p-6 max-w-2xl w-full mx-4" x-on:click="$event.stopPropagation()">
                       <div class="flex items-center justify-between mb-4">
-                        <h3 class="text-lg font-semibold text-gray-900">MCP Server Configuration</h3>
+                        <h3 class="text-lg font-semibold text-stone-800">MCP Server Configuration</h3>
                         <button
                           type="button"
                           x-on:click="closePopup()"
-                          class="text-gray-400 hover:text-gray-600 transition-colors"
+                          class="text-stone-400 hover:text-stone-600 transition-colors"
                         >
                           <svg class="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
@@ -246,12 +250,12 @@ const Layout = ({ title, version, children }: LayoutProps) => {
                         </button>
                       </div>
 
-                      <p class="text-sm text-gray-600 mb-4">
+                      <p class="text-sm text-stone-600 mb-4">
                         Add this configuration to your Claude Desktop settings to connect to the Scrapegoat MCP server:
                       </p>
 
                       <div class="relative">
-                        <pre class="bg-gray-50 border border-gray-200 rounded-lg p-4 overflow-x-auto text-sm font-mono"
+                        <pre class="bg-stone-50 border border-stone-200 rounded-lg p-4 overflow-x-auto text-sm font-mono"
                              x-text="configSnippet"></pre>
                         <button
                           type="button"
@@ -262,9 +266,9 @@ const Layout = ({ title, version, children }: LayoutProps) => {
                         </button>
                       </div>
 
-                      <p class="text-xs text-gray-500 mt-4">
+                      <p class="text-xs text-stone-500 mt-4">
                         Configuration file location:
-                        <code class="bg-gray-100 px-2 py-0.5 rounded">~/Library/Application Support/Claude/claude_desktop_config.json</code>
+                        <code class="bg-stone-100 px-2 py-0.5 rounded">~/Library/Application Support/Claude/claude_desktop_config.json</code>
                       </p>
                     </div>
                   </div>
@@ -299,14 +303,17 @@ const Layout = ({ title, version, children }: LayoutProps) => {
               <div class="flex items-center justify-center gap-2">
                 <a
                   href="/"
-                  class="text-2xl font-bold text-gray-900 hover:text-gray-700 transition-colors duration-150 font-brand"
+                  class="flex items-center gap-2 hover:opacity-90 transition-opacity duration-150"
                 >
-                  scrapegoat
+                  <Context7Logo className="w-8 h-9" />
+                  <span class="text-2xl font-bold text-stone-800 font-brand">
+                    scrapegoat
+                  </span>
                 </a>
                 {versionString ? (
                   <span
                     safe
-                    class="text-sm font-normal text-gray-500"
+                    class="text-sm font-normal text-stone-500"
                     title={`Version ${versionString}`}
                   >
                     v{versionString}
@@ -352,12 +359,12 @@ const Layout = ({ title, version, children }: LayoutProps) => {
                   {/* Checking State */}
                   <div
                     x-show="status === 'checking'"
-                    class="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-gray-50 border border-gray-200"
+                    class="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-stone-50 border border-stone-200"
                   >
                     <span class="relative flex h-2.5 w-2.5">
-                      <span class="animate-pulse inline-flex h-2.5 w-2.5 rounded-full bg-gray-400"></span>
+                      <span class="animate-pulse inline-flex h-2.5 w-2.5 rounded-full bg-stone-400"></span>
                     </span>
-                    <span class="text-sm font-medium text-gray-700" x-text="`MCP: ${displayText}`"></span>
+                    <span class="text-sm font-medium text-stone-700" x-text="`MCP: ${displayText}`"></span>
                   </div>
 
                   {/* Configuration Popup Modal */}
@@ -369,11 +376,11 @@ const Layout = ({ title, version, children }: LayoutProps) => {
                   >
                     <div class="bg-white rounded-lg shadow-xl p-6 max-w-2xl w-full mx-4" x-on:click="$event.stopPropagation()">
                       <div class="flex items-center justify-between mb-4">
-                        <h3 class="text-lg font-semibold text-gray-900">MCP Server Configuration</h3>
+                        <h3 class="text-lg font-semibold text-stone-800">MCP Server Configuration</h3>
                         <button
                           type="button"
                           x-on:click="closePopup()"
-                          class="text-gray-400 hover:text-gray-600 transition-colors"
+                          class="text-stone-400 hover:text-stone-600 transition-colors"
                         >
                           <svg class="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
@@ -381,12 +388,12 @@ const Layout = ({ title, version, children }: LayoutProps) => {
                         </button>
                       </div>
 
-                      <p class="text-sm text-gray-600 mb-4">
+                      <p class="text-sm text-stone-600 mb-4">
                         Add this configuration to your Claude Desktop settings to connect to the Scrapegoat MCP server:
                       </p>
 
                       <div class="relative">
-                        <pre class="bg-gray-50 border border-gray-200 rounded-lg p-4 overflow-x-auto text-sm font-mono"
+                        <pre class="bg-stone-50 border border-stone-200 rounded-lg p-4 overflow-x-auto text-sm font-mono"
                              x-text="configSnippet"></pre>
                         <button
                           type="button"
@@ -397,9 +404,9 @@ const Layout = ({ title, version, children }: LayoutProps) => {
                         </button>
                       </div>
 
-                      <p class="text-xs text-gray-500 mt-4">
+                      <p class="text-xs text-stone-500 mt-4">
                         Configuration file location:
-                        <code class="bg-gray-100 px-2 py-0.5 rounded">~/Library/Application Support/Claude/claude_desktop_config.json</code>
+                        <code class="bg-stone-100 px-2 py-0.5 rounded">~/Library/Application Support/Claude/claude_desktop_config.json</code>
                       </p>
                     </div>
                   </div>

@@ -14,7 +14,7 @@ interface StatusBadgeProps {
  * Get CSS classes for status badge based on status type.
  */
 function getStatusClasses(status: VersionStatus): string {
-  const baseClasses = "px-1.5 py-0.5 text-xs font-medium rounded";
+  const baseClasses = "px-2 py-1 text-sm font-semibold rounded-lg";
 
   switch (status) {
     case VersionStatus.COMPLETED:
@@ -27,10 +27,10 @@ function getStatusClasses(status: VersionStatus): string {
     case VersionStatus.FAILED:
       return `${baseClasses} bg-red-100 text-red-800`;
     case VersionStatus.CANCELLED:
-      return `${baseClasses} bg-gray-100 text-gray-800`;
+      return `${baseClasses} bg-stone-100 text-stone-800`;
     case VersionStatus.NOT_INDEXED:
     default:
-      return `${baseClasses} bg-gray-100 text-gray-600`;
+      return `${baseClasses} bg-stone-100 text-stone-600`;
   }
 }
 

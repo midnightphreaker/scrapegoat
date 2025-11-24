@@ -8,7 +8,7 @@ const VersionBadge = ({ version }: VersionBadgeProps) => {
   }
 
   return (
-    <span class="bg-primary-100 text-primary-800 text-xs font-medium me-2 px-1.5 py-0.5 rounded">
+    <span class="bg-primary-100 text-primary-800 text-sm font-semibold me-2 px-2 py-1 rounded-lg">
       <span safe>{version}</span>
     </span>
   );
