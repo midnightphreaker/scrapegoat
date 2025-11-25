@@ -253,13 +253,58 @@ document.addEventListener("alpine:init", () => {
   }));
 });
 
-// Ensure Alpine global store for confirmation actions is initialized before Alpine components render
+// Ensure Alpine global stores are initialized before Alpine components render
 Alpine.store("confirmingAction", {
   type: null,
   id: null,
   timeoutId: null,
   isDeleting: false,
 });
+
+// Dark mode global store
+Alpine.store("darkMode", {
+  on: false,
+
+  init() {
+    // Check localStorage for saved preference
+    const savedTheme = localStorage.getItem("theme");
+    if (savedTheme === "dark") {
+      this.on = true;
+    } else if (savedTheme === "light") {
+      this.on = false;
+    } else {
+      // Default to system preference if no saved preference
+      this.on = window.matchMedia("(prefers-color-scheme: dark)").matches;
+    }
+
+    // Apply dark class immediately
+    if (this.on) {
+      document.documentElement.classList.add("dark");
+    }
+
+    // Watch for system theme changes
+    window.matchMedia("(prefers-color-scheme: dark)").addEventListener("change", (e) => {
+      // Only auto-switch if user hasn't set a preference
+      if (!localStorage.getItem("theme")) {
+        this.toggle(e.matches);
+      }
+    });
+  },
+
+  toggle(forceTo) {
+    this.on = forceTo !== undefined ? forceTo : !this.on;
+    localStorage.setItem("theme", this.on ? "dark" : "light");
+
+    if (this.on) {
+      document.documentElement.classList.add("dark");
+    } else {
+      document.documentElement.classList.remove("dark");
+    }
+  },
+});
+
+// Initialize dark mode before Alpine starts
+Alpine.store("darkMode").init();
 
 Alpine.start();
 
