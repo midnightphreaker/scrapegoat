@@ -231,6 +231,26 @@ document.addEventListener("alpine:init", () => {
       localStorage.setItem("theme", this.isDark ? "dark" : "light");
     },
   }));
+
+  Alpine.data("wideModeData", () => ({
+    wide: false,
+
+    init() {
+      // Check localStorage for saved preference
+      const savedMode = localStorage.getItem("scrapegoat-wide-mode");
+      this.wide = savedMode === "true";
+    },
+
+    toggle() {
+      this.wide = !this.wide;
+      // Save preference to localStorage
+      localStorage.setItem("scrapegoat-wide-mode", this.wide.toString());
+    },
+
+    getMaxWidth() {
+      return this.wide ? "max-w-[90%]" : "max-w-2xl";
+    },
+  }));
 });
 
 // Ensure Alpine global store for confirmation actions is initialized before Alpine components render
