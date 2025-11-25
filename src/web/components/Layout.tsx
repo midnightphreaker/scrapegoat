@@ -158,7 +158,7 @@ const Layout = ({ title, version, children }: LayoutProps) => {
           `}
         </style>
       </head>
-      <body class="flex min-h-screen flex-col overflow-x-hidden antialiased bg-stone-50 dark:bg-stone-900" x-data={wideModeData}>
+      <body class="flex min-h-screen flex-col overflow-x-hidden antialiased bg-stone-50 dark:bg-stone-900" x-data="wideModeData()">
         {/* Full-width header with ScrapeGoat branding */}
         <header
           class="sticky top-0 z-50 bg-white dark:bg-stone-800 border-b border-stone-200 dark:border-stone-700 shadow-context7-sm"
