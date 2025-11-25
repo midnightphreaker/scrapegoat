@@ -234,14 +234,14 @@ const Layout = ({ title, version, children }: LayoutProps) => {
                 {/* Dark Mode Toggle */}
                 <button
                   type="button"
-                  x-on:click="toggle()"
+                  x-on:click="document.documentElement._x_dataStack[0].toggle()"
                   class="inline-flex items-center justify-center w-9 h-9 rounded-lg bg-stone-100 dark:bg-stone-700 hover:bg-stone-200 dark:hover:bg-stone-600 transition-all duration-150"
                   title="Toggle dark mode"
                   aria-label="Toggle dark mode"
                 >
                   {/* Sun Icon (visible in dark mode) */}
                   <svg
-                    x-show="isDark"
+                    x-show="document.documentElement._x_dataStack[0].isDark"
                     class="w-5 h-5 text-stone-600 dark:text-stone-300"
                     fill="none"
                     stroke="currentColor"
@@ -257,7 +257,7 @@ const Layout = ({ title, version, children }: LayoutProps) => {
                   </svg>
                   {/* Moon Icon (visible in light mode) */}
                   <svg
-                    x-show="!isDark"
+                    x-show="!document.documentElement._x_dataStack[0].isDark"
                     class="w-5 h-5 text-stone-600 dark:text-stone-300"
                     fill="none"
                     stroke="currentColor"
@@ -456,14 +456,14 @@ const Layout = ({ title, version, children }: LayoutProps) => {
                 {/* Dark Mode Toggle */}
                 <button
                   type="button"
-                  x-on:click="toggle()"
+                  x-on:click="document.documentElement._x_dataStack[0].toggle()"
                   class="inline-flex items-center justify-center w-9 h-9 rounded-lg bg-stone-100 dark:bg-stone-700 hover:bg-stone-200 dark:hover:bg-stone-600 transition-all duration-150"
                   title="Toggle dark mode"
                   aria-label="Toggle dark mode"
                 >
                   {/* Sun Icon (visible in dark mode) */}
                   <svg
-                    x-show="isDark"
+                    x-show="document.documentElement._x_dataStack[0].isDark"
                     class="w-5 h-5 text-stone-600 dark:text-stone-300"
                     fill="none"
                     stroke="currentColor"
@@ -479,7 +479,7 @@ const Layout = ({ title, version, children }: LayoutProps) => {
                   </svg>
                   {/* Moon Icon (visible in light mode) */}
                   <svg
-                    x-show="!isDark"
+                    x-show="!document.documentElement._x_dataStack[0].isDark"
                     class="w-5 h-5 text-stone-600 dark:text-stone-300"
                     fill="none"
                     stroke="currentColor"
