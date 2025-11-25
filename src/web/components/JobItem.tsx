@@ -26,16 +26,16 @@ const JobItem = ({ job }: JobItemProps) => {
       job.status === PipelineJobStatus.RUNNING;
 
   return (
-    <div class="block p-3 bg-white rounded-lg border border-stone-200 shadow-context7-md">
+    <div class="block p-3 bg-white dark:bg-stone-800 rounded-lg border border-stone-200 dark:border-stone-700 shadow-context7-md">
       <div class="flex items-start justify-between">
         <div class="flex-1">
-          <p class="text-sm font-semibold text-stone-800">
+          <p class="text-sm font-semibold text-stone-800 dark:text-stone-100">
             <span safe>{job.library}</span>{" "}
             <VersionBadge version={job.version} />
           </p>
 
           {/* Timestamps */}
-          <div class="text-xs text-stone-500 mt-1">
+          <div class="text-xs text-stone-500 dark:text-stone-400 mt-1">
             {job.startedAt ? (
               <div>
                 Last Indexed:{" "}
@@ -53,11 +53,11 @@ const JobItem = ({ job }: JobItemProps) => {
 
           {/* Error message display */}
           {job.errorMessage || job.error ? (
-            <div class="mt-2 p-2 bg-red-50 border border-red-200 rounded text-xs">
-              <div class="font-medium text-red-800 mb-1">
+            <div class="mt-2 p-2 bg-red-50 dark:bg-red-900/30 border border-red-200 dark:border-red-700 rounded text-xs">
+              <div class="font-medium text-red-800 dark:text-red-200 mb-1">
                 Error:
               </div>
-              <div safe class="text-red-700">
+              <div safe class="text-red-700 dark:text-red-300">
                 {job.errorMessage || job.error}
               </div>
             </div>
@@ -73,10 +73,10 @@ const JobItem = ({ job }: JobItemProps) => {
               <span
                 class={`px-2 py-1 text-sm font-semibold rounded-lg ${
                   job.status === PipelineJobStatus.COMPLETED
-                    ? "bg-green-100 text-green-800"
+                    ? "bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-200"
                     : job.error
-                      ? "bg-red-100 text-red-800"
-                      : "bg-primary-100 text-primary-800"
+                      ? "bg-red-100 dark:bg-red-900/30 text-red-800 dark:text-red-200"
+                      : "bg-primary-100 dark:bg-primary-900/30 text-primary-800 dark:text-primary-200"
                 }`}
               >
                 {job.status}
@@ -87,7 +87,7 @@ const JobItem = ({ job }: JobItemProps) => {
             {isActiveJob && (
               <button
                 type="button"
-                class="font-medium rounded-lg text-xs p-1 text-center inline-flex items-center transition-colors duration-150 ease-in-out border border-stone-300 bg-white text-red-600 hover:bg-red-50 focus:ring-4 focus:outline-none focus:ring-red-100"
+                class="font-medium rounded-lg text-xs p-1 text-center inline-flex items-center transition-colors duration-150 ease-in-out border border-stone-300 dark:border-stone-600 bg-white dark:bg-stone-700 text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/30 focus:ring-4 focus:outline-none focus:ring-red-100 dark:focus:ring-red-900"
                 title="Stop this job"
                 x-data="{}"
                 x-on:click={`
@@ -152,7 +152,7 @@ const JobItem = ({ job }: JobItemProps) => {
           </div>
           {job.error ? (
             // Keep the error badge for clarity if an error occurred
-            <span class="bg-red-100 text-red-800 text-sm font-semibold px-2 py-1 rounded-lg">
+            <span class="bg-red-100 dark:bg-red-900/30 text-red-800 dark:text-red-200 text-sm font-semibold px-2 py-1 rounded-lg">
               Error
             </span>
           ) : null}

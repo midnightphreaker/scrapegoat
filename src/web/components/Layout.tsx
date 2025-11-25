@@ -44,7 +44,7 @@ const Layout = ({ title, version, children }: LayoutProps) => {
   } })`;
 
   return (
-    <html lang="en">
+    <html lang="en" x-data="darkMode()" x-bind:class="isDark ? 'dark' : ''">
       <head>
         <meta charset="UTF-8" />
         <meta name="viewport" content="width=device-width, initial-scale=1.0" />
@@ -151,17 +151,21 @@ const Layout = ({ title, version, children }: LayoutProps) => {
           form .htmx-indicator .spinner { display: flex; }
           form .htmx-indicator .search-text { display: none; }
           form .spinner { display: none; }
+          /* Smooth transition for width changes */
+          .container {
+            transition: max-width 300ms ease-in-out;
+          }
           `}
         </style>
       </head>
-      <body class="flex min-h-screen flex-col overflow-x-hidden antialiased bg-stone-50">
+      <body class="flex min-h-screen flex-col overflow-x-hidden antialiased bg-stone-50 dark:bg-stone-900" x-data={wideModeData}>
         {/* Full-width header with ScrapeGoat branding */}
         <header
-          class="sticky top-0 z-50 bg-white border-b border-stone-200 shadow-context7-sm"
+          class="sticky top-0 z-50 bg-white dark:bg-stone-800 border-b border-stone-200 dark:border-stone-700 shadow-context7-sm"
           x-data={versionInitializer}
           x-init="queueCheck()"
         >
-          <div class="container max-w-2xl mx-auto px-4 py-4">
+          <div class="container mx-auto px-4 py-4" x-bind:class="$root.getMaxWidth()">
             {/* Large screens: single row layout */}
             <div class="hidden sm:flex items-center justify-between">
               <div class="flex items-center gap-3">
@@ -170,14 +174,14 @@ const Layout = ({ title, version, children }: LayoutProps) => {
                   class="flex items-center gap-3 hover:opacity-90 transition-opacity duration-150"
                 >
                   <Context7Logo className="w-10 h-11" />
-                  <span class="text-2xl font-bold text-stone-800 font-brand">
+                  <span class="text-2xl font-bold text-stone-800 dark:text-stone-100 font-brand">
                     scrapegoat
                   </span>
                 </a>
                 {versionString ? (
                   <span
                     safe
-                    class="text-sm font-normal text-stone-500"
+                    class="text-sm font-normal text-stone-500 dark:text-stone-400"
                     title={`Version ${versionString}`}
                   >
                     v{versionString}
@@ -185,6 +189,90 @@ const Layout = ({ title, version, children }: LayoutProps) => {
                 ) : null}
               </div>
               <div class="flex items-center gap-3">
+                {/* Wide Mode Toggle */}
+                <button
+                  type="button"
+                  x-on:click="$root.toggle()"
+                  class="inline-flex items-center justify-center w-9 h-9 rounded-lg bg-stone-100 dark:bg-stone-700 hover:bg-stone-200 dark:hover:bg-stone-600 transition-all duration-150"
+                  title="Toggle wide mode"
+                  aria-label="Toggle wide mode"
+                >
+                  {/* Expand Icon (visible in normal mode) */}
+                  <svg
+                    x-show="!$root.wide"
+                    class="w-5 h-5 text-stone-600 dark:text-stone-300"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                    xmlns="http://www.w3.org/2000/svg"
+                  >
+                    <path
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                      stroke-width="2"
+                      d="M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 0l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5l-5-5m5 5v-4m0 4h-4"
+                    />
+                  </svg>
+                  {/* Compress Icon (visible in wide mode) */}
+                  <svg
+                    x-show="$root.wide"
+                    class="w-5 h-5 text-stone-600 dark:text-stone-300"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                    xmlns="http://www.w3.org/2000/svg"
+                  >
+                    <path
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                      stroke-width="2"
+                      d="M9 9V4.5M9 9H4.5M9 9L3.75 3.75M9 15v4.5M9 15H4.5M9 15l-5.25 5.25M15 9h4.5M15 9V4.5M15 9l5.25-5.25M15 15h4.5M15 15v4.5m0-4.5l5.25 5.25"
+                    />
+                  </svg>
+                </button>
+
+                {/* Dark Mode Toggle */}
+                <button
+                  type="button"
+                  x-on:click="toggle()"
+                  class="inline-flex items-center justify-center w-9 h-9 rounded-lg bg-stone-100 dark:bg-stone-700 hover:bg-stone-200 dark:hover:bg-stone-600 transition-all duration-150"
+                  title="Toggle dark mode"
+                  aria-label="Toggle dark mode"
+                >
+                  {/* Sun Icon (visible in dark mode) */}
+                  <svg
+                    x-show="isDark"
+                    class="w-5 h-5 text-stone-600 dark:text-stone-300"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                    xmlns="http://www.w3.org/2000/svg"
+                  >
+                    <path
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                      stroke-width="2"
+                      d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z"
+                    />
+                  </svg>
+                  {/* Moon Icon (visible in light mode) */}
+                  <svg
+                    x-show="!isDark"
+                    class="w-5 h-5 text-stone-600 dark:text-stone-300"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                    xmlns="http://www.w3.org/2000/svg"
+                  >
+                    <path
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                      stroke-width="2"
+                      d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z"
+                    />
+                  </svg>
+                </button>
+
                 {/* MCP Status Indicator */}
                 <div x-data="mcpStatus()" x-init="init()">
                   {/* Connected State */}
@@ -236,13 +324,13 @@ const Layout = ({ title, version, children }: LayoutProps) => {
                     class="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50"
                     x-on:click="if ($event.target === $el) closePopup()"
                   >
-                    <div class="bg-white rounded-lg shadow-xl p-6 max-w-2xl w-full mx-4" x-on:click="$event.stopPropagation()">
+                    <div class="bg-white dark:bg-stone-800 rounded-lg shadow-xl p-6 max-w-2xl w-full mx-4" x-on:click="$event.stopPropagation()">
                       <div class="flex items-center justify-between mb-4">
-                        <h3 class="text-lg font-semibold text-stone-800">MCP Server Configuration</h3>
+                        <h3 class="text-lg font-semibold text-stone-800 dark:text-stone-100">MCP Server Configuration</h3>
                         <button
                           type="button"
                           x-on:click="closePopup()"
-                          class="text-stone-400 hover:text-stone-600 transition-colors"
+                          class="text-stone-400 hover:text-stone-600 dark:hover:text-stone-300 transition-colors"
                         >
                           <svg class="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
@@ -250,12 +338,12 @@ const Layout = ({ title, version, children }: LayoutProps) => {
                         </button>
                       </div>
 
-                      <p class="text-sm text-stone-600 mb-4">
+                      <p class="text-sm text-stone-600 dark:text-stone-300 mb-4">
                         Add this configuration to your Claude Desktop settings to connect to the Scrapegoat MCP server:
                       </p>
 
                       <div class="relative">
-                        <pre class="bg-stone-50 border border-stone-200 rounded-lg p-4 overflow-x-auto text-sm font-mono"
+                        <pre class="bg-stone-50 dark:bg-stone-900 border border-stone-200 dark:border-stone-700 text-stone-800 dark:text-stone-200 rounded-lg p-4 overflow-x-auto text-sm font-mono"
                              x-text="configSnippet"></pre>
                         <button
                           type="button"
@@ -266,9 +354,9 @@ const Layout = ({ title, version, children }: LayoutProps) => {
                         </button>
                       </div>
 
-                      <p class="text-xs text-stone-500 mt-4">
+                      <p class="text-xs text-stone-500 dark:text-stone-400 mt-4">
                         Configuration file location:
-                        <code class="bg-stone-100 px-2 py-0.5 rounded">~/Library/Application Support/Claude/claude_desktop_config.json</code>
+                        <code class="bg-stone-100 dark:bg-stone-900 text-stone-800 dark:text-stone-200 px-2 py-0.5 rounded">~/Library/Application Support/Claude/claude_desktop_config.json</code>
                       </p>
                     </div>
                   </div>
@@ -306,14 +394,14 @@ const Layout = ({ title, version, children }: LayoutProps) => {
                   class="flex items-center gap-2 hover:opacity-90 transition-opacity duration-150"
                 >
                   <Context7Logo className="w-8 h-9" />
-                  <span class="text-2xl font-bold text-stone-800 font-brand">
+                  <span class="text-2xl font-bold text-stone-800 dark:text-stone-100 font-brand">
                     scrapegoat
                   </span>
                 </a>
                 {versionString ? (
                   <span
                     safe
-                    class="text-sm font-normal text-stone-500"
+                    class="text-sm font-normal text-stone-500 dark:text-stone-400"
                     title={`Version ${versionString}`}
                   >
                     v{versionString}
@@ -321,8 +409,92 @@ const Layout = ({ title, version, children }: LayoutProps) => {
                 ) : null}
               </div>
 
-              {/* Row 2: MCP Status and Update notification */}
+              {/* Row 2: Wide Mode, Dark Mode Toggle, MCP Status and Update notification */}
               <div class="flex justify-center gap-2 flex-wrap">
+                {/* Wide Mode Toggle */}
+                <button
+                  type="button"
+                  x-on:click="$root.toggle()"
+                  class="inline-flex items-center justify-center w-9 h-9 rounded-lg bg-stone-100 dark:bg-stone-700 hover:bg-stone-200 dark:hover:bg-stone-600 transition-all duration-150"
+                  title="Toggle wide mode"
+                  aria-label="Toggle wide mode"
+                >
+                  {/* Expand Icon (visible in normal mode) */}
+                  <svg
+                    x-show="!$root.wide"
+                    class="w-5 h-5 text-stone-600 dark:text-stone-300"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                    xmlns="http://www.w3.org/2000/svg"
+                  >
+                    <path
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                      stroke-width="2"
+                      d="M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 0l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5l-5-5m5 5v-4m0 4h-4"
+                    />
+                  </svg>
+                  {/* Compress Icon (visible in wide mode) */}
+                  <svg
+                    x-show="$root.wide"
+                    class="w-5 h-5 text-stone-600 dark:text-stone-300"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                    xmlns="http://www.w3.org/2000/svg"
+                  >
+                    <path
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                      stroke-width="2"
+                      d="M9 9V4.5M9 9H4.5M9 9L3.75 3.75M9 15v4.5M9 15H4.5M9 15l-5.25 5.25M15 9h4.5M15 9V4.5M15 9l5.25-5.25M15 15h4.5M15 15v4.5m0-4.5l5.25 5.25"
+                    />
+                  </svg>
+                </button>
+
+                {/* Dark Mode Toggle */}
+                <button
+                  type="button"
+                  x-on:click="toggle()"
+                  class="inline-flex items-center justify-center w-9 h-9 rounded-lg bg-stone-100 dark:bg-stone-700 hover:bg-stone-200 dark:hover:bg-stone-600 transition-all duration-150"
+                  title="Toggle dark mode"
+                  aria-label="Toggle dark mode"
+                >
+                  {/* Sun Icon (visible in dark mode) */}
+                  <svg
+                    x-show="isDark"
+                    class="w-5 h-5 text-stone-600 dark:text-stone-300"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                    xmlns="http://www.w3.org/2000/svg"
+                  >
+                    <path
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                      stroke-width="2"
+                      d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z"
+                    />
+                  </svg>
+                  {/* Moon Icon (visible in light mode) */}
+                  <svg
+                    x-show="!isDark"
+                    class="w-5 h-5 text-stone-600 dark:text-stone-300"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                    xmlns="http://www.w3.org/2000/svg"
+                  >
+                    <path
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                      stroke-width="2"
+                      d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z"
+                    />
+                  </svg>
+                </button>
+
                 {/* MCP Status Indicator */}
                 <div x-data="mcpStatus()" x-init="init()">
                   {/* Connected State */}
@@ -374,13 +546,13 @@ const Layout = ({ title, version, children }: LayoutProps) => {
                     class="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50"
                     x-on:click="if ($event.target === $el) closePopup()"
                   >
-                    <div class="bg-white rounded-lg shadow-xl p-6 max-w-2xl w-full mx-4" x-on:click="$event.stopPropagation()">
+                    <div class="bg-white dark:bg-stone-800 rounded-lg shadow-xl p-6 max-w-2xl w-full mx-4" x-on:click="$event.stopPropagation()">
                       <div class="flex items-center justify-between mb-4">
-                        <h3 class="text-lg font-semibold text-stone-800">MCP Server Configuration</h3>
+                        <h3 class="text-lg font-semibold text-stone-800 dark:text-stone-100">MCP Server Configuration</h3>
                         <button
                           type="button"
                           x-on:click="closePopup()"
-                          class="text-stone-400 hover:text-stone-600 transition-colors"
+                          class="text-stone-400 hover:text-stone-600 dark:hover:text-stone-300 transition-colors"
                         >
                           <svg class="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
@@ -388,12 +560,12 @@ const Layout = ({ title, version, children }: LayoutProps) => {
                         </button>
                       </div>
 
-                      <p class="text-sm text-stone-600 mb-4">
+                      <p class="text-sm text-stone-600 dark:text-stone-300 mb-4">
                         Add this configuration to your Claude Desktop settings to connect to the Scrapegoat MCP server:
                       </p>
 
                       <div class="relative">
-                        <pre class="bg-stone-50 border border-stone-200 rounded-lg p-4 overflow-x-auto text-sm font-mono"
+                        <pre class="bg-stone-50 dark:bg-stone-900 border border-stone-200 dark:border-stone-700 text-stone-800 dark:text-stone-200 rounded-lg p-4 overflow-x-auto text-sm font-mono"
                              x-text="configSnippet"></pre>
                         <button
                           type="button"
@@ -404,9 +576,9 @@ const Layout = ({ title, version, children }: LayoutProps) => {
                         </button>
                       </div>
 
-                      <p class="text-xs text-stone-500 mt-4">
+                      <p class="text-xs text-stone-500 dark:text-stone-400 mt-4">
                         Configuration file location:
-                        <code class="bg-stone-100 px-2 py-0.5 rounded">~/Library/Application Support/Claude/claude_desktop_config.json</code>
+                        <code class="bg-stone-100 dark:bg-stone-900 text-stone-800 dark:text-stone-200 px-2 py-0.5 rounded">~/Library/Application Support/Claude/claude_desktop_config.json</code>
                       </p>
                     </div>
                   </div>
@@ -437,7 +609,7 @@ const Layout = ({ title, version, children }: LayoutProps) => {
           </div>
         </header>
 
-        <main class="flex-1 container max-w-2xl mx-auto px-4 py-6 sm:px-6 lg:px-8">
+        <main class="flex-1 container mx-auto px-4 py-6 sm:px-6 lg:px-8" x-bind:class="getMaxWidth()">
           {children}
         </main>
 

@@ -28,7 +28,7 @@ const Alert = ({ type, title, message }: AlertProps) => {
     case "success":
       defaultTitle = "Success:";
       colorClasses =
-        "text-green-800 border-green-300 bg-green-50";
+        "text-green-800 dark:text-green-200 border-green-300 dark:border-green-700 bg-green-50 dark:bg-green-900/30";
       iconSvg = (
         <svg
           class="flex-shrink-0 inline w-4 h-4 me-3"
@@ -44,7 +44,7 @@ const Alert = ({ type, title, message }: AlertProps) => {
     case "error":
       defaultTitle = "Error:";
       colorClasses =
-        "text-red-800 border-red-300 bg-red-50";
+        "text-red-800 dark:text-red-200 border-red-300 dark:border-red-700 bg-red-50 dark:bg-red-900/30";
       iconSvg = (
         <svg
           class="flex-shrink-0 inline w-4 h-4 me-3"
@@ -60,7 +60,7 @@ const Alert = ({ type, title, message }: AlertProps) => {
     case "warning":
       defaultTitle = "Warning:";
       colorClasses =
-        "text-yellow-800 border-yellow-300 bg-yellow-50";
+        "text-yellow-800 dark:text-yellow-200 border-yellow-300 dark:border-yellow-700 bg-yellow-50 dark:bg-yellow-900/30";
       iconSvg = (
         <svg
           class="flex-shrink-0 inline w-4 h-4 me-3"
@@ -77,7 +77,7 @@ const Alert = ({ type, title, message }: AlertProps) => {
     default: // Default to info style
       defaultTitle = "Info:";
       colorClasses =
-        "text-blue-800 border-blue-300 bg-blue-50";
+        "text-blue-800 dark:text-blue-200 border-blue-300 dark:border-blue-700 bg-blue-50 dark:bg-blue-900/30";
       iconSvg = (
         <svg
           class="flex-shrink-0 inline w-4 h-4 me-3"
