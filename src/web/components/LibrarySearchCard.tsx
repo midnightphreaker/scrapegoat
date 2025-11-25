@@ -15,8 +15,8 @@ interface LibrarySearchCardProps {
  */
 const LibrarySearchCard = ({ library }: LibrarySearchCardProps) => {
   return (
-    <div class="block p-4 bg-white rounded-lg shadow-context7-md border border-stone-200 mb-4">
-      <h2 class="text-xl font-semibold mb-2 text-stone-800" safe>
+    <div class="block p-4 bg-white dark:bg-stone-800 rounded-lg shadow-context7-md border border-stone-200 dark:border-stone-700 mb-4">
+      <h2 class="text-xl font-semibold mb-2 text-stone-800 dark:text-stone-100" safe>
         Search {library.name} Documentation
       </h2>
       <form
@@ -28,7 +28,7 @@ const LibrarySearchCard = ({ library }: LibrarySearchCardProps) => {
       >
         <select
           name="version"
-          class="w-40 bg-white border border-stone-300 text-stone-800 text-sm rounded-lg focus:ring-primary-600 focus:border-primary-600 block p-2.5 transition-colors duration-150"
+          class="w-40 bg-white dark:bg-stone-700 border border-stone-300 dark:border-stone-600 text-stone-800 dark:text-stone-100 text-sm rounded-lg focus:ring-primary-600 focus:border-primary-600 block p-2.5 transition-colors duration-150"
         >
           <option value="">Latest</option> {/* Default to latest */}
           {library.versions.map((version) => (
@@ -42,7 +42,7 @@ const LibrarySearchCard = ({ library }: LibrarySearchCardProps) => {
           name="query"
           placeholder="Search query..."
           required
-          class="flex-grow bg-white border border-stone-300 text-stone-800 text-sm rounded-lg focus:ring-primary-600 focus:border-primary-600 block p-2.5 transition-colors duration-150"
+          class="flex-grow bg-white dark:bg-stone-700 border border-stone-300 dark:border-stone-600 text-stone-800 dark:text-stone-100 placeholder:text-stone-400 dark:placeholder:text-stone-500 text-sm rounded-lg focus:ring-primary-600 focus:border-primary-600 block p-2.5 transition-colors duration-150"
         />
         <button
           type="submit"

@@ -198,6 +198,39 @@ document.addEventListener("alpine:init", () => {
       // Could add toast notification here
     },
   }));
+
+  Alpine.data("darkMode", () => ({
+    isDark: false,
+
+    init() {
+      // Check localStorage for saved preference
+      const savedTheme = localStorage.getItem("theme");
+      if (savedTheme === "dark") {
+        this.isDark = true;
+      } else if (savedTheme === "light") {
+        this.isDark = false;
+      } else {
+        // Default to system preference if no saved preference
+        this.isDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
+      }
+
+      // Watch for system theme changes
+      window
+        .matchMedia("(prefers-color-scheme: dark)")
+        .addEventListener("change", (e) => {
+          // Only auto-switch if user hasn't set a preference
+          if (!localStorage.getItem("theme")) {
+            this.isDark = e.matches;
+          }
+        });
+    },
+
+    toggle() {
+      this.isDark = !this.isDark;
+      // Save preference to localStorage
+      localStorage.setItem("theme", this.isDark ? "dark" : "light");
+    },
+  }));
 });
 
 // Ensure Alpine global store for confirmation actions is initialized before Alpine components render
