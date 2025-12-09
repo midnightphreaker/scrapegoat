@@ -28,7 +28,7 @@ const FetcherSelector = ({ name = "fetcher", defaultValue = "auto" }: FetcherSel
       <select
         name={name}
         id={name}
-        class="block w-full px-3 py-2 text-sm border border-stone-200 rounded-xl shadow-sm focus:outline-none focus:ring-2 focus:ring-primary-600 focus:border-primary-600 bg-white text-stone-800 transition-colors duration-150"
+        class="block w-full px-3 py-2 text-sm border border-stone-200 dark:border-stone-600 rounded-xl shadow-sm focus:outline-none focus:ring-2 focus:ring-primary-600 focus:border-primary-600 bg-white dark:bg-stone-700 text-stone-800 dark:text-stone-100 transition-colors duration-150"
         x-model="fetcher"
         x-on:change="updateFetcherHelp()"
       >
@@ -43,7 +43,7 @@ const FetcherSelector = ({ name = "fetcher", defaultValue = "auto" }: FetcherSel
         </option>
       </select>
       <p
-        class="mt-2 text-sm text-stone-500"
+        class="mt-2 text-sm text-stone-500 dark:text-stone-400"
         x-text="fetcherHelp"
         x-show="fetcherHelp"
       />
