@@ -124,6 +124,7 @@ export class EmbeddingConfig {
     "BAAI/bge-m3": 1024,
     "HIT-TMG/KaLM-embedding-multilingual-mini-v1": 896,
     "jinaai/jina-embeddings-v3": 1024,
+    "Jina-Embedding-v3": 1024, // embed.den.lan model name
     "Alibaba-NLP/gte-multilingual-base": 768,
     "Lajavaness/bilingual-embedding-base": 768,
     "HIT-TMG/KaLM-embedding-multilingual-mini-instruct-v1": 896,
