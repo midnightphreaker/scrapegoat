@@ -14,14 +14,14 @@ export function registerIndexRoute(server: FastifyInstance) {
       (
         <Layout title="ScrapeGoat">
           {/* Job Queue Section */}
-          <section class="mb-6 p-6 bg-white rounded-lg shadow-sm border border-gray-200">
+          <section class="mb-6 p-6 bg-white dark:bg-stone-800 rounded-lg shadow-sm border border-gray-200 dark:border-stone-700">
             <div class="flex items-center justify-between mb-4">
-              <h2 class="text-xl font-semibold text-gray-800">
+              <h2 class="text-xl font-semibold text-gray-800 dark:text-stone-100">
                 Job Queue
               </h2>
               <button
                 type="button"
-                class="text-sm px-4 py-2 text-gray-800 bg-stone-50 border border-gray-200 rounded-lg hover:bg-stone-100 focus:ring-2 focus:outline-none focus:ring-primary-600 transition-colors duration-150 font-medium"
+                class="text-sm px-4 py-2 text-gray-800 dark:text-stone-100 bg-stone-50 dark:bg-stone-700 border border-gray-200 dark:border-stone-600 rounded-lg hover:bg-stone-100 dark:hover:bg-stone-600 focus:ring-2 focus:outline-none focus:ring-primary-600 transition-colors duration-150 font-medium"
                 title="Clear all completed, cancelled, and failed jobs"
                 hx-post="/web/jobs/clear-completed"
                 hx-trigger="click"
