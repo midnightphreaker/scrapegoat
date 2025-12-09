@@ -10,6 +10,7 @@ import {
   SEARCH_OVERFETCH_FACTOR,
   SEARCH_WEIGHT_FTS,
   SEARCH_WEIGHT_VEC,
+  VECTOR_DIMENSION,
   VECTOR_SEARCH_MULTIPLIER,
 } from "../utils/config";
 import { logger } from "../utils/logger";
@@ -33,7 +34,6 @@ import {
   denormalizeVersionName,
   mapDbDocumentToDocument,
   normalizeVersionName,
-  VECTOR_DIMENSION,
   type VersionScraperOptions,
   type VersionStatus,
 } from "./types";

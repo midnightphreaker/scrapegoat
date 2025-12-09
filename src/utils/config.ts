@@ -94,6 +94,17 @@ export const SEARCH_WEIGHT_FTS = 1.0;
 export const VECTOR_SEARCH_MULTIPLIER = 10;
 
 /**
+ * Vector dimension for embeddings storage in the database.
+ * This must match the output dimension of your embedding model.
+ * Set via VECTOR_DIMENSION environment variable.
+ * Default: 1024 (matches common models like text-embedding-3-small with 1024 dimensions)
+ */
+export const VECTOR_DIMENSION = Number.parseInt(
+  process.env.VECTOR_DIMENSION || "1024",
+  10,
+);
+
+/**
  * Crawl4AI service base URL.
  * Set via CRAWL4AI_SERVICE_URL environment variable.
  */

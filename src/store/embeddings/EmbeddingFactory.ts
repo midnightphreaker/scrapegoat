@@ -8,8 +8,8 @@ import {
   OpenAIEmbeddings,
   type OpenAIEmbeddingsParams,
 } from "@langchain/openai";
+import { VECTOR_DIMENSION } from "../../utils/config";
 import { MissingCredentialsError } from "../errors";
-import { VECTOR_DIMENSION } from "../types";
 import { FixedDimensionEmbeddings } from "./FixedDimensionEmbeddings";
 
 /**
