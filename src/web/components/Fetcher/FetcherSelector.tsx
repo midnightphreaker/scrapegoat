@@ -19,7 +19,7 @@ const FetcherSelector = ({ name = "fetcher", defaultValue = "auto" }: FetcherSel
       <div class="flex items-center mb-2">
         <label
           for={name}
-          class="block text-sm font-medium text-stone-800"
+          class="block text-sm font-medium text-stone-800 dark:text-stone-100"
         >
           Content Fetcher
         </label>
