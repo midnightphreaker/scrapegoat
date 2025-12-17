@@ -38,7 +38,7 @@ Scrapegoat enables AI assistants to search, retrieve, and index web documentatio
 
 ```bash
 # Clone repository
-git clone https://github.com/yourusername/scrapegoat.git
+git clone <repository-url>
 cd scrapegoat
 
 # Install dependencies
@@ -58,7 +58,7 @@ npm run build
 npm start
 ```
 
-For detailed installation instructions, see [INSTALL.md](INSTALL.md).
+For detailed installation and deployment instructions, see [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md).
 
 ## Architecture
 
@@ -192,7 +192,7 @@ See [docs/NGINX.md](docs/NGINX.md) for complete nginx configuration.
 
 ## Documentation
 
-- [INSTALL.md](INSTALL.md) - Detailed installation guide
+- [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md) - Installation and deployment guide
 - [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) - System architecture and design
 - [docs/NGINX.md](docs/NGINX.md) - Reverse proxy configuration
 - [docs/TROUBLESHOOTING.md](docs/TROUBLESHOOTING.md) - Common issues and solutions
@@ -245,9 +245,8 @@ MIT License - see [LICENSE](LICENSE) for details.
 
 ## Support
 
-- **Issues**: [GitHub Issues](https://github.com/yourusername/scrapegoat/issues)
-- **Discussions**: [GitHub Discussions](https://github.com/yourusername/scrapegoat/discussions)
 - **Documentation**: [docs/](docs/)
+- **Issues**: Please check the [docs/TROUBLESHOOTING.md](docs/TROUBLESHOOTING.md) guide first
 
 ## Acknowledgments
 
