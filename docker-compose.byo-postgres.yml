@@ -112,7 +112,7 @@ services:
         "--host",
         "0.0.0.0",
         "--port",
-        "80",
+        "${WEB_PORT:-6821}",
         "--server-url",
         "http://localhost:8080/api",
       ]
@@ -122,7 +122,7 @@ services:
     env_file:
       - .env
     environment:
-      - PORT=80
+      - PORT=${WEB_PORT:-6821}
       - HOST=0.0.0.0
     depends_on:
       worker:
