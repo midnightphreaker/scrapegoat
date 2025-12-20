@@ -352,12 +352,23 @@ export class SemanticMarkdownSplitter implements DocumentSplitter {
               ],
             });
 
-            const chunks = await splitter.splitText(content.text);
-            if (chunks.length === 0) {
-              // If still no chunks, use the most extreme approach: just truncate
+            try {
+              const chunks = await splitter.splitText(content.text);
+              if (chunks.length === 0) {
+                // If still no chunks, use the most extreme approach: just truncate
+                logger.warn(
+                  `⚠ RecursiveCharacterTextSplitter returned no chunks for ${content.type}, truncating to ${this.maxChunkSize} bytes`,
+                );
+                splitContent = [content.text.substring(0, this.maxChunkSize)];
+              } else {
+                splitContent = chunks;
+              }
+            } catch (recursiveErr) {
+              // RecursiveCharacterTextSplitter also failed - last resort: truncate
+              logger.warn(
+                `⚠ RecursiveCharacterTextSplitter failed for ${content.type}, truncating to ${this.maxChunkSize} bytes: ${recursiveErr instanceof Error ? recursiveErr.message : String(recursiveErr)}`,
+              );
               splitContent = [content.text.substring(0, this.maxChunkSize)];
-            } else {
-              splitContent = chunks;
             }
           } else {
             // Convert other error message to string, handling non-Error objects
