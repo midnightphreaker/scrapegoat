@@ -137,6 +137,7 @@ export function createEmbeddingModel(providerAndModel: string): Embeddings {
           ...baseConfig,
           modelName: model,
           batchSize: 512, // OpenAI supports large batches
+          dimensions: VECTOR_DIMENSION, // Force dimension for Matryoshka models (e.g., qwen3-embedding)
         };
       // Add custom base URL if specified
       const baseURL = process.env.OPENAI_API_BASE;
