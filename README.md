@@ -21,6 +21,9 @@ Scrapegoat enables AI assistants to search, retrieve, and index web documentatio
 - **Link Extraction**: Comprehensive link discovery from Markdown and HTML ✨
 - **Three-Service Architecture**: Specialized services for MCP, Web UI, and background processing
 - **Web Interface**: Easy-to-use web UI for searching and managing documentation
+- **Accessibility**: WCAG AA/AAA compliant color contrast, keyboard navigation, ARIA labels ✨
+- **Performance**: Memory leak prevention, performance budgeting, skeleton loading screens ✨
+- **Type Safety**: Comprehensive type guards and discriminated unions for runtime type checking ✨
 
 ✨ _New in latest release_
 
@@ -194,6 +197,7 @@ See [docs/NGINX.md](docs/NGINX.md) for complete nginx configuration.
 
 - [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md) - Installation and deployment guide
 - [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) - System architecture and design
+- [docs/RATE_LIMITING.md](docs/RATE_LIMITING.md) - Rate limiting configuration and tuning
 - [docs/NGINX.md](docs/NGINX.md) - Reverse proxy configuration
 - [docs/TROUBLESHOOTING.md](docs/TROUBLESHOOTING.md) - Common issues and solutions
 - [docs/CONTRIBUTING.md](docs/CONTRIBUTING.md) - Development and contribution guide
