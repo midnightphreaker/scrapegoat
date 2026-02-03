@@ -24,6 +24,13 @@ interface GithubReleaseResponse {
   html_url?: unknown;
 }
 
+/**
+ * Detail payload for version list refresh events.
+ */
+interface VersionListRefreshDetail {
+  library: string;
+}
+
 document.addEventListener("alpine:init", () => {
   Alpine.data("versionUpdate", (config: VersionUpdateConfig) => ({
     currentVersion:
@@ -138,11 +145,11 @@ document.addEventListener("alpine:init", () => {
           this.status = "connected";
           this.displayText = "Server Available (click for details)";
         } else {
-          this.status = "disconnected";
+          this.status = "down";
           this.displayText = "Server Not Available (check config)";
         }
       } catch (error) {
-        this.status = "disconnected";
+        this.status = "down";
         this.displayText = "Server Not Available (check config)";
       }
     },
@@ -338,26 +345,24 @@ document.addEventListener("visibilitychange", () => {
 
 // Add a global event listener for 'version-list-refresh' that reloads the version list container using HTMX
 document.addEventListener("version-list-refresh", (event: Event) => {
-  const customEvent = event as CustomEvent<{ library: string }>;
-  const library = customEvent.detail?.library;
-  if (library) {
-    htmx.ajax(
-      "get",
-      `/web/libraries/${encodeURIComponent(library)}/versions`,
-      "#version-list",
-    );
-  }
+  const customEvent = event as CustomEvent<VersionListRefreshDetail>;
+  const library = customEvent.detail.library;
+  htmx.ajax(
+    "get",
+    `/web/libraries/${encodeURIComponent(library)}/versions`,
+    "#version-list",
+  );
 });
 
 // Listen for htmx swaps after a version delete and dispatch version-list-refresh with payload
-document.body.addEventListener("htmx:afterSwap", (event) => {
+document.body.addEventListener("htmx:afterSwap", (event: Event) => {
   // Always re-initialize AlpineJS for swapped-in DOM to fix $store errors
   if (event.target instanceof HTMLElement) {
     Alpine.initTree(event.target);
   }
 
   // Existing logic for version delete refresh
-  const detail = (event as CustomEvent).detail;
+  const detail = (event as CustomEvent<Record<string, unknown>>).detail;
   if (
     detail?.xhr?.status === 204 &&
     detail?.requestConfig?.verb === "delete" &&
