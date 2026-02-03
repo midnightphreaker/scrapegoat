@@ -14,7 +14,7 @@ import { ListJobsTool } from "../tools/ListJobsTool";
 import { ListLibrariesTool } from "../tools/ListLibrariesTool";
 import { RemoveTool } from "../tools/RemoveTool";
 import { ScrapeTool } from "../tools/ScrapeTool";
-import { appConfig, validateConfig } from "../utils/config";
+import { appConfig, DEFAULT_HTTP_PORT, validateConfig } from "../utils/config";
 import { logger } from "../utils/logger";
 import { getProjectRoot } from "../utils/paths";
 import { registerIndexRoute } from "./routes/index";
@@ -145,7 +145,7 @@ export async function startWebServer(
     try {
       // Read MCP configuration from environment variables
       // MCP_PORT is set by the container/orchestration and indicates where MCP server is running
-      const mcpPort = process.env.MCP_PORT ? Number.parseInt(process.env.MCP_PORT, 10) : 6280;
+      const mcpPort = process.env.MCP_PORT ? Number.parseInt(process.env.MCP_PORT, 10) : DEFAULT_HTTP_PORT;
       const mcpHost = process.env.MCP_HOST || "localhost";
       const mcpUrl = `http://${mcpHost}:${mcpPort}`;
 
@@ -330,7 +330,7 @@ export async function startWebServer(
       const validation = validateConfig(appConfig);
 
       // Read MCP configuration from environment variables
-      const mcpPort = process.env.MCP_PORT ? Number.parseInt(process.env.MCP_PORT, 10) : 6280;
+      const mcpPort = process.env.MCP_PORT ? Number.parseInt(process.env.MCP_PORT, 10) : DEFAULT_HTTP_PORT;
       const mcpHost = process.env.MCP_HOST || "localhost";
       const mcpUrl = `http://${mcpHost}:${mcpPort}`;
 
