@@ -1,11 +1,11 @@
 #!/bin/bash
-# Deployment script for qwen3-embedding dimension fix
+# Deployment script for qwen3-vl-embedding dimension fix
 # Run this on docs.den.lan as: bash deploy-dimension-fix.sh
 
 set -e
 
 echo "======================================"
-echo "Deploying qwen3-embedding dimension fix"
+echo "Deploying qwen3-vl-embedding dimension fix"
 echo "======================================"
 
 # Navigate to scrapegoat directory
@@ -16,9 +16,9 @@ echo "1. Pulling latest code changes..."
 git pull
 
 echo ""
-echo "2. Updating .env to use qwen3-embedding..."
-# Update DOCS_MCP_EMBEDDING_MODEL to qwen3-embedding
-sed -i 's/^DOCS_MCP_EMBEDDING_MODEL=.*/DOCS_MCP_EMBEDDING_MODEL=qwen3-embedding/' .env
+echo "2. Updating .env to use qwen3-vl-embedding..."
+# Update DOCS_MCP_EMBEDDING_MODEL to qwen3-vl-embedding
+sed -i 's/^DOCS_MCP_EMBEDDING_MODEL=.*/DOCS_MCP_EMBEDDING_MODEL=qwen3-vl-embedding/' .env
 
 # Verify the change
 echo "   Current embedding model configuration:"

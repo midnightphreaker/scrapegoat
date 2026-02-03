@@ -132,7 +132,7 @@ export function createEmbeddingModel(providerAndModel: string): Embeddings {
       if (!process.env.OPENAI_API_KEY) {
         throw new MissingCredentialsError("openai", ["OPENAI_API_KEY"]);
       }
-      // Use smaller batch size for self-hosted models (e.g., qwen3-embedding)
+      // Use smaller batch size for self-hosted models (e.g., qwen3-vl-embedding)
       // Custom base URLs indicate self-hosted models with lower batch size limits
       const baseURL = process.env.OPENAI_API_BASE;
       const batchSize = baseURL ? 32 : 512; // 32 for self-hosted, 512 for OpenAI
@@ -142,7 +142,7 @@ export function createEmbeddingModel(providerAndModel: string): Embeddings {
           ...baseConfig,
           modelName: model,
           batchSize, // Adjusted based on whether using self-hosted model
-          dimensions: VECTOR_DIMENSION, // Force dimension for Matryoshka models (e.g., qwen3-embedding)
+          dimensions: VECTOR_DIMENSION, // Force dimension for Matryoshka models (e.g., qwen3-vl-embedding)
         };
       // Add custom base URL if specified
       if (baseURL) {

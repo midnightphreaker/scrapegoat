@@ -105,6 +105,7 @@ export class EmbeddingConfig {
     "Qwen/Qwen3-Embedding-8B": 4096,
     "Qwen/Qwen3-Embedding-4B": 2560,
     "Qwen/Qwen3-Embedding-0.6B": 1024,
+    "qwen3-vl-embedding": 1024,
     "Linq-AI-Research/Linq-Embed-Mistral": 4096,
     "Alibaba-NLP/gte-Qwen2-7B-instruct": 3584,
     "intfloat/multilingual-e5-large-instruct": 1024,

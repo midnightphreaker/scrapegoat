@@ -18,6 +18,10 @@ RUN apt-get update \
 # Copy package files
 COPY package*.json ./
 
+# Force-refresh baseline-browser-mapping (avoids stale Baseline dataset warnings)
+RUN npm pkg delete overrides.baseline-browser-mapping >/dev/null 2>&1 || true
+RUN npm i -D baseline-browser-mapping@latest --package-lock-only --legacy-peer-deps
+
 # Install all dependencies (including dev dependencies for building)
 # Using --legacy-peer-deps to resolve @langchain dependency conflicts
 RUN npm ci --legacy-peer-deps

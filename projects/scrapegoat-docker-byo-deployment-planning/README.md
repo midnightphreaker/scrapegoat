@@ -127,7 +127,7 @@ Crawl4AI: 8001 (optional)
 ### Identified Risks
 1. **Port Conflicts**: Verify no services running on required ports
 2. **Database Connectivity**: Test connection before deployment
-3. **Docker Image Availability**: Verify ghcr.io/denmaster/scrapegoat:latest is accessible
+3. **Docker Image Availability**: Verify gitlab.fenrirsden.org/pub/scrapegoat:latest is accessible
 4. **Service Startup Order**: Docker Compose handles with depends_on and health checks
 
 ### Mitigation Strategies

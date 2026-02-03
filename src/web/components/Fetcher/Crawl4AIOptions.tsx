@@ -7,7 +7,7 @@ import Tooltip from "../Tooltip";
  * - Screenshot capture (viewport or fullpage)
  * - Media extraction (images, videos, audio)
  * - Link extraction
- * - Advanced settings (waitFor, waitForTimeout, customJs, cacheMode, headers)
+ * - Advanced settings (waitFor, waitForTimeout, customJs, cacheMode, headers, stealthMode)
  */
 const Crawl4AIOptions = () => {
   return (
@@ -215,6 +215,28 @@ const Crawl4AIOptions = () => {
               placeholder='{"Authorization": "Bearer token"}'
               class="block w-full max-w-md px-3 py-2 border border-stone-200 dark:border-stone-600 rounded-xl shadow-sm focus:outline-none focus:ring-2 focus:ring-primary-600 focus:border-primary-600 text-sm bg-white dark:bg-stone-700 text-stone-800 dark:text-stone-100 dark:placeholder-stone-400 font-mono transition-colors duration-150"
             ></textarea>
+          </div>
+
+          {/* Stealth Mode */}
+          <div>
+            <div class="flex items-center mb-2">
+              <label
+                for="crawl4ai_stealthMode"
+                class="block text-sm font-medium text-stone-800 dark:text-stone-100"
+              >
+                Stealth Mode
+              </label>
+              <Tooltip text="Helps avoid bot detection. 'Disabled' is fastest, 'Advanced' provides best anti-detection." />
+            </div>
+            <select
+              name="crawl4ai_stealthMode"
+              id="crawl4ai_stealthMode"
+              class="block w-full max-w-xs px-3 py-2 border border-stone-200 dark:border-stone-600 rounded-xl shadow-sm focus:outline-none focus:ring-2 focus:ring-primary-600 focus:border-primary-600 text-sm bg-white dark:bg-stone-700 text-stone-800 dark:text-stone-100 transition-colors duration-150"
+            >
+              <option value="disabled" selected>Disabled (fastest)</option>
+              <option value="basic">Basic (minimal anti-detection)</option>
+              <option value="advanced">Advanced (full anti-detection)</option>
+            </select>
           </div>
         </div>
       </details>

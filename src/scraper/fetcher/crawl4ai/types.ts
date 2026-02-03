@@ -37,6 +37,7 @@ export interface Crawl4AIConfig {
   extractMedia?: boolean;
   customJs?: string;
   proxy?: ProxyConfig;
+  stealthMode?: 'disabled' | 'basic' | 'advanced';
 }
 
 /**

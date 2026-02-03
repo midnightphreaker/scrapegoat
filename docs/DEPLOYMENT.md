@@ -251,7 +251,7 @@ services:
       retries: 5
 
   scrapegoat:
-    image: ghcr.io/denmaster/scrapegoat:latest
+    image: gitlab.fenrirsden.org/pub/scrapegoat:latest
     restart: unless-stopped
     depends_on:
       postgres:
@@ -1193,7 +1193,7 @@ npm run build
 pm2 start scrapegoat
 
 # Using Docker
-docker pull ghcr.io/denmaster/scrapegoat:previous-tag
+docker pull gitlab.fenrirsden.org/pub/scrapegoat:previous-tag
 docker compose up -d scrapegoat
 ```
 

@@ -122,7 +122,7 @@ Job recovery behavior depends on deployment mode:
 ### Single Container
 
 ```dockerfile
-FROM ghcr.io/denmaster/scrapegoat:latest
+FROM gitlab.fenrirsden.org/pub/scrapegoat:latest
 EXPOSE 6280
 CMD ["--protocol", "http", "--port", "6280"]
 ```
@@ -132,12 +132,12 @@ CMD ["--protocol", "http", "--port", "6280"]
 ```yaml
 services:
   coordinator:
-    image: ghcr.io/denmaster/scrapegoat:latest
+    image: gitlab.fenrirsden.org/pub/scrapegoat:latest
     ports: ["6280:6280"]
   command: ["mcp", "--server-url", "http://worker:8080/api"]
 
   worker:
-    image: ghcr.io/denmaster/scrapegoat:latest
+    image: gitlab.fenrirsden.org/pub/scrapegoat:latest
     ports: ["8080:8080"]
     command: ["worker", "--port", "8080"]
 ```

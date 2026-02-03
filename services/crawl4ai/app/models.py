@@ -37,6 +37,7 @@ class CrawlConfig(BaseModel):
     screenshot: Optional[Literal[False, True, "full", "viewport"]] = Field(default=False)
     extract_media: bool = Field(default=False)
     custom_js: Optional[str] = Field(default=None)
+    stealth_mode: Optional[str] = Field(default=None, description="Stealth mode for anti-detection (disabled, basic, advanced)")
     proxy: Optional[ProxyConfig] = None
 
     @field_validator('wait_for_timeout')
