@@ -209,10 +209,10 @@ const Layout = ({ title, version, children }: LayoutProps) => {
                     <span class="text-sm font-medium text-emerald-700" x-text="`MCP: ${displayText}`"></span>
                   </button>
 
-                  {/* Disconnected State */}
+                  {/* Server Down State */}
                   <button
                     type="button"
-                    x-show="status === 'disconnected'"
+                    x-show="status === 'down'"
                     x-on:click="handleClick()"
                     x-cloak
                     class="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-red-50 border border-red-200 hover:bg-red-100 transition-all duration-150 cursor-pointer"
@@ -350,10 +350,10 @@ const Layout = ({ title, version, children }: LayoutProps) => {
                     <span class="text-sm font-medium text-emerald-700" x-text="`MCP: ${displayText}`"></span>
                   </button>
 
-                  {/* Disconnected State */}
+                  {/* Server Down State */}
                   <button
                     type="button"
-                    x-show="status === 'disconnected'"
+                    x-show="status === 'down'"
                     x-on:click="handleClick()"
                     x-cloak
                     class="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-red-50 border border-red-200 hover:bg-red-100 transition-all duration-150 cursor-pointer"
