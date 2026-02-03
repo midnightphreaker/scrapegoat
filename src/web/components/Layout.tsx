@@ -222,7 +222,7 @@ const Layout = ({ title, version, children }: LayoutProps) => {
                       <span class="animate-pulse absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
                       <span class="relative inline-flex rounded-full h-2.5 w-2.5 bg-red-600"></span>
                     </span>
-                    <span class="text-sm font-medium text-red-700">MCP: Disconnected</span>
+                    <span class="text-sm font-medium text-red-700" x-text="`MCP: ${displayText}`"></span>
                   </button>
 
                   {/* Checking State */}
@@ -363,7 +363,7 @@ const Layout = ({ title, version, children }: LayoutProps) => {
                       <span class="animate-pulse absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
                       <span class="relative inline-flex rounded-full h-2.5 w-2.5 bg-red-600"></span>
                     </span>
-                    <span class="text-sm font-medium text-red-700">MCP: Disconnected</span>
+                    <span class="text-sm font-medium text-red-700" x-text="`MCP: ${displayText}`"></span>
                   </button>
 
                   {/* Checking State */}
