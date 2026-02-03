@@ -8,6 +8,7 @@ import type { PropsWithChildren } from "@kitajs/html";
 import { readFileSync } from "node:fs";
 import { logger } from "../../utils/logger";
 import Context7Logo from "./Context7Logo";
+import { MobileNav } from "./MobileNav";
 
 /**
  * Props for the Layout component.
@@ -16,14 +17,16 @@ interface LayoutProps extends PropsWithChildren {
   title: string;
   /** Optional version string to display next to the title. */
   version?: string;
+  /** Current path for navigation highlighting */
+  currentPath?: string;
 }
 
 /**
  * Base HTML layout component for all pages.
  * Includes common head elements, header, and scripts.
- * @param props - Component props including title, version, and children.
+ * @param props - Component props including title, version, currentPath, and children.
  */
-const Layout = ({ title, version, children }: LayoutProps) => {
+const Layout = ({ title, version, currentPath = "", children }: LayoutProps) => {
   let versionString = version;
   if (!versionString) {
     // If no version is provided, use the version from package.json
@@ -164,6 +167,7 @@ const Layout = ({ title, version, children }: LayoutProps) => {
           class="sticky top-0 z-50 bg-white dark:bg-stone-800 border-b border-stone-200 dark:border-stone-700 shadow-context7-sm"
           x-data={versionInitializer}
           x-init="queueCheck()"
+          x-on:unmount="$dispatch('cleanup')"
         >
           <div class="container mx-auto px-4 py-4" x-bind:class="$root.getMaxWidth()">
             {/* Large screens: single row layout */}
@@ -193,7 +197,7 @@ const Layout = ({ title, version, children }: LayoutProps) => {
                 {/* Wide Mode Toggle - REMOVED (not working) */}
 
                 {/* MCP Status Indicator */}
-                <div x-data="mcpStatus()" x-init="init()">
+                <div x-data="mcpStatus()" x-init="init()" x-on:unmount="$dispatch('cleanup')">
                   {/* Connected State */}
                   <button
                     type="button"
@@ -258,7 +262,7 @@ const Layout = ({ title, version, children }: LayoutProps) => {
                       </div>
 
                       <p class="text-sm text-stone-600 dark:text-stone-300 mb-4">
-                        Add this configuration to your Claude Desktop settings to connect to the Scrapegoat MCP server:
+                        Add this configuration to your Claude Code settings to connect to the Scrapegoat MCP server:
                       </p>
 
                       <div class="relative">
@@ -275,7 +279,7 @@ const Layout = ({ title, version, children }: LayoutProps) => {
 
                       <p class="text-xs text-stone-500 dark:text-stone-400 mt-4">
                         Configuration file location:
-                        <code class="bg-stone-100 dark:bg-stone-900 text-stone-800 dark:text-stone-200 px-2 py-0.5 rounded">~/claude/settings.json</code>
+                        <code class="bg-stone-100 dark:bg-stone-900 text-stone-800 dark:text-stone-200 px-2 py-0.5 rounded">~/.claude/settings.json</code>
                       </p>
                     </div>
                   </div>
@@ -304,144 +308,31 @@ const Layout = ({ title, version, children }: LayoutProps) => {
               </div>
             </div>
 
-            {/* Small screens: stacked layout */}
-            <div class="sm:hidden space-y-2">
-              {/* Row 1: scrapegoat branding */}
-              <div class="flex items-center justify-center gap-2">
+            {/* Small screens: stacked layout with mobile nav */}
+            <div class="sm:hidden">
+              {/* Row 1: scrapegoat branding with mobile menu button */}
+              <div class="flex items-center justify-between gap-2">
                 <a
                   href="/"
                   class="flex items-center gap-2 hover:opacity-90 transition-opacity duration-150"
                 >
                   <Context7Logo className="w-8 h-9" />
-                  <span class="text-2xl font-bold text-stone-800 dark:text-stone-100 font-brand">
+                  <span class="text-xl font-bold text-stone-800 dark:text-stone-100 font-brand">
                     scrapegoat
                   </span>
+                  {versionString ? (
+                    <span
+                      safe
+                      class="text-xs font-normal text-stone-500 dark:text-stone-400"
+                      title={`Version ${versionString}`}
+                    >
+                      v{versionString}
+                    </span>
+                  ) : null}
                 </a>
-                {versionString ? (
-                  <span
-                    safe
-                    class="text-sm font-normal text-stone-500 dark:text-stone-400"
-                    title={`Version ${versionString}`}
-                  >
-                    v{versionString}
-                  </span>
-                ) : null}
-              </div>
 
-              {/* Row 2: MCP Status and Update notification */}
-              <div class="flex justify-center gap-2 flex-wrap">
-                {/* Wide Mode Toggle - REMOVED (not working) */}
-                {/* Dark Mode Toggle - REMOVED (not working) */}
-
-                {/* MCP Status Indicator */}
-                <div x-data="mcpStatus()" x-init="init()">
-                  {/* Connected State */}
-                  <button
-                    type="button"
-                    x-show="status === 'connected'"
-                    x-on:click="handleClick()"
-                    class="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-emerald-50 border border-emerald-200 hover:bg-emerald-100 transition-all duration-150 cursor-pointer"
-                    title="Click to view MCP configuration"
-                  >
-                    <span class="relative flex h-2.5 w-2.5">
-                      <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
-                      <span class="relative inline-flex rounded-full h-2.5 w-2.5 bg-emerald-600"></span>
-                    </span>
-                    <span class="text-sm font-medium text-emerald-700" x-text="`MCP: ${displayText}`"></span>
-                  </button>
-
-                  {/* Server Down State */}
-                  <button
-                    type="button"
-                    x-show="status === 'down'"
-                    x-on:click="handleClick()"
-                    x-cloak
-                    class="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-red-50 border border-red-200 hover:bg-red-100 transition-all duration-150 cursor-pointer"
-                    title="Click to retry connection"
-                  >
-                    <span class="relative flex h-2.5 w-2.5">
-                      <span class="animate-pulse absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
-                      <span class="relative inline-flex rounded-full h-2.5 w-2.5 bg-red-600"></span>
-                    </span>
-                    <span class="text-sm font-medium text-red-700" x-text="`MCP: ${displayText}`"></span>
-                  </button>
-
-                  {/* Checking State */}
-                  <div
-                    x-show="status === 'checking'"
-                    class="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-stone-50 border border-stone-200"
-                  >
-                    <span class="relative flex h-2.5 w-2.5">
-                      <span class="animate-pulse inline-flex h-2.5 w-2.5 rounded-full bg-stone-400"></span>
-                    </span>
-                    <span class="text-sm font-medium text-stone-700" x-text="`MCP: ${displayText}`"></span>
-                  </div>
-
-                  {/* Configuration Popup Modal */}
-                  <div
-                    x-show="showPopup"
-                    x-cloak
-                    class="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50"
-                    x-on:click="if ($event.target === $el) closePopup()"
-                  >
-                    <div class="bg-white dark:bg-stone-800 rounded-lg shadow-xl p-6 max-w-2xl w-full mx-4" x-on:click="$event.stopPropagation()">
-                      <div class="flex items-center justify-between mb-4">
-                        <h3 class="text-lg font-semibold text-stone-800 dark:text-stone-100">MCP Server Configuration</h3>
-                        <button
-                          type="button"
-                          x-on:click="closePopup()"
-                          class="text-stone-400 hover:text-stone-600 dark:hover:text-stone-300 transition-colors"
-                        >
-                          <svg class="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
-                          </svg>
-                        </button>
-                      </div>
-
-                      <p class="text-sm text-stone-600 dark:text-stone-300 mb-4">
-                        Add this configuration to your Claude Desktop settings to connect to the Scrapegoat MCP server:
-                      </p>
-
-                      <div class="relative">
-                        <pre class="bg-stone-50 dark:bg-stone-900 border border-stone-200 dark:border-stone-700 text-stone-800 dark:text-stone-200 rounded-lg p-4 overflow-x-auto text-sm font-mono"
-                             x-text="configSnippet"></pre>
-                        <button
-                          type="button"
-                          x-on:click="copyToClipboard()"
-                          class="absolute top-2 right-2 px-3 py-1.5 bg-primary-600 hover:bg-primary-700 text-white text-sm font-medium rounded-lg transition-colors"
-                        >
-                          Copy
-                        </button>
-                      </div>
-
-                      <p class="text-xs text-stone-500 dark:text-stone-400 mt-4">
-                        Configuration file location:
-                        <code class="bg-stone-100 dark:bg-stone-900 text-stone-800 dark:text-stone-200 px-2 py-0.5 rounded">~/claude/settings.json</code>
-                      </p>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Version Update Notification */}
-                <span
-                  x-show="hasUpdate"
-                  x-cloak
-                  class="inline-flex items-center gap-2 rounded-full bg-amber-100 px-3 py-1.5 text-sm font-medium text-amber-700 border border-amber-200"
-                  role="status"
-                  aria-live="polite"
-                >
-                  <span class="flex h-4 w-4 items-center justify-center rounded-full bg-amber-500 text-amber-800 text-xs font-bold">
-                    !
-                  </span>
-                  <a
-                    x-bind:href="latestReleaseUrl"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    class="hover:text-amber-800 transition-colors"
-                  >
-                    <span class="mr-1">Update available</span>
-                  </a>
-                </span>
+                {/* Mobile Navigation Menu */}
+                ${MobileNav({ currentPath })}
               </div>
             </div>
           </div>
