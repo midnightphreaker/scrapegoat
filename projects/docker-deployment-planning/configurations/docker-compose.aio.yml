@@ -84,7 +84,7 @@ services:
 
   # Worker service - handles documentation processing and API
   worker:
-    image: ghcr.io/denmaster/scrapegoat:latest
+    image: gitlab.fenrirsden.org/pub/scrapegoat:latest
     build:
       context: ../..
       dockerfile: Dockerfile
@@ -133,7 +133,7 @@ services:
 
   # MCP server - provides AI tool integration endpoint
   mcp:
-    image: ghcr.io/denmaster/scrapegoat:latest
+    image: gitlab.fenrirsden.org/pub/scrapegoat:latest
     build:
       context: ../..
       dockerfile: Dockerfile
@@ -172,7 +172,7 @@ services:
 
   # Web interface - provides browser-based management
   web:
-    image: ghcr.io/denmaster/scrapegoat:latest
+    image: gitlab.fenrirsden.org/pub/scrapegoat:latest
     build:
       context: ../..
       dockerfile: Dockerfile

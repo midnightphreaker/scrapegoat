@@ -1,0 +1,97 @@
+{
+  "mcpServers": {
+    "filesystem": {
+      "type": "stdio",
+      "command": "npx",
+      "args": [
+        "-y",
+        "@modelcontextprotocol/server-filesystem",
+        "/home/mp",
+        "/opt"
+      ],
+      "env": {}
+    },
+    "calculator": {
+      "type": "stdio",
+      "command": "uvx",
+      "args": [
+        "mcp-server-calculator"
+      ],
+      "env": {}
+    },
+    "microsoft-learn": {
+      "type": "http",
+      "url": "https://learn.microsoft.com/api/mcp"
+    },
+    "sequential-thinking": {
+      "type": "stdio",
+      "command": "npx",
+      "args": [
+        "-y",
+        "@modelcontextprotocol/server-sequential-thinking"
+      ],
+      "env": {}
+    },
+    "time": {
+      "type": "stdio",
+      "command": "uvx",
+      "args": [
+        "mcp-server-time"
+      ],
+      "env": {}
+    },
+    "context7": {
+      "type": "stdio",
+      "command": "npx",
+      "args": [
+        "-y",
+        "@upstash/context7-mcp",
+        "--api-key",
+        "ctx7sk-ddd44ea9-2f04-41a0-94e5-328bb575981a"
+      ],
+      "env": {}
+    },
+    "memory": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "@modelcontextprotocol/server-memory"
+      ],
+      "env": {
+        "MEMORY_FILE_PATH": "/home/mp/Documents/ClaudeCodeMemory.jsonl"
+      }
+    },
+    "serena": {
+      "type": "stdio",
+      "command": "uvx",
+      "args": [
+        "--from",
+        "git+https://github.com/oraios/serena",
+        "serena",
+        "start-mcp-server",
+        "--context=claude-code",
+        "--project-from-cwd"
+      ],
+      "env": {}
+    },
+    "reminders": {
+      "type": "stdio",
+      "command": "npx",
+      "args": [
+        "-y",
+        "https://github.com/smb1982x/mcp-reminders"
+      ],
+      "env": {}
+    },
+    "gitlab": {
+      "command": "npx",
+      "args": ["-y", "@yoda.digital/gitlab-mcp-server"],
+      "env": {
+        "GITLAB_PERSONAL_ACCESS_TOKEN": "glpat-fenrirsden-RS4vq0F6Wj_1KKDRdVvBXm86MQp1OjMH.01.0w0agb17c",
+        "GITLAB_API_URL": "https://gitlab.fenrirsden.org/api/v4"
+      },
+      "alwaysAllow": ["*"],
+      "disabled": false
+    }
+  }
+}

@@ -103,6 +103,7 @@ export class Crawl4AIFetcher implements ContentFetcher {
         extractMedia: enableMedia,
         waitFor: options?.crawl4ai?.waitFor, // CSS selector to wait for (default: undefined)
         waitForTimeout: options?.crawl4ai?.waitForTimeout ?? 30000, // Default: 30000ms per Section 0
+        stealthMode: options?.crawl4ai?.stealthMode ?? undefined,
         customJs: options?.crawl4ai?.customJs, // Custom JavaScript (default: undefined)
       };
 

@@ -75,7 +75,7 @@ docker compose -f configurations/docker-compose.aio.yml up -d
 
 | Component | Technology | Version/Image |
 |-----------|-----------|---------------|
-| **Scrapegoat** | Node.js 22 | Custom build (ghcr.io/denmaster/scrapegoat:latest) |
+| **Scrapegoat** | Node.js 22 | Custom build (gitlab.fenrirsden.org/pub/scrapegoat:latest) |
 | **Database (AIO)** | PostgreSQL + pgvector | pgvector/pgvector:pg17 |
 | **Embeddings (AIO)** | Text-Embeddings-Inference | ghcr.io/huggingface/text-embeddings-inference:1.8-cpu |
 | **Web Crawler** | Crawl4AI + Playwright | Custom build (services/crawl4ai) |

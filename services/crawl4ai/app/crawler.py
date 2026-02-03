@@ -2,7 +2,7 @@
 
 import time
 from typing import Optional
-from crawl4ai import AsyncWebCrawler
+from crawl4ai import AsyncWebCrawler, CrawlerRunConfig
 
 from .models import CrawlConfig, CrawlData, CrawlMetadata, MediaItem, LinkItem
 
@@ -41,26 +41,39 @@ class Crawler:
 
         start = time.time()
 
-        # Build crawler params
-        params = {
-            "bypass_cache": config.cache_mode == "bypass",
-        }
+        # Build CrawlerRunConfig
+        run_config_params = {}
+
+        # Add cache bypass
+        if config.cache_mode == "bypass":
+            run_config_params["cache_mode"] = "bypass"
 
         # Add wait configuration if specified
         if config.wait_for:
-            params["wait_for"] = config.wait_for
-            params["wait_for_timeout"] = config.wait_for_timeout / 1000  # Convert to seconds
+            run_config_params["wait_for"] = config.wait_for
+            run_config_params["wait_for_timeout"] = config.wait_for_timeout / 1000  # Convert to seconds
+
+        # Add stealth mode if specified
+        if config.stealth_mode:
+            run_config_params["stealth_mode"] = config.stealth_mode
 
         # Execute custom JS if provided
         if config.custom_js:
-            params["js_code"] = config.custom_js
+            run_config_params["js_code"] = config.custom_js
 
         # Add screenshot configuration if enabled
         if config.screenshot:
-            params["screenshot"] = config.screenshot
+            run_config_params["screenshot"] = True
+
+        # Add media extraction if requested
+        if config.extract_media:
+            run_config_params["extract_media"] = True
+
+        # Create CrawlerRunConfig
+        run_config = CrawlerRunConfig(**run_config_params)
 
         # Run the crawl
-        result = await self.crawler.arun(url, **params)
+        result = await self.crawler.arun(url, config=run_config)
 
         crawl_time = time.time() - start
 

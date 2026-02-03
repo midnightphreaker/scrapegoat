@@ -22,7 +22,7 @@
 services:
   # Worker service - handles documentation processing and API
   worker:
-    image: ghcr.io/denmaster/scrapegoat:latest
+    image: gitlab.fenrirsden.org/pub/scrapegoat:latest
     build:
       context: .
       dockerfile: Dockerfile
@@ -62,7 +62,7 @@ services:
 
   # MCP server - provides AI tool integration endpoint
   mcp:
-    image: ghcr.io/denmaster/scrapegoat:latest
+    image: gitlab.fenrirsden.org/pub/scrapegoat:latest
     build:
       context: .
       dockerfile: Dockerfile
@@ -74,7 +74,7 @@ services:
         "--host",
         "0.0.0.0",
         "--port",
-        "6280",
+        "${MCP_PORT:-6280}",
         "--server-url",
         "http://localhost:8080/api",
       ]
@@ -84,7 +84,7 @@ services:
     env_file:
       - .env
     environment:
-      - PORT=6280
+      - PORT=${MCP_PORT:-6280}
       - HOST=0.0.0.0
     depends_on:
       worker:
@@ -102,7 +102,7 @@ services:
   # Web interface - provides browser-based management
   # MODIFIED: Port 80 for direct HTTP access at http://scrapegoat.den.lan/
   web:
-    image: ghcr.io/denmaster/scrapegoat:latest
+    image: gitlab.fenrirsden.org/pub/scrapegoat:latest
     build:
       context: .
       dockerfile: Dockerfile
