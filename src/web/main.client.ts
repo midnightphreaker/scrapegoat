@@ -168,19 +168,17 @@ document.addEventListener("alpine:init", () => {
     },
 
     generateConfigSnippet() {
-      // Build full URL using window.location for the current domain
-      const protocol = window.location.protocol; // http: or https:
-      const host = window.location.host; // includes port if not default
-      const fullUrl = `${protocol}//${host}/mcp`;
+      // Use the MCP port from loaded config, and current domain
+      // MCP server is always http (even behind https proxy)
+      const hostname = window.location.hostname; // e.g., docs.fenrirsden.org
+      const fullUrl = `http://${hostname}:${this.mcpPort}/mcp`;
 
       this.configSnippet = JSON.stringify(
         {
           mcpServers: {
             scrapegoat: {
+              type: "http",
               url: fullUrl,
-              transport: {
-                type: "sse",
-              },
             },
           },
         },
