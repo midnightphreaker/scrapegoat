@@ -10,8 +10,9 @@ import { initializeTools } from "../../mcp/tools";
 import type { PipelineOptions } from "../../pipeline";
 import { createLocalDocumentManagement } from "../../store";
 import { analytics, TelemetryEvent } from "../../telemetry";
-import { DEFAULT_HOST, DEFAULT_HTTP_PORT } from "../../utils/config";
+import { DEFAULT_HOST, DEFAULT_HTTP_PORT, rateLimitConfig } from "../../utils/config";
 import { LogLevel, logger, setLogLevel } from "../../utils/logger";
+import { validatePortString } from "../../utils/validation";
 import { registerGlobalServices } from "../main";
 import {
   createAppServerConfig,
@@ -39,13 +40,7 @@ export function createDefaultAction(program: Command): Command {
           .env("DOCS_MCP_PORT")
           .env("PORT")
           .default(DEFAULT_HTTP_PORT.toString())
-          .argParser((v: string) => {
-            const n = Number(v);
-            if (!Number.isInteger(n) || n < 1 || n > 65535) {
-              throw new Error("Port must be an integer between 1 and 65535");
-            }
-            return String(n);
-          }),
+          .argParser(validatePortString),
       )
       .addOption(
         new Option("--host <host>", "Host to bind the server to")
@@ -152,7 +147,7 @@ export function createDefaultAction(program: Command): Command {
           );
           const pipelineOptions: PipelineOptions = {
             recoverJobs: options.resume || false, // Use --resume flag for job recovery
-            concurrency: 3,
+            concurrency: rateLimitConfig.pipeline.maxConcurrency,
           };
           const pipeline = await createPipelineWithCallbacks(docService, pipelineOptions);
 

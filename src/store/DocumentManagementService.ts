@@ -1,4 +1,3 @@
-import path from "node:path";
 import type { Document } from "@langchain/core/documents";
 import Fuse from "fuse.js";
 import semver from "semver";
@@ -10,12 +9,15 @@ import type { ContentPipeline } from "../scraper/pipelines/types";
 import type { ScraperOptions } from "../scraper/types";
 import type { ContentChunk } from "../splitter/types";
 import { analytics, extractHostname, TelemetryEvent } from "../telemetry";
+import type { DocumentMetadata } from "../types";
 import { logger } from "../utils/logger";
 import { DocumentRetrieverService } from "./DocumentRetrieverService";
 import { DocumentStore } from "./DocumentStore";
 import type { EmbeddingModelConfig } from "./embeddings/EmbeddingConfig";
 import {
+  DocumentValidationError,
   LibraryNotFoundInStoreError,
+  MAX_DOCUMENT_CONTENT_LENGTH,
   StoreError,
   VersionNotFoundInStoreError,
 } from "./errors";
@@ -26,9 +28,9 @@ import type {
   ScraperConfig,
   StoreSearchResult,
   VersionRef,
-  VersionStatus,
   VersionSummary,
 } from "./types";
+import { VersionStatus } from "./types";
 
 /**
  * Provides semantic search capabilities across different versions of library documentation.
@@ -169,7 +171,7 @@ export class DocumentManagementService {
             status: v.status as VersionStatus,
             // Include progress only while indexing is active; set undefined for COMPLETED
             progress:
-              v.status === "completed"
+              v.status === VersionStatus.COMPLETED
                 ? undefined
                 : { pages: v.progressPages, maxPages: v.progressMaxPages },
             counts: { documents: v.documentCount, uniqueUrls: v.uniqueUrlCount },
@@ -397,6 +399,17 @@ export class DocumentManagementService {
       throw new Error("Document content cannot be empty");
     }
 
+    // Validate document content length before expensive processing
+    const contentLength = document.pageContent.length;
+    if (contentLength > MAX_DOCUMENT_CONTENT_LENGTH) {
+      throw new DocumentValidationError(
+        "Document content exceeds maximum allowed size",
+        contentLength,
+        MAX_DOCUMENT_CONTENT_LENGTH,
+        url,
+      );
+    }
+
     const contentType = document.metadata.mimeType as string | undefined;
 
     try {
@@ -511,6 +524,38 @@ export class DocumentManagementService {
     return this.documentRetriever.search(library, normalizedVersion, query, limit);
   }
 
+  /**
+   * Searches for documentation content using image similarity.
+   * Finds documents that have visually similar screenshots/images to the query image.
+   *
+   * @param library - Library name
+   * @param version - Version name (null for unversioned)
+   * @param imagePath - Path or URL to the query image
+   * @param limit - Maximum number of results to return
+   * @returns Array of search results with similarity scores
+   */
+  async searchByImage(
+    library: string,
+    version: string | null | undefined,
+    imagePath: string,
+    limit = 5,
+  ): Promise<StoreSearchResult[]> {
+    const normalizedVersion = this.normalizeVersion(version);
+    const results = await this.store.findByImage(
+      library,
+      normalizedVersion,
+      imagePath,
+      limit,
+    );
+
+    return results.map((doc) => ({
+      url: (doc.metadata as DocumentMetadata).url || "",
+      content: doc.pageContent,
+      score: null,
+      mimeType: (doc.metadata as DocumentMetadata).contentType as string | undefined,
+    }));
+  }
+
   // Deprecated simple listing removed: enriched listLibraries() is canonical
 
   /**
@@ -529,5 +574,32 @@ export class DocumentManagementService {
     );
 
     return versionId;
+  }
+
+  /**
+   * Get the screenshot path for a specific page.
+   * Used by the web server to serve screenshots.
+   *
+   * @param pageId - The page ID to query
+   * @returns The screenshot path or null if not found
+   */
+  async getScreenshotPath(pageId: number): Promise<string | null> {
+    return this.store.getScreenshotPath(pageId);
+  }
+
+  /**
+   * Get page metadata including fetcher type and screenshot info.
+   * Used by the web server to display page details.
+   *
+   * @param pageId - The page ID to query
+   * @returns Page metadata or null if not found
+   */
+  async getPageMetadata(pageId: number): Promise<{
+    metadata: Record<string, unknown>;
+    fetcherType: string | null;
+    hasScreenshot: boolean;
+    screenshotPath: string | null;
+  } | null> {
+    return this.store.getPageMetadata(pageId);
   }
 }

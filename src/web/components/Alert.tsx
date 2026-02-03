@@ -18,6 +18,7 @@ interface AlertProps extends PropsWithChildren {
  * Reusable Alert component using Flowbite styling.
  * Displays messages with appropriate colors and icons based on the type.
  * @param props - Component props including type, title (optional), and message.
+ * @default title - Uses default title based on alert type if not provided
  */
 const Alert = ({ type, title, message }: AlertProps) => {
   let iconSvg: JSX.Element;

@@ -49,7 +49,7 @@ export class HtmlToMarkdownMiddleware implements ContentProcessorMiddleware {
             const match = className.match(
               /(?:highlight-source-|highlight-|language-)(\w+)/,
             );
-            if (match) language = match[1];
+            if (match) language = match[1]!;
           }
         }
 

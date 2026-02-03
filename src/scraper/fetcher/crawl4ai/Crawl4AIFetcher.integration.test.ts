@@ -1,4 +1,5 @@
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
+import { logger } from "../../../utils/logger";
 import { Crawl4AIFetcher } from "./Crawl4AIFetcher";
 
 /**
@@ -43,7 +44,7 @@ describe("Crawl4AIFetcher Integration Tests", () => {
 
   it("should fetch real webpage content", async () => {
     if (!isServiceAvailable) {
-      console.log("Skipping - service not available");
+      logger.debug("Skipping - Crawl4AI service not available");
       return;
     }
 
@@ -62,7 +63,7 @@ describe("Crawl4AIFetcher Integration Tests", () => {
 
   it("should handle redirects correctly", async () => {
     if (!isServiceAvailable) {
-      console.log("Skipping - service not available");
+      logger.debug("Skipping - Crawl4AI service not available");
       return;
     }
 
@@ -82,7 +83,7 @@ describe("Crawl4AIFetcher Integration Tests", () => {
 
   it("should respect timeout option", async () => {
     if (!isServiceAvailable) {
-      console.log("Skipping - service not available");
+      logger.debug("Skipping - Crawl4AI service not available");
       return;
     }
 
@@ -95,7 +96,7 @@ describe("Crawl4AIFetcher Integration Tests", () => {
 
   it("should handle cancellation via AbortSignal", async () => {
     if (!isServiceAvailable) {
-      console.log("Skipping - service not available");
+      logger.debug("Skipping - Crawl4AI service not available");
       return;
     }
 

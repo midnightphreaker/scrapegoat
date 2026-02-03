@@ -1,6 +1,7 @@
 import type { FastifyInstance } from "fastify";
 import type { ClearCompletedJobsTool } from "../../../tools/ClearCompletedJobsTool";
 import { ToolError } from "../../../tools/errors";
+import { MimeType } from "../../../utils/constants";
 
 /**
  * Registers the API route for clearing completed jobs.
@@ -16,7 +17,7 @@ export function registerClearCompletedJobsRoute(
     try {
       await clearCompletedJobsTool.execute({});
 
-      reply.type("application/json");
+      reply.type(MimeType.JSON);
       return {
         success: true,
         message: "Completed jobs cleared successfully",

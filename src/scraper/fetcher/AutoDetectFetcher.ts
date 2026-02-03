@@ -1,11 +1,12 @@
 import { metricsCollector } from "../../monitoring/metrics";
 import { appConfig } from "../../utils/config";
-import { ChallengeError } from "../../utils/errors";
+import { FetcherType, type FetcherTypeValue } from "../../utils/constants";
+import { ChallengeError, ScraperError } from "../../utils/errors";
 import { logger } from "../../utils/logger";
 import { Crawl4AIFetcher } from "./crawl4ai/Crawl4AIFetcher";
 import { FileFetcher } from "./FileFetcher";
 import { HttpFetcher } from "./HttpFetcher";
-import type { ContentFetcher, FetcherType, FetchOptions, RawContent } from "./types";
+import type { ContentFetcher, FetchOptions, RawContent } from "./types";
 
 /**
  * AutoDetectFetcher automatically selects the appropriate fetcher based on URL type
@@ -55,27 +56,27 @@ export class AutoDetectFetcher implements ContentFetcher {
 
       // Route to appropriate fetcher
       switch (fetcherType) {
-        case "file":
+        case FetcherType.FILE:
           logger.debug(`Using FileFetcher for: ${source}`);
           result = await this.fileFetcher.fetch(source, options);
           break;
 
-        case "http":
+        case FetcherType.HTTP:
           logger.debug(`Using HttpFetcher (explicit) for: ${source}`);
           result = await this.httpFetcher.fetch(source, options);
           break;
 
-        case "crawl4ai":
+        case FetcherType.CRAWL4AI:
           logger.debug(`Using Crawl4AIFetcher (explicit) for: ${source}`);
           result = await this.crawl4aiFetcher.fetch(source, options);
           break;
 
-        case "auto":
+        case FetcherType.AUTO:
           result = await this.autoDetect(source, options);
           break;
 
         default:
-          throw new Error(`Unknown fetcher type: ${fetcherType}`);
+          throw new ScraperError(`Unknown fetcher type: ${fetcherType}`, false);
       }
 
       // Record successful fetch metrics
@@ -101,7 +102,7 @@ export class AutoDetectFetcher implements ContentFetcher {
    * Determine which fetcher to use based on options and URL.
    * Priority: explicit fetcher > useCrawl4AI flag > auto-detection
    */
-  private determineFetcherType(source: string, options?: FetchOptions): FetcherType {
+  private determineFetcherType(source: string, options?: FetchOptions): FetcherTypeValue {
     // Priority 1: Explicit fetcher parameter
     if (options?.fetcher) {
       // Backward compatibility: redirect 'browser' to 'crawl4ai'
@@ -112,15 +113,16 @@ export class AutoDetectFetcher implements ContentFetcher {
           'fetcher="browser" is deprecated and has been removed. Using "crawl4ai" instead. ' +
             'Please update your code to use fetcher="crawl4ai".',
         );
-        return "crawl4ai";
+        return FetcherType.CRAWL4AI;
       }
 
       // Validate that fetcher can handle this URL
       if (!this.canFetcherHandleSource(options.fetcher, source)) {
-        throw new Error(
+        throw new ScraperError(
           `Fetcher '${options.fetcher}' cannot handle URL: ${source}. ` +
             `Expected ${this.getExpectedProtocol(options.fetcher)} URL. ` +
             `Use 'auto' or choose a compatible fetcher.`,
+          false,
         );
       }
       return options.fetcher;
@@ -128,25 +130,30 @@ export class AutoDetectFetcher implements ContentFetcher {
 
     // Priority 2: Backward compatibility with useCrawl4AI flag
     if (options?.useCrawl4AI === true) {
-      return "crawl4ai";
+      logger.warn(
+        "The useCrawl4AI option is deprecated and will be removed in a future version. " +
+          'Please use fetcher="crawl4ai" or fetcher="auto" instead. ' +
+          'Example: { fetcher: "crawl4ai" } or { fetcher: "auto" }',
+      );
+      return FetcherType.CRAWL4AI;
     }
 
     // Priority 3: Auto-detection
-    return "auto";
+    return FetcherType.AUTO;
   }
 
   /**
    * Check if a specific fetcher can handle the given source URL
    */
-  private canFetcherHandleSource(fetcher: FetcherType, source: string): boolean {
+  private canFetcherHandleSource(fetcher: FetcherTypeValue, source: string): boolean {
     switch (fetcher) {
-      case "auto":
+      case FetcherType.AUTO:
         return true; // Auto can handle anything
-      case "file":
+      case FetcherType.FILE:
         return this.fileFetcher.canFetch(source);
-      case "http":
+      case FetcherType.HTTP:
         return this.httpFetcher.canFetch(source);
-      case "crawl4ai":
+      case FetcherType.CRAWL4AI:
         return this.crawl4aiFetcher.canFetch(source);
       default:
         return false;
@@ -156,14 +163,14 @@ export class AutoDetectFetcher implements ContentFetcher {
   /**
    * Get expected protocol for a fetcher type (for error messages)
    */
-  private getExpectedProtocol(fetcher: FetcherType): string {
+  private getExpectedProtocol(fetcher: FetcherTypeValue): string {
     switch (fetcher) {
-      case "file":
+      case FetcherType.FILE:
         return "file://";
-      case "http":
-      case "crawl4ai":
+      case FetcherType.HTTP:
+      case FetcherType.CRAWL4AI:
         return "http:// or https://";
-      case "auto":
+      case FetcherType.AUTO:
         return "any";
       default:
         return "unknown";
@@ -195,16 +202,24 @@ export class AutoDetectFetcher implements ContentFetcher {
     }
 
     // If we get here, no fetcher can handle this URL
-    throw new Error(`No suitable fetcher found for URL: ${source}`);
+    throw new ScraperError(`No suitable fetcher found for URL: ${source}`, false);
   }
 
   /**
    * Close all underlying fetchers to prevent resource leaks.
    */
   async close(): Promise<void> {
-    await Promise.allSettled([
+    const results = await Promise.allSettled([
       this.crawl4aiFetcher.close(),
       // HttpFetcher and FileFetcher don't need explicit cleanup
     ]);
+
+    // Log any cleanup failures
+    results.forEach((result, index) => {
+      if (result.status === "rejected") {
+        const fetcherName = index === 0 ? "Crawl4AIFetcher" : "Unknown";
+        logger.warn(`Failed to close ${fetcherName}: ${result.reason}`);
+      }
+    });
   }
 }

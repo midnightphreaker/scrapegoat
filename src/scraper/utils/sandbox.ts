@@ -82,9 +82,9 @@ export async function executeJsInSandbox(
     logger.debug(`Found ${scripts.length} script(s) to execute in sandbox for ${url}`);
 
     for (const script of scripts) {
-      const scriptSrc = script.src;
+      const scriptSrc = script.src ?? undefined;
       const scriptType =
-        script.type?.toLowerCase().split(";")[0].trim() || "text/javascript"; // Default to JavaScript if type is not specified
+        script.type?.toLowerCase().split(";")[0]?.trim() || "text/javascript"; // Default to JavaScript if type is not specified
       let scriptContentToExecute: string | null = null;
       let scriptSourceDescription = "inline script"; // For logging
 

@@ -25,7 +25,7 @@ export class MarkdownLinkExtractorMiddleware implements ContentProcessorMiddlewa
       const inlineLinkRegex = /\[([^\]]+)\]\(([^)]+)\)/g;
       let match: RegExpExecArray | null = inlineLinkRegex.exec(context.content);
       while (match !== null) {
-        const url = match[2].trim();
+        const url = match[2]?.trim();
         if (url) {
           extractedLinks.push(url);
         }
@@ -36,7 +36,7 @@ export class MarkdownLinkExtractorMiddleware implements ContentProcessorMiddlewa
       const refLinkDefRegex = /^\s*\[([^\]]+)\]:\s*(.+?)(?:\s|$)/gm;
       match = refLinkDefRegex.exec(context.content);
       while (match !== null) {
-        const url = match[2].trim();
+        const url = match[2]?.trim();
         if (url) {
           extractedLinks.push(url);
         }
@@ -47,7 +47,7 @@ export class MarkdownLinkExtractorMiddleware implements ContentProcessorMiddlewa
       const autolinkRegex = /<(https?:\/\/[^>]+)>/g;
       match = autolinkRegex.exec(context.content);
       while (match !== null) {
-        const url = match[1].trim();
+        const url = match[1]?.trim();
         if (url) {
           extractedLinks.push(url);
         }

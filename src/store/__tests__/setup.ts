@@ -26,8 +26,6 @@ if (!process.env.TEST_TIMEOUT) {
   process.env.TEST_TIMEOUT = "30000";
 }
 
-// Log test database connection info
-console.log("Test Environment Configuration:");
-console.log(`  Database: ${process.env.TEST_DATABASE_URL}`);
-console.log(`  Timeout: ${process.env.TEST_TIMEOUT}ms`);
-console.log("");
+// Test environment configuration is logged via the logger when LOG_LEVEL is set
+// These console.log statements have been removed to use proper logging infrastructure
+// Run tests with LOG_LEVEL=INFO to see test environment details

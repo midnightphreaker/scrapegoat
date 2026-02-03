@@ -12,9 +12,9 @@ import type { IDocumentManagement } from "../../store/trpc/interfaces";
 import { analytics, TelemetryEvent } from "../../telemetry";
 import { ScrapeTool } from "../../tools";
 import {
-  DEFAULT_MAX_CONCURRENCY,
   DEFAULT_MAX_DEPTH,
   DEFAULT_MAX_PAGES,
+  rateLimitConfig,
 } from "../../utils/config";
 import {
   createPipelineWithCallbacks,
@@ -157,7 +157,7 @@ export function createScrapeCommand(program: Command): Command {
     .option(
       "-c, --max-concurrency <number>",
       "Maximum concurrent page requests",
-      DEFAULT_MAX_CONCURRENCY.toString(),
+      rateLimitConfig.pipeline.pageConcurrency.toString(),
     )
     .option("--ignore-errors", "Ignore errors during scraping", true)
     .option(

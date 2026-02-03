@@ -58,7 +58,8 @@ export class HtmlJsExecutorMiddleware implements ContentProcessorMiddleware {
             "application/x-javascript",
           ];
           // Allow common JS types or be lenient if type is generic/unknown
-          const mimeTypeLower = rawContent.mimeType.toLowerCase().split(";")[0].trim();
+          const mimeTypeParts = rawContent.mimeType.toLowerCase().split(";");
+          const mimeTypeLower = mimeTypeParts[0]?.trim() ?? "";
           if (
             !allowedMimeTypes.includes(mimeTypeLower) &&
             !["application/octet-stream", "unknown/unknown", ""].includes(mimeTypeLower) // Allow empty MIME type as well

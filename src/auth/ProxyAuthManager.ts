@@ -9,6 +9,11 @@
 import { ProxyOAuthServerProvider } from "@modelcontextprotocol/sdk/server/auth/providers/proxyProvider.js";
 import type { FastifyInstance, FastifyRequest } from "fastify";
 import { createRemoteJWKSet, jwtVerify } from "jose";
+import {
+  AuthenticationError,
+  ConfigurationError,
+  InvalidTokenError,
+} from "../utils/errors";
 import { logger } from "../utils/logger";
 import type { AuthConfig, AuthContext } from "./types";
 
@@ -43,7 +48,12 @@ export class ProxyAuthManager {
     }
 
     if (!this.config.issuerUrl || !this.config.audience) {
-      throw new Error("Issuer URL and Audience are required when auth is enabled");
+      throw new ConfigurationError(
+        "Issuer URL and Audience are required when auth is enabled",
+        ["issuerUrl", "audience"].filter(
+          (field) => !this.config[field as keyof AuthConfig],
+        ),
+      );
     }
 
     try {
@@ -87,7 +97,10 @@ export class ProxyAuthManager {
     } catch (error) {
       const message = error instanceof Error ? error.message : "Unknown error";
       logger.error(`❌ Failed to initialize OAuth2 proxy authentication: ${message}`);
-      throw new Error(`Proxy authentication initialization failed: ${message}`);
+      throw new AuthenticationError(
+        `Proxy authentication initialization failed: ${message}`,
+        error,
+      );
     }
   }
 
@@ -97,7 +110,9 @@ export class ProxyAuthManager {
    */
   registerRoutes(server: FastifyInstance, baseUrl: URL): void {
     if (!this.proxyProvider) {
-      throw new Error("Proxy provider not initialized");
+      throw new AuthenticationError(
+        "Proxy provider not initialized. Call initialize() first",
+      );
     }
 
     // OAuth2 Authorization Server Metadata (RFC 8414)
@@ -348,7 +363,7 @@ export class ProxyAuthManager {
         );
 
         if (!payload.sub) {
-          throw new Error("JWT payload missing subject claim");
+          throw new InvalidTokenError("JWT payload missing subject claim", "JWT");
         }
 
         return {
@@ -378,8 +393,9 @@ export class ProxyAuthManager {
         });
 
         if (!response.ok) {
-          throw new Error(
+          throw new InvalidTokenError(
             `Userinfo request failed: ${response.status} ${response.statusText}`,
+            "opaque token",
           );
         }
 
@@ -389,7 +405,10 @@ export class ProxyAuthManager {
         );
 
         if (!userinfo.sub) {
-          throw new Error("Userinfo response missing subject");
+          throw new InvalidTokenError(
+            "Userinfo response missing subject claim",
+            "opaque token",
+          );
         }
 
         // Optional: Resource validation if MCP Authorization spec requires it
@@ -413,7 +432,10 @@ export class ProxyAuthManager {
 
     // Both validation strategies failed
     logger.debug("All token validation strategies exhausted");
-    throw new Error("Invalid access token");
+    throw new InvalidTokenError(
+      "Invalid access token - all validation strategies failed",
+      "access token",
+    );
   }
 
   /**
@@ -453,10 +475,19 @@ export class ProxyAuthManager {
       const match = authorization.match(/^Bearer\s+(.+)$/i);
       if (!match) {
         logger.debug("Authorization header does not match Bearer token pattern");
-        throw new Error("Invalid authorization header format");
+        throw new InvalidTokenError(
+          "Invalid authorization header format. Expected: Bearer <token>",
+          "Bearer token",
+        );
       }
 
       const token = match[1];
+      if (!token) {
+        throw new InvalidTokenError(
+          "Invalid authorization header format",
+          "Bearer token",
+        );
+      }
       logger.debug(`Extracted token: ${token.substring(0, 20)}...`);
 
       const authInfo = await this.verifyAccessToken(token, request);

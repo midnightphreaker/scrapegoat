@@ -90,7 +90,11 @@ export class DocumentManagementClient implements IDocumentManagement {
     status: VersionStatus,
     errorMessage?: string,
   ): Promise<void> {
-    await this.client.updateVersionStatus.mutate({ versionId, status, errorMessage });
+    await this.client.updateVersionStatus.mutate({
+      versionId,
+      status: status as unknown as string,
+      errorMessage,
+    });
   }
 
   async updateVersionProgress(

@@ -179,7 +179,7 @@ export class GreedySplitter implements DocumentSplitter {
     const common: string[] = [];
     for (let i = 0; i < Math.min(path1.length, path2.length); i++) {
       if (path1[i] === path2[i]) {
-        common.push(path1[i]);
+        common.push(path1[i]!);
       } else {
         break;
       }

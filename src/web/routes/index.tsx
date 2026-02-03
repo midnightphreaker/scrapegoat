@@ -1,5 +1,6 @@
 import type { FastifyInstance } from "fastify";
 import Layout from "../components/Layout"; // Import the Layout component
+import { MimeType } from "../../utils/constants";
 
 /**
  * Registers the root route that serves the main HTML page.
@@ -7,7 +8,7 @@ import Layout from "../components/Layout"; // Import the Layout component
  */
 export function registerIndexRoute(server: FastifyInstance) {
   server.get("/", async (_, reply) => {
-    reply.type("text/html");
+    reply.type(MimeType.HTML);
     // Use the Layout component and define the main content within it
     return (
       "<!DOCTYPE html>" +

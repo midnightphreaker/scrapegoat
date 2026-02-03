@@ -71,7 +71,7 @@ async function getQueryPlan(pool: Pool, query: string, params: any[] = []): Prom
 /**
  * Helper function to check if an index is used in the query plan
  */
-function isIndexUsed(plan: any, indexName: string): boolean {
+function _isIndexUsed(plan: any, indexName: string): boolean {
   if (!plan) return false;
 
   // Check current node
@@ -82,7 +82,7 @@ function isIndexUsed(plan: any, indexName: string): boolean {
   // Check child nodes recursively
   if (plan.Plans) {
     for (const childPlan of plan.Plans) {
-      if (isIndexUsed(childPlan, indexName)) {
+      if (_isIndexUsed(childPlan, indexName)) {
         return true;
       }
     }
@@ -94,7 +94,7 @@ function isIndexUsed(plan: any, indexName: string): boolean {
 /**
  * Helper function to calculate RRF score manually for validation
  */
-function calculateRRFScore(rank: number, k: number = 60): number {
+function _calculateRRFScore(rank: number, k: number = 60): number {
   return 1 / (k + rank);
 }
 
@@ -1162,7 +1162,7 @@ describe("PostgreSQL Features", () => {
       await testDb.store.addDocuments("test-lib", "1.0.0", docs);
 
       // Execute 20 simultaneous queries
-      const queries = Array.from({ length: 20 }, (_, i) =>
+      const queries = Array.from({ length: 20 }, (_, _i) =>
         pool.query("SELECT content FROM documents WHERE page_id IS NOT NULL LIMIT 5"),
       );
 

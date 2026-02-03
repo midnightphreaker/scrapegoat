@@ -115,4 +115,22 @@
   .shadow-context7-none {
     box-shadow: var(--shadow-context7-none);
   }
+
+  /* Screen reader-only content (Issue #23: ARIA Labels for Dynamic Content) */
+  .sr-only {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border-width: 0;
+  }
+
+  /* Alpine.js x-cloak directive (Issue #72: Missing x-cloak CSS Definition) */
+  [x-cloak] {
+    display: none !important;
+  }
 }

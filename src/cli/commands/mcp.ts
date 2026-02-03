@@ -11,8 +11,14 @@ import type { PipelineOptions } from "../../pipeline";
 import { createDocumentManagement } from "../../store";
 import type { IDocumentManagement } from "../../store/trpc/interfaces";
 import { analytics, TelemetryEvent } from "../../telemetry";
-import { DEFAULT_HOST, DEFAULT_HTTP_PORT, DEFAULT_PROTOCOL } from "../../utils/config";
+import {
+  DEFAULT_HOST,
+  DEFAULT_HTTP_PORT,
+  DEFAULT_PROTOCOL,
+  rateLimitConfig,
+} from "../../utils/config";
 import { LogLevel, logger, setLogLevel } from "../../utils/logger";
+import { validatePortString } from "../../utils/validation";
 import { registerGlobalServices } from "../main";
 import {
   createAppServerConfig,
@@ -41,13 +47,7 @@ export function createMcpCommand(program: Command): Command {
           .env("DOCS_MCP_PORT")
           .env("PORT")
           .default(DEFAULT_HTTP_PORT.toString())
-          .argParser((v: string) => {
-            const n = Number(v);
-            if (!Number.isInteger(n) || n < 1 || n > 65535) {
-              throw new Error("Port must be an integer between 1 and 65535");
-            }
-            return String(n);
-          }),
+          .argParser(validatePortString),
       )
       .addOption(
         new Option("--host <host>", "Host to bind the MCP server to")
@@ -164,7 +164,7 @@ export function createMcpCommand(program: Command): Command {
             const pipelineOptions: PipelineOptions = {
               recoverJobs: false, // MCP command doesn't support job recovery
               serverUrl,
-              concurrency: 3,
+              concurrency: rateLimitConfig.pipeline.maxConcurrency,
             };
             const pipeline = await createPipelineWithCallbacks(
               serverUrl ? undefined : (docService as unknown as never),

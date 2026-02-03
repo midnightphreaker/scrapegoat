@@ -1,4 +1,4 @@
-import { Pool, type PoolClient, type PoolConfig } from "pg";
+import { Pool, type PoolConfig } from "pg";
 import { logger } from "../utils/logger";
 import { ConnectionError } from "./errors";
 
@@ -8,14 +8,11 @@ import { ConnectionError } from "./errors";
  */
 export class PostgresConnection {
   private pool: Pool;
-  private readonly connectionString: string;
 
   constructor(connectionString: string, config?: Partial<PoolConfig>) {
     if (!connectionString) {
       throw new ConnectionError("PostgreSQL connection string is required");
     }
-
-    this.connectionString = connectionString;
 
     // Create connection pool with optimal defaults
     const poolConfig: PoolConfig = {
@@ -159,7 +156,7 @@ export class PostgresConnection {
         await client.query("COMMIT");
         permissions.canCreateTables = true;
         permissions.canCreateIndexes = true; // If we can create tables, we can create indexes
-      } catch (error) {
+      } catch (_error) {
         await client.query("ROLLBACK");
         logger.warn("⚠️ Insufficient permissions to create tables");
       }
@@ -170,7 +167,7 @@ export class PostgresConnection {
         await client.query("CREATE EXTENSION IF NOT EXISTS vector");
         await client.query("ROLLBACK"); // Don't actually create it in the test
         permissions.canCreateExtensions = true;
-      } catch (error) {
+      } catch (_error) {
         await client.query("ROLLBACK");
         // This is OK if extension already exists
       }

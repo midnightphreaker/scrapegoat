@@ -14,9 +14,12 @@ interface LinksTableProps {
  *
  * Categorizes links as internal or external based on the baseUrl
  * and displays them in separate tables.
+ * @param links - Array of link items to display
+ * @default links - Empty array if not provided
+ * @param baseUrl - Base URL for categorizing internal vs external links
  */
-const LinksTable = ({ links, baseUrl }: LinksTableProps) => {
-  if (!links || links.length === 0) return null;
+const LinksTable = ({ links = [], baseUrl }: LinksTableProps) => {
+  if (links.length === 0) return null;
 
   // Categorize links as internal or external
   const internal: LinkItem[] = [];
@@ -56,9 +59,8 @@ const LinksTable = ({ links, baseUrl }: LinksTableProps) => {
                 </tr>
               </thead>
               <tbody>
-                {internal.map((link, index) => (
+                {internal.map((link) => (
                   <tr
-                    key={index}
                     class="border-t border-stone-200 hover:bg-stone-50 transition-colors duration-150"
                   >
                     <td class="p-2 text-stone-800">{link.text}</td>
@@ -92,9 +94,8 @@ const LinksTable = ({ links, baseUrl }: LinksTableProps) => {
                 </tr>
               </thead>
               <tbody>
-                {external.map((link, index) => (
+                {external.map((link) => (
                   <tr
-                    key={index}
                     class="border-t border-stone-200 hover:bg-stone-50 transition-colors duration-150"
                   >
                     <td class="p-2 text-stone-800">{link.text}</td>

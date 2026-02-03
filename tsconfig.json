@@ -20,9 +20,16 @@
     "types": ["@kitajs/html/htmx.d.ts", "vite/client"],
     "incremental": true,
     "tsBuildInfoFile": ".tsbuildinfo",
-    "noUncheckedIndexedAccess": false,
+    "noUncheckedIndexedAccess": true,
     "exactOptionalPropertyTypes": false,
-    "assumeChangesOnlyAffectDirectDependencies": true
+    "assumeChangesOnlyAffectDirectDependencies": true,
+    "paths": {
+      "@/*": ["./src/*"],
+      "@scraper/*": ["./src/scraper/*"],
+      "@store/*": ["./src/store/*"],
+      "@web/*": ["./src/web/*"],
+      "@utils/*": ["./src/utils/*"]
+    }
   },
   "include": ["src/**/*"],
   "exclude": ["node_modules", "dist", "**/*.test.ts", "**/*.test.tsx"]

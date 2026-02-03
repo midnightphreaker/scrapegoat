@@ -165,7 +165,7 @@ export function adjustColorForContrast(
  */
 function darkenColor(color: RGB, background: RGB, targetRatio: number): RGB {
   let { r, g, b } = color;
-  const bgLum = rgbToLuminance(background);
+  const _bgLum = rgbToLuminance(background);
   let currentRatio = getContrastRatio(color, background);
 
   let iterations = 0;
@@ -189,7 +189,7 @@ function darkenColor(color: RGB, background: RGB, targetRatio: number): RGB {
  */
 function lightenColor(color: RGB, background: RGB, targetRatio: number): RGB {
   let { r, g, b } = color;
-  const bgLum = rgbToLuminance(background);
+  const _bgLum = rgbToLuminance(background);
   let currentRatio = getContrastRatio(color, background);
 
   let iterations = 0;
@@ -214,7 +214,7 @@ function lightenColor(color: RGB, background: RGB, targetRatio: number): RGB {
 export function rgbToHex(rgb: RGB): string {
   const toHex = (c: number): string => {
     const hex = c.toString(16);
-    return hex.length === 1 ? "0" + hex : hex;
+    return hex.length === 1 ? `0${hex}` : hex;
   };
 
   return `#${toHex(rgb.r)}${toHex(rgb.g)}${toHex(rgb.b)}`;
@@ -361,7 +361,14 @@ export function auditColorContrast(document: Document): {
     passing: number;
   };
 } {
-  const issues: typeof auditColorContrast.issues = [];
+  const issues: Array<{
+    element: string;
+    foreground: string;
+    background: string;
+    ratio: number;
+    required: number;
+    issue: string;
+  }> = [];
   let total = 0;
   let failing = 0;
 
@@ -380,11 +387,11 @@ export function auditColorContrast(document: Document): {
       const bgMatch = bg.match(/\d+/g)?.slice(0, 3).map(Number);
       const fgRgb: RGB =
         fgMatch && fgMatch.length >= 3
-          ? { r: fgMatch[0], g: fgMatch[1], b: fgMatch[2] }
+          ? { r: fgMatch[0]!, g: fgMatch[1]!, b: fgMatch[2]! }
           : { r: 0, g: 0, b: 0 };
       const bgRgb: RGB =
         bgMatch && bgMatch.length >= 3
-          ? { r: bgMatch[0], g: bgMatch[1], b: bgMatch[2] }
+          ? { r: bgMatch[0]!, g: bgMatch[1]!, b: bgMatch[2]! }
           : { r: 0, g: 0, b: 0 };
       const fgHex = rgbToHex(fgRgb);
       const bgHex = rgbToHex(bgRgb);

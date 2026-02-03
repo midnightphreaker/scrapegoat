@@ -6,6 +6,7 @@
 import { createHash } from "node:crypto";
 import { mkdir, readFile, unlink, writeFile } from "node:fs/promises";
 import { join } from "node:path";
+import { FileNotFoundError, ValidationError } from "./errors";
 import { logger } from "./logger";
 
 const DEFAULT_SCREENSHOT_DIR = "./public/screenshots";
@@ -34,8 +35,10 @@ export async function saveScreenshot(options: SaveScreenshotOptions): Promise<st
   const maxSize =
     Number.parseInt(process.env.SCREENSHOT_MAX_SIZE_MB || "5", 10) * 1024 * 1024;
   if (buffer.length > maxSize) {
-    throw new Error(
-      `Screenshot too large: ${(buffer.length / 1024 / 1024).toFixed(2)}MB (max: ${maxSize / 1024 / 1024}MB)`,
+    throw new ValidationError(
+      "screenshot",
+      `${(buffer.length / 1024 / 1024).toFixed(2)}MB`,
+      `Screenshot too large (max: ${maxSize / 1024 / 1024}MB)`,
     );
   }
 
@@ -79,7 +82,7 @@ export async function loadScreenshot(path: string): Promise<Buffer> {
     logger.warn(
       `Failed to load screenshot ${fullPath}: ${error instanceof Error ? error.message : String(error)}`,
     );
-    throw new Error(`Screenshot not found: ${path}`);
+    throw new FileNotFoundError(path, "file");
   }
 }
 

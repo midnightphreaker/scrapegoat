@@ -13,6 +13,26 @@ import {
 } from "./constants.js";
 
 /**
+ * Type definitions for scraper job results
+ */
+export interface ScraperJobSuccessResult {
+  status: "completed";
+  library: string;
+  version: string;
+  documentsProcessed: number;
+  uniqueUrls: number;
+}
+
+export interface ScraperJobErrorResult {
+  status: "failed";
+  library: string;
+  version: string;
+  error: string;
+}
+
+export type ScraperJobResult = ScraperJobSuccessResult | ScraperJobErrorResult;
+
+/**
  * Result types for discriminated unions
  */
 
@@ -75,7 +95,7 @@ export function isVersionStatus(value: unknown): value is VersionStatus {
     "cancelled",
     "updating",
   ] as const;
-  return typeof value === "string" && validValues.includes(value as VersionStatus);
+  return typeof value === "string" && validValues.includes(value as any);
 }
 
 /**
@@ -85,7 +105,7 @@ export function isVersionStatus(value: unknown): value is VersionStatus {
  */
 export function isPipelineJobStatus(value: unknown): value is PipelineJobStatus {
   const validValues = ["queued", "running", "completed", "failed", "cancelled"] as const;
-  return typeof value === "string" && validValues.includes(value as PipelineJobStatus);
+  return typeof value === "string" && validValues.includes(value as any);
 }
 
 /**

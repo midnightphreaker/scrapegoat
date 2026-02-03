@@ -88,7 +88,7 @@ export class DocumentRetrieverService {
     // Extract mimeType from the first document's metadata
     const mimeType =
       initialChunks.length > 0
-        ? (initialChunks[0].metadata.mimeType as string | undefined)
+        ? (initialChunks[0]?.metadata.mimeType as string | undefined)
         : undefined;
 
     // Find the maximum score from the initial results

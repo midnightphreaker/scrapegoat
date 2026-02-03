@@ -18,9 +18,11 @@ interface ServiceStatusCardProps {
 
 /**
  * Card displaying health status of all fetcher services
- * 
+ *
  * Uses HTMX to poll the /api/health/all endpoint every 30 seconds
  * and displays the status of HTTP, Browser, and Crawl4AI services.
+ * @param health - Optional health status response object
+ * @default health - undefined if not provided (shows loading state)
  */
 const ServiceStatusCard = ({ health }: ServiceStatusCardProps) => {
   return (

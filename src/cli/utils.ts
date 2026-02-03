@@ -12,6 +12,7 @@ import {
   EmbeddingConfig,
   type EmbeddingModelConfig,
 } from "../store/embeddings/EmbeddingConfig";
+import { ConfigurationError, ValidationError } from "../utils/errors";
 import { LogLevel, logger, setLogLevel } from "../utils/logger";
 import type { GlobalOptions } from "./types";
 
@@ -57,7 +58,9 @@ export function resolveProtocol(protocol: string): "stdio" | "http" {
     return protocol;
   }
 
-  throw new Error(`Invalid protocol: ${protocol}. Must be 'auto', 'stdio', or 'http'`);
+  throw new ConfigurationError(
+    `Invalid protocol: ${protocol}. Must be 'auto', 'stdio', or 'http'`,
+  );
 }
 
 /**
@@ -65,9 +68,8 @@ export function resolveProtocol(protocol: string): "stdio" | "http" {
  */
 export function validateResumeFlag(resume: boolean, serverUrl?: string): void {
   if (resume && serverUrl) {
-    throw new Error(
-      "--resume flag is incompatible with --server-url. " +
-        "External workers handle their own job recovery.",
+    throw new ConfigurationError(
+      "--resume flag is incompatible with --server-url. External workers handle their own job recovery.",
     );
   }
 }
@@ -97,7 +99,11 @@ export function setupLogging(options: GlobalOptions, protocol?: "stdio" | "http"
 export function validatePort(portString: string): number {
   const port = Number.parseInt(portString, 10);
   if (Number.isNaN(port) || port < 1 || port > 65535) {
-    throw new Error("❌ Invalid port number");
+    throw new ValidationError(
+      "port",
+      portString,
+      "Port must be an integer between 1 and 65535",
+    );
   }
   return port;
 }
@@ -109,12 +115,12 @@ export function validateHost(hostString: string): string {
   // Basic validation - allow IPv4, IPv6, and hostnames
   const trimmed = hostString.trim();
   if (!trimmed) {
-    throw new Error("❌ Host cannot be empty");
+    throw new ValidationError("host", hostString, "Host cannot be empty");
   }
 
   // Very basic format check - reject obviously invalid values
   if (trimmed.includes(" ") || trimmed.includes("\t") || trimmed.includes("\n")) {
-    throw new Error("❌ Host cannot contain whitespace");
+    throw new ValidationError("host", hostString, "Host cannot contain whitespace");
   }
 
   return trimmed;

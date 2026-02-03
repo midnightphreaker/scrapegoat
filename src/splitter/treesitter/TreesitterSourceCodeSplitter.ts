@@ -262,8 +262,9 @@ export class TreesitterSourceCodeSplitter implements DocumentSplitter {
     const segments: TextSegment[] = [];
 
     for (let i = 0; i < sortedPoints.length - 1; i++) {
-      const startLine = sortedPoints[i];
-      const endLine = sortedPoints[i + 1] - 1; // Convert back to inclusive end
+      const startLine = sortedPoints[i]!;
+      const nextLine = sortedPoints[i + 1]!;
+      const endLine = nextLine - 1; // Convert back to inclusive end
 
       // Skip empty segments
       if (startLine > endLine || startLine > totalLines) {
@@ -363,7 +364,7 @@ export class TreesitterSourceCodeSplitter implements DocumentSplitter {
 
     // If file ended with whitespace-only content, append it to last chunk (preserve reconstructability)
     if (pendingWhitespace && chunks.length > 0) {
-      chunks[chunks.length - 1].content += pendingWhitespace;
+      chunks[chunks.length - 1]!.content += pendingWhitespace;
     }
 
     return chunks;
@@ -378,14 +379,14 @@ export class TreesitterSourceCodeSplitter implements DocumentSplitter {
 
     // Build parent-child relationships
     for (let i = 0; i < hierarchicalBoundaries.length; i++) {
-      const boundary = hierarchicalBoundaries[i];
+      const boundary = hierarchicalBoundaries[i]!;
       let parent: CodeBoundary | undefined;
       let smallestRange = Infinity;
 
       // Find the smallest containing parent
       for (let j = 0; j < hierarchicalBoundaries.length; j++) {
         if (i === j) continue;
-        const candidate = hierarchicalBoundaries[j];
+        const candidate = hierarchicalBoundaries[j]!;
 
         // Check if candidate contains boundary
         if (

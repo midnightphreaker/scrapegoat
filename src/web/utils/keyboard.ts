@@ -6,7 +6,7 @@
 export interface KeyboardShortcut {
   key: string;
   description: string;
-  handler: (event: KeyboardEvent) => void | boolean;
+  handler: (event: KeyboardEvent) => undefined | boolean;
   ctrlKey?: boolean;
   altKey?: boolean;
   shiftKey?: boolean;
@@ -191,7 +191,7 @@ class KeyboardShortcutManager {
       if (!shortcutsByCategory.has(category)) {
         shortcutsByCategory.set(category, []);
       }
-      shortcutsByCategory.get(category)!.push(shortcut);
+      shortcutsByCategory.get(category)?.push(shortcut);
     }
 
     const categoryTitles: Record<string, string> = {
@@ -352,7 +352,10 @@ export function initializeShortcuts(): () => void {
   registerShortcut({
     key: "?",
     description: "Show keyboard shortcuts",
-    handler: () => showShortcutsHelp(),
+    handler: () => {
+      showShortcutsHelp();
+      return undefined;
+    },
     category: "general",
   });
 
@@ -365,6 +368,7 @@ export function initializeShortcuts(): () => void {
         'input[type="search"], input[placeholder*="search" i]',
       );
       searchInput?.focus();
+      return undefined;
     },
     category: "navigation",
   });
@@ -377,6 +381,7 @@ export function initializeShortcuts(): () => void {
       const urlInput = document.querySelector<HTMLInputElement>("#url");
       urlInput?.focus();
       urlInput?.scrollIntoView({ behavior: "smooth", block: "center" });
+      return undefined;
     },
     category: "actions",
   });
@@ -392,6 +397,7 @@ export function initializeShortcuts(): () => void {
           modal.remove();
         }
       });
+      return undefined;
     },
     category: "general",
   });
@@ -399,5 +405,4 @@ export function initializeShortcuts(): () => void {
   return manager.initialize();
 }
 
-export { manager, manager as shortcutManager };
-export type { KeyboardShortcut };
+export { manager as shortcutManager };

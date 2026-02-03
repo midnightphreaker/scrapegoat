@@ -3,9 +3,13 @@ fastapi>=0.115.0
 uvicorn[standard]>=0.32.0
 pydantic>=2.10.0
 
-# Crawl4AI
-crawl4ai>=0.7.0
+# Crawl4AI - Updated to v0.8.0
+crawl4ai==0.8.0
 
 # Additional dependencies
 httpx>=0.28.0
 playwright>=1.49.0
+
+# Undetected browser support (optional)
+undetected-chromedriver>=3.5.0; python_version >= "3.8"
+selenium>=4.0.0; python_version >= "3.8"

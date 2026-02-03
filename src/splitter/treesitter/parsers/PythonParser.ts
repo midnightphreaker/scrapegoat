@@ -103,7 +103,7 @@ function findDocumentationStart(
   // Walk upward collecting contiguous comment block
   let sawComment = false;
   for (let i = idx - 1; i >= 0; i--) {
-    const s = siblings[i];
+    const s = siblings[i]!;
     const text = source.slice(s.startIndex, s.endIndex);
 
     if (s.type === "comment") {

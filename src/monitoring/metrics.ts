@@ -1,8 +1,11 @@
 /**
  * Metrics collection for monitoring fetcher performance
  *
+ * @deprecated Use PerformanceMetrics for new code. This class is maintained for backward compatibility.
  * Tracks usage, success rates, response times, and errors for all fetcher types.
  * Provides Prometheus-compatible export format for integration with monitoring systems.
+ *
+ * @see PerformanceMetrics for more comprehensive performance tracking across all operation types.
  */
 
 import type { FetcherType } from "../scraper/fetcher/types";
@@ -122,7 +125,8 @@ class MetricsCollector {
   private calculatePercentile(sortedValues: number[], percentile: number): number {
     if (sortedValues.length === 0) return 0;
     const index = Math.floor(sortedValues.length * percentile);
-    return sortedValues[Math.min(index, sortedValues.length - 1)];
+    const value = sortedValues[Math.min(index, sortedValues.length - 1)];
+    return value ?? 0;
   }
 
   /**
@@ -145,7 +149,11 @@ class MetricsCollector {
         errorsByType: new Map(),
       });
     }
-    return this.metrics.get(fetcher)!;
+    const metrics = this.metrics.get(fetcher);
+    if (!metrics) {
+      throw new Error(`Metrics not found for fetcher: ${fetcher}`);
+    }
+    return metrics;
   }
 
   /**

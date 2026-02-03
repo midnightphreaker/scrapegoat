@@ -59,10 +59,12 @@ export async function registerWebService(
    * GET /api/health/mcp
    * Check MCP server health
    */
-  server.get("/api/health/mcp", async (request, reply) => {
+  server.get("/api/health/mcp", async (_request, reply) => {
     try {
       // Read MCP configuration from environment variables
-      const mcpPort = process.env.MCP_PORT ? Number.parseInt(process.env.MCP_PORT, 10) : DEFAULT_HTTP_PORT;
+      const mcpPort = process.env.MCP_PORT
+        ? Number.parseInt(process.env.MCP_PORT, 10)
+        : DEFAULT_HTTP_PORT;
       const mcpHost = process.env.MCP_HOST || "localhost";
       const mcpUrl = `http://${mcpHost}:${mcpPort}`;
 
@@ -84,7 +86,7 @@ export async function registerWebService(
           url: mcpUrl,
           port: mcpPort,
         });
-      } catch (error) {
+      } catch (_error) {
         reply.status(503).send({
           status: "down",
           connected: false,
@@ -105,12 +107,14 @@ export async function registerWebService(
    * GET /api/config
    * Get application configuration (read-only, sanitized)
    */
-  server.get("/api/config", async (request, reply) => {
+  server.get("/api/config", async (_request, reply) => {
     try {
       const validation = validateConfig(appConfig);
 
       // Read MCP configuration from environment variables
-      const mcpPort = process.env.MCP_PORT ? Number.parseInt(process.env.MCP_PORT, 10) : DEFAULT_HTTP_PORT;
+      const mcpPort = process.env.MCP_PORT
+        ? Number.parseInt(process.env.MCP_PORT, 10)
+        : DEFAULT_HTTP_PORT;
       const mcpHost = process.env.MCP_HOST || "localhost";
       const mcpUrl = `http://${mcpHost}:${mcpPort}`;
 

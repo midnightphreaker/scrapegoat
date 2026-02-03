@@ -15,9 +15,11 @@ interface MediaGalleryProps {
  *
  * Organizes media by type (images, videos, audio) and displays
  * them in a responsive grid layout.
+ * @param media - Array of media items to display
+ * @default media - Empty array if not provided
  */
-const MediaGallery = ({ media }: MediaGalleryProps) => {
-  if (!media || media.length === 0) return null;
+const MediaGallery = ({ media = [] }: MediaGalleryProps) => {
+  if (media.length === 0) return null;
 
   const images = media.filter((m) => m.type === "image");
   const videos = media.filter((m) => m.type === "video");
@@ -38,7 +40,6 @@ const MediaGallery = ({ media }: MediaGalleryProps) => {
           <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
             {images.map((img, index) => (
               <div
-                key={index}
                 class="border border-stone-200 rounded-lg overflow-hidden hover:shadow-lg transition-shadow"
               >
                 <img
@@ -65,8 +66,8 @@ const MediaGallery = ({ media }: MediaGalleryProps) => {
             Videos ({videos.length})
           </h4>
           <ul class="space-y-2">
-            {videos.map((video, index) => (
-              <li key={index}>
+            {videos.map((video) => (
+              <li>
                 <a
                   href={video.url}
                   target="_blank"
@@ -88,8 +89,8 @@ const MediaGallery = ({ media }: MediaGalleryProps) => {
             Audio ({audios.length})
           </h4>
           <ul class="space-y-2">
-            {audios.map((audio, index) => (
-              <li key={index}>
+            {audios.map((audio) => (
+              <li>
                 <a
                   href={audio.url}
                   target="_blank"

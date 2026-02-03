@@ -10,9 +10,15 @@ interface ProgressBarProps {
     totalPages: number; // Effective total pages (limited by maxPages config)
     totalDiscovered: number; // Total pages actually discovered
   };
+  /** Whether to show text description above the bar */
   showText?: boolean;
 }
 
+/**
+ * @param progress - Progress object with pages, totalPages, and totalDiscovered counts
+ * @param showText - Whether to display progress text
+ * @default showText - true if not provided
+ */
 const ProgressBar = ({ progress, showText = true }: ProgressBarProps) => {
   // Handle the initial case where we only know about 1 page (starting URL)
   // and haven't discovered any additional pages yet.

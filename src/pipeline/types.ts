@@ -1,18 +1,24 @@
 import type { ScraperProgress } from "../scraper/types";
 import type { VersionScraperOptions, VersionStatus } from "../store/types";
 import type { Document } from "../types"; // Use local Document type
+import { JobStatus } from "../utils/constants";
 
 /**
  * Represents the possible states of a pipeline job.
+ * Uses const assertion to create a readonly union type.
  */
-export enum PipelineJobStatus {
-  QUEUED = "queued",
-  RUNNING = "running",
-  COMPLETED = "completed",
-  FAILED = "failed",
-  CANCELLING = "cancelling",
-  CANCELLED = "cancelled",
-}
+export const PipelineJobStatus = {
+  QUEUED: JobStatus.QUEUED,
+  RUNNING: JobStatus.RUNNING,
+  COMPLETED: JobStatus.COMPLETED,
+  FAILED: JobStatus.FAILED,
+  CANCELLING: JobStatus.CANCELLING,
+  CANCELLED: JobStatus.CANCELLED,
+} as const;
+
+/** Union type of all possible pipeline job status values */
+export type PipelineJobStatus =
+  (typeof PipelineJobStatus)[keyof typeof PipelineJobStatus];
 
 /**
  * Public interface for pipeline jobs exposed through API boundaries.

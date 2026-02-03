@@ -5,6 +5,7 @@ import { analytics, TelemetryEvent } from "../telemetry";
 import type { JobInfo } from "../tools";
 import { ToolError } from "../tools/errors";
 import { DEFAULT_MAX_DEPTH, DEFAULT_MAX_PAGES } from "../utils/config";
+import type { FetcherTypeValue } from "../utils/constants";
 import { logger } from "../utils/logger";
 import type { McpServerTools } from "./tools";
 import { createError, createResponse } from "./utils";
@@ -36,8 +37,6 @@ export function createMcpServerInstance(
 
   // Only register write/job tools if not in read-only mode
   if (!readOnly) {
-    // Scrape docs tool - suppress deep inference issues
-    // @ts-expect-error TypeScript has issues with deep Zod inference in MCP SDK
     server.tool(
       "scrape_docs",
       "Scrape and index documentation from a URL for a library. Use this tool to index a new library or a new version.",
@@ -131,7 +130,7 @@ export function createMcpServerInstance(
               maxDepth,
               scope,
               followRedirects,
-              fetcher: fetcher as "auto" | "http" | "crawl4ai", // Type assertion safe due to zod validation
+              fetcher: fetcher as FetcherTypeValue, // Type assertion safe due to zod validation
               crawl4ai: {
                 enableScreenshot: enableScreenshots,
                 screenshotMode: "viewport", // Default mode
@@ -297,8 +296,6 @@ ${r.content}\n`,
 
   // Job and write tools - only available when not in read-only mode
   if (!readOnly) {
-    // List jobs tool - suppress deep inference issues
-    // @ts-expect-error TypeScript has issues with deep Zod inference in MCP SDK
     server.tool(
       "list_jobs",
       "List all indexing jobs. Optionally filter by status.",

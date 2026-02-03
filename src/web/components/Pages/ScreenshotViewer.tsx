@@ -5,9 +5,12 @@ interface ScreenshotViewerProps {
 
 /**
  * Component to display page screenshots
- * 
+ *
  * Shows the screenshot image with a link to view it in a new tab.
  * Returns null if no screenshot is available.
+ * @param pageId - Database ID of the page
+ * @param screenshotPath - Optional path to the screenshot file
+ * @default screenshotPath - undefined if no screenshot available
  */
 const ScreenshotViewer = ({ pageId, screenshotPath }: ScreenshotViewerProps) => {
   if (!screenshotPath) return null;

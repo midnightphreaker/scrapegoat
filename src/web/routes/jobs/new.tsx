@@ -6,6 +6,8 @@ import Alert from "../../components/Alert";
 import ScrapeFormContent from "../../components/ScrapeFormContent";
 import { DEFAULT_EXCLUSION_PATTERNS } from "../../../scraper/utils/defaultPatterns";
 import { ValidationError } from "../../../tools/errors";
+import { validateFormFields, VALIDATION_LIMITS } from "../../utils/validation";
+import { sanitizeScrapeFormData } from "../../utils/sanitization";
 
 /**
  * Registers the API routes for creating new jobs.
@@ -46,6 +48,47 @@ export function registerNewJobRoutes(
       const body = request.body;
       reply.type("text/html"); // Set content type for all responses from this handler
       try {
+        // Helper functions for parsing
+        // Parse includePatterns and excludePatterns from textarea input
+        function parsePatterns(input?: string): string[] | undefined {
+          if (!input) return undefined;
+          return input
+            .split(/\n|,/)
+            .map((s) => s.trim())
+            .filter((s) => s.length > 0);
+        }
+
+        // Parse custom headers from repeated header[] fields (format: name:value)
+        // Also returns an array of header objects for validation
+        function parseHeadersFromForm(
+          input?: string[] | string
+        ): Array<{ name: string; value: string }> {
+          if (!input) return [];
+          const arr = Array.isArray(input) ? input : [input];
+          const headers: Array<{ name: string; value: string }> = [];
+          for (const entry of arr) {
+            const idx = entry.indexOf(":");
+            if (idx > 0) {
+              const name = entry.slice(0, idx).trim();
+              const value = entry.slice(idx + 1).trim();
+              if (name) headers.push({ name, value });
+            }
+          }
+          return headers;
+        }
+
+        // Parse custom headers from repeated header[] fields (format: name:value)
+        function parseHeaders(
+          input?: string[] | string
+        ): Record<string, string> | undefined {
+          const headersArr = parseHeadersFromForm(input);
+          const headers: Record<string, string> = {};
+          for (const header of headersArr) {
+            headers[header.name] = header.value;
+          }
+          return Object.keys(headers).length > 0 ? headers : undefined;
+        }
+
         // Basic validation
         if (!body.url || !body.library) {
           reply.status(400);
@@ -59,38 +102,50 @@ export function registerNewJobRoutes(
           );
         }
 
-        // Parse includePatterns and excludePatterns from textarea input
-        function parsePatterns(input?: string): string[] | undefined {
-          if (!input) return undefined;
-          return input
-            .split(/\n|,/)
-            .map((s) => s.trim())
-            .filter((s) => s.length > 0);
-        }
-
-        // Parse custom headers from repeated header[] fields (format: name:value)
-        function parseHeaders(
-          input?: string[] | string
-        ): Record<string, string> | undefined {
-          if (!input) return undefined;
-          const arr = Array.isArray(input) ? input : [input];
-          const headers: Record<string, string> = {};
-          for (const entry of arr) {
-            const idx = entry.indexOf(":");
-            if (idx > 0) {
-              const name = entry.slice(0, idx).trim();
-              const value = entry.slice(idx + 1).trim();
-              if (name) headers[name] = value;
-            }
-          }
-          return Object.keys(headers).length > 0 ? headers : undefined;
-        }
-
-        // Prepare options for ScrapeTool
-        const scrapeOptions = {
+        // Sanitize all user inputs before processing (Issue #43 - Data sanitization)
+        // This prevents XSS, command injection, header injection, and URL attacks
+        const sanitized = sanitizeScrapeFormData({
           url: body.url,
           library: body.library,
-          version: body.version || null, // Handle empty string as null
+          version: body.version,
+          includePatterns: body.includePatterns,
+          excludePatterns: body.excludePatterns,
+          headers: parseHeadersFromForm(body["header[]"]),
+        });
+
+        // Log warnings if any input was modified during sanitization
+        if (sanitized.warnings.length > 0) {
+          logger.warn(
+            `Input sanitization warnings for scrape job: ${sanitized.warnings.join(", ")}`
+          );
+        }
+
+        // Length validation - enforce backend limits (using sanitized values)
+        const lengthError = validateFormFields({
+          url: sanitized.url,
+          library: sanitized.library,
+          version: sanitized.version,
+          includePatterns: body.includePatterns, // Original for length check
+          excludePatterns: body.excludePatterns, // Original for length check
+          headers: sanitized.headers,
+        });
+
+        if (lengthError) {
+          reply.status(400);
+          return (
+            <Alert
+              type="error"
+              title="Validation Error:"
+              message={lengthError}
+            />
+          );
+        }
+
+        // Prepare options for ScrapeTool (using sanitized values)
+        const scrapeOptions = {
+          url: sanitized.url,
+          library: sanitized.library,
+          version: sanitized.version || null, // Handle empty string as null
           waitForCompletion: false, // Don't wait in UI
           options: {
             maxPages: body.maxPages
@@ -103,9 +158,11 @@ export function registerNewJobRoutes(
             // Checkboxes send 'on' when checked, otherwise undefined
             followRedirects: body.followRedirects === "on",
             ignoreErrors: body.ignoreErrors === "on",
-            includePatterns: parsePatterns(body.includePatterns),
-            excludePatterns: parsePatterns(body.excludePatterns),
-            headers: parseHeaders(body["header[]"]), // <-- propagate custom headers from web UI
+            includePatterns: sanitized.includePatterns,
+            excludePatterns: sanitized.excludePatterns,
+            headers: Object.fromEntries(
+              sanitized.headers.map((h) => [h.name, h.value])
+            ),
           },
         };
 

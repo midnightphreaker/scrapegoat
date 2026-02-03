@@ -1,6 +1,6 @@
 // Integration test for database migrations using PostgreSQL with pgvector
 
-import { Pool, type PoolClient } from "pg";
+import { Pool } from "pg";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { applyMigrations } from "./applyMigrations";
 
@@ -226,7 +226,7 @@ describe("Database Migrations", () => {
         "INSERT INTO versions (library_id, name, status) VALUES ($1, $2, 'completed') RETURNING id",
         [libraryId, "1.0.0"],
       );
-      const versionId = versionResult.rows[0].id;
+      const _versionId = versionResult.rows[0].id;
 
       // Search for vectors in empty library
       const searchVector = new Array(1536).fill(0.5);

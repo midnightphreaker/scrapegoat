@@ -1,4 +1,5 @@
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
+import { logger } from "../../../utils/logger";
 import { AutoDetectFetcher } from "../AutoDetectFetcher";
 import { Crawl4AIFetcher } from "./Crawl4AIFetcher";
 
@@ -52,7 +53,7 @@ describe("Crawl4AI Storage Integration", () => {
 
     it("should select Crawl4AIFetcher when useCrawl4AI flag is true", async () => {
       if (!isServiceAvailable) {
-        console.log("Skipping - service not available");
+        logger.debug("Skipping - Crawl4AI service not available");
         return;
       }
 
@@ -101,7 +102,7 @@ describe("Crawl4AI Storage Integration", () => {
   describe("Content Quality", () => {
     it("should return BM25-filtered markdown from Crawl4AI", async () => {
       if (!isServiceAvailable) {
-        console.log("Skipping - service not available");
+        logger.debug("Skipping - Crawl4AI service not available");
         return;
       }
 
@@ -123,7 +124,7 @@ describe("Crawl4AI Storage Integration", () => {
 
     it("should handle redirects correctly with Crawl4AI", async () => {
       if (!isServiceAvailable) {
-        console.log("Skipping - service not available");
+        logger.debug("Skipping - Crawl4AI service not available");
         return;
       }
 
@@ -142,7 +143,7 @@ describe("Crawl4AI Storage Integration", () => {
   describe("Error Handling", () => {
     it("should handle invalid URLs gracefully", async () => {
       if (!isServiceAvailable) {
-        console.log("Skipping - service not available");
+        logger.debug("Skipping - Crawl4AI service not available");
         return;
       }
 
@@ -157,7 +158,7 @@ describe("Crawl4AI Storage Integration", () => {
 
     it("should handle cancellation via AbortSignal", async () => {
       if (!isServiceAvailable) {
-        console.log("Skipping - service not available");
+        logger.debug("Skipping - Crawl4AI service not available");
         return;
       }
 
@@ -194,7 +195,7 @@ describe("Crawl4AI Storage Integration", () => {
   describe("Performance Characteristics", () => {
     it("should complete Crawl4AI fetch within timeout", async () => {
       if (!isServiceAvailable) {
-        console.log("Skipping - service not available");
+        logger.debug("Skipping - Crawl4AI service not available");
         return;
       }
 
@@ -213,7 +214,7 @@ describe("Crawl4AI Storage Integration", () => {
 
       // Note: Crawl4AI is typically slower than HTTP (2-5x)
       // This is expected and documented
-      console.log(`Crawl4AI fetch completed in ${duration}ms`);
+      logger.debug(`Crawl4AI fetch completed in ${duration}ms`);
     }, 35000);
   });
 });

@@ -12,13 +12,17 @@ import { ScraperRegistry, ScraperService } from "../scraper";
 import type { ScraperOptions, ScraperProgress } from "../scraper/types";
 import type { DocumentManagementService } from "../store";
 import { VersionStatus } from "../store/types";
-import { DEFAULT_MAX_CONCURRENCY } from "../utils/config";
+import { rateLimitConfig } from "../utils/config";
 import { logger } from "../utils/logger";
 import { CancellationError, PipelineStateError } from "./errors";
 import { PipelineWorker } from "./PipelineWorker"; // Import the worker
 import type { IPipeline } from "./trpc/interfaces";
-import type { InternalPipelineJob, PipelineJob, PipelineManagerCallbacks } from "./types";
-import { PipelineJobStatus } from "./types";
+import type {
+  InternalPipelineJob,
+  PipelineJob,
+  PipelineJobStatus,
+  PipelineManagerCallbacks,
+} from "./types";
 
 /**
  * Manages a queue of document processing jobs, controlling concurrency and tracking progress.
@@ -37,7 +41,7 @@ export class PipelineManager implements IPipeline {
 
   constructor(
     store: DocumentManagementService,
-    concurrency: number = DEFAULT_MAX_CONCURRENCY,
+    concurrency: number = rateLimitConfig.pipeline.maxConcurrency,
     options: { recoverJobs?: boolean } = {},
   ) {
     this.store = store;
@@ -176,7 +180,7 @@ export class PipelineManager implements IPipeline {
           id: jobId,
           library: version.library_name,
           version: version.name || "",
-          status: PipelineJobStatus.QUEUED,
+          status: "queued",
           progress: null,
           error: null,
           createdAt: new Date(version.created_at),
@@ -258,7 +262,7 @@ export class PipelineManager implements IPipeline {
       (job) =>
         job.library === library &&
         (job.version ?? "") === normalizedVersion && // Normalize null to empty string for comparison
-        [PipelineJobStatus.QUEUED, PipelineJobStatus.RUNNING].includes(job.status),
+        ["queued", "running"].includes(job.status),
     );
     for (const job of duplicateJobs) {
       logger.info(
@@ -283,7 +287,7 @@ export class PipelineManager implements IPipeline {
       id: jobId,
       library,
       version: normalizedVersion,
-      status: PipelineJobStatus.QUEUED,
+      status: "queued",
       progress: null,
       error: null,
       createdAt: new Date(),
@@ -310,7 +314,7 @@ export class PipelineManager implements IPipeline {
     );
 
     // Update database status to QUEUED
-    await this.updateJobStatus(job, PipelineJobStatus.QUEUED);
+    await this.updateJobStatus(job, "queued");
 
     // Trigger processing if manager is running
     if (this.isRunning) {
@@ -349,11 +353,34 @@ export class PipelineManager implements IPipeline {
       const storedOptions = stored.options;
 
       // Reconstruct complete scraper options
+      // Normalize scope and fetcher to lowercase values expected by ScraperOptions
+      const normalizedScope = storedOptions.scope
+        ? (storedOptions.scope as string).toLowerCase()
+        : undefined;
+      const normalizedFetcher = storedOptions.fetcher
+        ? (storedOptions.fetcher as string).toLowerCase()
+        : undefined;
+
+      // Normalize crawl4ai options (screenshotMode may be uppercase from keyof typeof)
+      const normalizedCrawl4ai = storedOptions.crawl4ai
+        ? {
+            ...storedOptions.crawl4ai,
+            screenshotMode: storedOptions.crawl4ai.screenshotMode
+              ? ((storedOptions.crawl4ai.screenshotMode as string).toLowerCase() as
+                  | "viewport"
+                  | "full")
+              : undefined,
+          }
+        : undefined;
+
       const completeOptions: ScraperOptions = {
         url: stored.sourceUrl,
         library,
         version: normalizedVersion,
         ...storedOptions,
+        scope: normalizedScope as "subpages" | "hostname" | "domain" | undefined,
+        fetcher: normalizedFetcher as "auto" | "http" | "crawl4ai" | "file" | undefined,
+        crawl4ai: normalizedCrawl4ai,
       };
 
       logger.info(
@@ -400,10 +427,7 @@ export class PipelineManager implements IPipeline {
       await job.completionPromise;
     } catch (error) {
       // If the job was cancelled, treat it as successful completion
-      if (
-        error instanceof CancellationError ||
-        job.status === PipelineJobStatus.CANCELLED
-      ) {
+      if (error instanceof CancellationError || job.status === "cancelled") {
         return; // Resolve successfully for cancelled jobs
       }
       // Re-throw other errors (failed jobs)
@@ -422,27 +446,27 @@ export class PipelineManager implements IPipeline {
     }
 
     switch (job.status) {
-      case PipelineJobStatus.QUEUED:
+      case "queued":
         // Remove from queue and mark as cancelled
         this.jobQueue = this.jobQueue.filter((id) => id !== jobId);
-        await this.updateJobStatus(job, PipelineJobStatus.CANCELLED);
+        await this.updateJobStatus(job, "cancelled");
         job.finishedAt = new Date();
         logger.info(`🚫 Job cancelled (was queued): ${jobId}`);
         job.rejectCompletion(new PipelineStateError("Job cancelled before starting"));
         break;
 
-      case PipelineJobStatus.RUNNING:
+      case "running":
         // Signal cancellation via AbortController
-        await this.updateJobStatus(job, PipelineJobStatus.CANCELLING);
+        await this.updateJobStatus(job, "cancelling");
         job.abortController.abort();
         logger.info(`🚫 Signalling cancellation for running job: ${jobId}`);
         // The worker is responsible for transitioning to CANCELLED and rejecting
         break;
 
-      case PipelineJobStatus.COMPLETED:
-      case PipelineJobStatus.FAILED:
-      case PipelineJobStatus.CANCELLED:
-      case PipelineJobStatus.CANCELLING:
+      case "completed":
+      case "failed":
+      case "cancelled":
+      case "cancelling":
         logger.warn(
           `⚠️  Job ${jobId} cannot be cancelled in its current state: ${job.status}`,
         );
@@ -460,11 +484,7 @@ export class PipelineManager implements IPipeline {
    * @returns The number of jobs that were cleared.
    */
   async clearCompletedJobs(): Promise<number> {
-    const completedStatuses = [
-      PipelineJobStatus.COMPLETED,
-      PipelineJobStatus.CANCELLED,
-      PipelineJobStatus.FAILED,
-    ];
+    const completedStatuses = ["completed", "cancelled", "failed"];
 
     let clearedCount = 0;
     const jobsToRemove: string[] = [];
@@ -504,25 +524,22 @@ export class PipelineManager implements IPipeline {
       if (!jobId) continue; // Should not happen, but safety check
 
       const job = this.jobMap.get(jobId);
-      if (!job || job.status !== PipelineJobStatus.QUEUED) {
+      if (!job || job.status !== "queued") {
         logger.warn(`⏭️ Skipping job ${jobId} in queue (not found or not queued).`);
         continue;
       }
 
       this.activeWorkers.add(jobId);
-      await this.updateJobStatus(job, PipelineJobStatus.RUNNING);
+      await this.updateJobStatus(job, "running");
       job.startedAt = new Date();
 
       // Start the actual job execution asynchronously
       this._runJob(job).catch(async (error) => {
         // Catch unexpected errors during job setup/execution not handled by _runJob itself
         logger.error(`❌ Unhandled error during job ${jobId} execution: ${error}`);
-        if (
-          job.status !== PipelineJobStatus.FAILED &&
-          job.status !== PipelineJobStatus.CANCELLED
-        ) {
+        if (job.status !== "failed" && job.status !== "cancelled") {
           const errorMessage = error instanceof Error ? error.message : String(error);
-          await this.updateJobStatus(job, PipelineJobStatus.FAILED, errorMessage);
+          await this.updateJobStatus(job, "failed", errorMessage);
           job.error = error instanceof Error ? error : new Error(String(error));
           job.finishedAt = new Date();
           job.rejectCompletion(job.error);
@@ -558,7 +575,7 @@ export class PipelineManager implements IPipeline {
       }
 
       // Mark as completed
-      await this.updateJobStatus(job, PipelineJobStatus.COMPLETED);
+      await this.updateJobStatus(job, "completed");
       job.finishedAt = new Date();
       job.resolveCompletion();
 
@@ -567,7 +584,7 @@ export class PipelineManager implements IPipeline {
       // Handle errors thrown by the worker, including CancellationError
       if (error instanceof CancellationError || signal.aborted) {
         // Explicitly check for CancellationError or if the signal was aborted
-        await this.updateJobStatus(job, PipelineJobStatus.CANCELLED);
+        await this.updateJobStatus(job, "cancelled");
         job.finishedAt = new Date();
         // Don't set job.error for cancellations - cancellation is not an error condition
         const cancellationError =
@@ -579,7 +596,7 @@ export class PipelineManager implements IPipeline {
       } else {
         // Handle other errors
         const errorMessage = error instanceof Error ? error.message : String(error);
-        await this.updateJobStatus(job, PipelineJobStatus.FAILED, errorMessage);
+        await this.updateJobStatus(job, "failed", errorMessage);
         job.error = error instanceof Error ? error : new Error(String(error));
         job.finishedAt = new Date();
         logger.error(`❌ Job failed: ${jobId}: ${job.error}`);
@@ -599,17 +616,17 @@ export class PipelineManager implements IPipeline {
    */
   private mapJobStatusToVersionStatus(jobStatus: PipelineJobStatus): VersionStatus {
     switch (jobStatus) {
-      case PipelineJobStatus.QUEUED:
+      case "queued":
         return VersionStatus.QUEUED;
-      case PipelineJobStatus.RUNNING:
+      case "running":
         return VersionStatus.RUNNING;
-      case PipelineJobStatus.COMPLETED:
+      case "completed":
         return VersionStatus.COMPLETED;
-      case PipelineJobStatus.FAILED:
+      case "failed":
         return VersionStatus.FAILED;
-      case PipelineJobStatus.CANCELLED:
+      case "cancelled":
         return VersionStatus.CANCELLED;
-      case PipelineJobStatus.CANCELLING:
+      case "cancelling":
         return VersionStatus.RUNNING; // Keep as running in DB until actually cancelled
       default:
         return VersionStatus.NOT_INDEXED;
@@ -647,14 +664,42 @@ export class PipelineManager implements IPipeline {
       await this.store.updateVersionStatus(versionId, dbStatus, errorMessage);
 
       // Store scraper options when job is first queued
-      if (newStatus === PipelineJobStatus.QUEUED && job.scraperOptions) {
+      if (newStatus === "queued" && job.scraperOptions) {
         try {
           // Reconstruct ScraperOptions for storage (DocumentStore will filter runtime fields)
+          // Normalize scope and fetcher to lowercase values
+          const normalizedScope = job.scraperOptions.scope
+            ? (job.scraperOptions.scope as string).toLowerCase()
+            : undefined;
+          const normalizedFetcher = job.scraperOptions.fetcher
+            ? (job.scraperOptions.fetcher as string).toLowerCase()
+            : undefined;
+
+          // Normalize crawl4ai options (screenshotMode may be uppercase from keyof typeof)
+          const normalizedCrawl4ai = job.scraperOptions.crawl4ai
+            ? {
+                ...job.scraperOptions.crawl4ai,
+                screenshotMode: job.scraperOptions.crawl4ai.screenshotMode
+                  ? ((
+                      job.scraperOptions.crawl4ai.screenshotMode as string
+                    ).toLowerCase() as "viewport" | "full")
+                  : undefined,
+              }
+            : undefined;
+
           const fullOptions = {
             url: job.sourceUrl ?? "",
             library: job.library,
             version: job.version,
             ...job.scraperOptions,
+            scope: normalizedScope as "subpages" | "hostname" | "domain" | undefined,
+            fetcher: normalizedFetcher as
+              | "auto"
+              | "http"
+              | "crawl4ai"
+              | "file"
+              | undefined,
+            crawl4ai: normalizedCrawl4ai,
           };
           await this.store.storeScraperOptions(versionId, fullOptions);
           logger.debug(

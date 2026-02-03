@@ -2,6 +2,8 @@
  * Default configuration values for the scraping pipeline and server
  */
 
+import { logger } from "./logger.js";
+
 /** Default PostgreSQL connection string (can be overridden via DATABASE_URL env var) */
 export const DEFAULT_DATABASE_URL =
   process.env.DATABASE_URL || "postgresql://localhost:5432/scrapegoat";
@@ -203,6 +205,21 @@ export interface MonitoringConfig {
   exportInterval: number;
   /** Enable detailed logging */
   detailedLogging: boolean;
+  /** Performance tracking thresholds (ms) */
+  performance: {
+    /** Database operation slow threshold */
+    database: number;
+    /** Embedding generation slow threshold */
+    embedding: number;
+    /** Search operation slow threshold */
+    search: number;
+    /** Document processing slow threshold */
+    processing: number;
+    /** Fetcher operation slow threshold */
+    fetcher: number;
+  };
+  /** Maximum timing samples to keep per operation */
+  maxSamples: number;
 }
 
 /**
@@ -263,6 +280,14 @@ export function loadConfig(): Config {
       enabled: process.env.MONITORING_ENABLED !== "false",
       exportInterval: Number.parseInt(process.env.METRICS_EXPORT_INTERVAL || "60000", 10),
       detailedLogging: process.env.DETAILED_LOGGING === "true",
+      performance: {
+        database: Number.parseInt(process.env.PERF_THRESHOLD_DATABASE || "1000", 10),
+        embedding: Number.parseInt(process.env.PERF_THRESHOLD_EMBEDDING || "5000", 10),
+        search: Number.parseInt(process.env.PERF_THRESHOLD_SEARCH || "2000", 10),
+        processing: Number.parseInt(process.env.PERF_THRESHOLD_PROCESSING || "10000", 10),
+        fetcher: Number.parseInt(process.env.PERF_THRESHOLD_FETCHER || "30000", 10),
+      },
+      maxSamples: Number.parseInt(process.env.PERF_MAX_SAMPLES || "1000", 10),
     },
   };
 }
@@ -354,3 +379,275 @@ export function validateConfig(config: Config): ValidationResult {
  * Loaded once at startup and validated
  */
 export const appConfig = loadConfig();
+
+// ============================================================================
+// Rate Limiting Configuration (Issue #80)
+// ============================================================================
+
+/**
+ * Pipeline rate limit configuration
+ * Controls how many scraping jobs run concurrently
+ */
+export interface PipelineRateLimitConfig {
+  /** Maximum concurrent scraping jobs in the pipeline queue */
+  maxConcurrency: number;
+  /** Maximum concurrent page requests within a single scraping job */
+  pageConcurrency: number;
+}
+
+/**
+ * Embedding rate limit configuration
+ * Controls parallel embedding operations
+ */
+export interface EmbeddingRateLimitConfig {
+  /** Maximum concurrent image embedding operations */
+  maxConcurrency: number;
+  /** Maximum documents per embedding batch */
+  maxBatchSize: number;
+}
+
+/**
+ * Network rate limit configuration
+ * Controls HTTP/Crawl4AI request rate limiting
+ */
+export interface NetworkRateLimitConfig {
+  /** HTTP fetcher retry settings */
+  http: {
+    /** Maximum number of retry attempts for failed HTTP requests */
+    maxRetries: number;
+    /** Base delay in milliseconds for exponential backoff */
+    retryDelayMs: number;
+  };
+  /** Crawl4AI circuit breaker settings */
+  crawl4ai: {
+    /** Number of consecutive failures before opening circuit */
+    circuitBreakerThreshold: number;
+    /** Time in milliseconds before attempting to reset circuit */
+    circuitBreakerResetTimeoutMs: number;
+  };
+}
+
+/**
+ * Database rate limit configuration
+ * Controls connection pool behavior
+ */
+export interface DatabaseRateLimitConfig {
+  /** Minimum number of connections in the pool */
+  poolMin: number;
+  /** Maximum number of connections in the pool */
+  poolMax: number;
+  /** Connection timeout in milliseconds */
+  connectionTimeoutMs: number;
+  /** Idle timeout in milliseconds before closing unused connections */
+  idleTimeoutMs: number;
+}
+
+/**
+ * Complete rate limiting configuration
+ */
+export interface RateLimitConfig {
+  pipeline: PipelineRateLimitConfig;
+  embedding: EmbeddingRateLimitConfig;
+  network: NetworkRateLimitConfig;
+  database: DatabaseRateLimitConfig;
+}
+
+/**
+ * Load rate limiting configuration from environment variables
+ *
+ * @returns Rate limit configuration with values from environment or defaults
+ */
+export function loadRateLimitConfig(): RateLimitConfig {
+  return {
+    pipeline: {
+      maxConcurrency: Number.parseInt(process.env.PIPELINE_MAX_CONCURRENCY || "3", 10),
+      pageConcurrency: Number.parseInt(process.env.SCRAPER_PAGE_CONCURRENCY || "3", 10),
+    },
+    embedding: {
+      maxConcurrency: Number.parseInt(
+        process.env.IMAGE_EMBEDDING_MAX_CONCURRENCY || "5",
+        10,
+      ),
+      maxBatchSize: Number.parseInt(process.env.EMBEDDING_BATCH_SIZE || "100", 10),
+    },
+    network: {
+      http: {
+        maxRetries: Number.parseInt(process.env.HTTP_FETCHER_MAX_RETRIES || "6", 10),
+        retryDelayMs: Number.parseInt(
+          process.env.HTTP_FETCHER_RETRY_DELAY_MS || "1000",
+          10,
+        ),
+      },
+      crawl4ai: {
+        circuitBreakerThreshold: Number.parseInt(
+          process.env.CRAWL4AI_CIRCUIT_BREAKER_THRESHOLD || "5",
+          10,
+        ),
+        circuitBreakerResetTimeoutMs: Number.parseInt(
+          process.env.CRAWL4AI_CIRCUIT_BREAKER_RESET_TIMEOUT_MS || "60000",
+          10,
+        ),
+      },
+    },
+    database: {
+      poolMin: Number.parseInt(process.env.DB_POOL_MIN || "2", 10),
+      poolMax: Number.parseInt(process.env.DB_POOL_MAX || "10", 10),
+      connectionTimeoutMs: Number.parseInt(
+        process.env.DB_CONNECTION_TIMEOUT_MS || "10000",
+        10,
+      ),
+      idleTimeoutMs: Number.parseInt(process.env.DB_IDLE_TIMEOUT_MS || "30000", 10),
+    },
+  };
+}
+
+/**
+ * Validate rate limiting configuration
+ *
+ * Checks for invalid values and returns validation errors.
+ * Should be called after loadRateLimitConfig() to ensure configuration is valid.
+ *
+ * @param config Rate limit configuration to validate
+ * @returns Validation result with errors if any
+ */
+export function validateRateLimitConfig(config: RateLimitConfig): {
+  valid: boolean;
+  errors: string[];
+  warnings: string[];
+} {
+  const errors: string[] = [];
+  const warnings: string[] = [];
+
+  // Validate pipeline concurrency
+  if (config.pipeline.maxConcurrency < 1 || config.pipeline.maxConcurrency > 20) {
+    errors.push(
+      `PIPELINE_MAX_CONCURRENCY must be between 1 and 20 (got: ${config.pipeline.maxConcurrency})`,
+    );
+  } else if (config.pipeline.maxConcurrency > 10) {
+    warnings.push(
+      `PIPELINE_MAX_CONCURRENCY is set to ${config.pipeline.maxConcurrency}. High values may cause memory issues or rate limiting from target servers.`,
+    );
+  }
+
+  if (config.pipeline.pageConcurrency < 1 || config.pipeline.pageConcurrency > 20) {
+    errors.push(
+      `SCRAPER_PAGE_CONCURRENCY must be between 1 and 20 (got: ${config.pipeline.pageConcurrency})`,
+    );
+  } else if (config.pipeline.pageConcurrency > 10) {
+    warnings.push(
+      `SCRAPER_PAGE_CONCURRENCY is set to ${config.pipeline.pageConcurrency}. High values may trigger anti-bot measures.`,
+    );
+  }
+
+  // Validate embedding concurrency
+  if (config.embedding.maxConcurrency < 1 || config.embedding.maxConcurrency > 20) {
+    errors.push(
+      `IMAGE_EMBEDDING_MAX_CONCURRENCY must be between 1 and 20 (got: ${config.embedding.maxConcurrency})`,
+    );
+  } else if (config.embedding.maxConcurrency > 10) {
+    warnings.push(
+      `IMAGE_EMBEDDING_MAX_CONCURRENCY is set to ${config.embedding.maxConcurrency}. High values may overload embedding APIs.`,
+    );
+  }
+
+  if (config.embedding.maxBatchSize < 1 || config.embedding.maxBatchSize > 500) {
+    errors.push(
+      `EMBEDDING_BATCH_SIZE must be between 1 and 500 (got: ${config.embedding.maxBatchSize})`,
+    );
+  }
+
+  // Validate network settings
+  if (config.network.http.maxRetries < 0 || config.network.http.maxRetries > 20) {
+    errors.push(
+      `HTTP_FETCHER_MAX_RETRIES must be between 0 and 20 (got: ${config.network.http.maxRetries})`,
+    );
+  }
+
+  if (
+    config.network.http.retryDelayMs < 100 ||
+    config.network.http.retryDelayMs > 60000
+  ) {
+    errors.push(
+      `HTTP_FETCHER_RETRY_DELAY_MS must be between 100 and 60000 (got: ${config.network.http.retryDelayMs})`,
+    );
+  }
+
+  if (
+    config.network.crawl4ai.circuitBreakerThreshold < 1 ||
+    config.network.crawl4ai.circuitBreakerThreshold > 100
+  ) {
+    errors.push(
+      `CRAWL4AI_CIRCUIT_BREAKER_THRESHOLD must be between 1 and 100 (got: ${config.network.crawl4ai.circuitBreakerThreshold})`,
+    );
+  }
+
+  if (
+    config.network.crawl4ai.circuitBreakerResetTimeoutMs < 1000 ||
+    config.network.crawl4ai.circuitBreakerResetTimeoutMs > 600000
+  ) {
+    errors.push(
+      `CRAWL4AI_CIRCUIT_BREAKER_RESET_TIMEOUT_MS must be between 1000 and 600000 (got: ${config.network.crawl4ai.circuitBreakerResetTimeoutMs})`,
+    );
+  }
+
+  // Validate database pool settings
+  if (config.database.poolMin < 0 || config.database.poolMin > 100) {
+    errors.push(
+      `DB_POOL_MIN must be between 0 and 100 (got: ${config.database.poolMin})`,
+    );
+  }
+
+  if (config.database.poolMax < 1 || config.database.poolMax > 200) {
+    errors.push(
+      `DB_POOL_MAX must be between 1 and 200 (got: ${config.database.poolMax})`,
+    );
+  }
+
+  if (config.database.poolMin >= config.database.poolMax) {
+    errors.push(
+      `DB_POOL_MIN (${config.database.poolMin}) must be less than DB_POOL_MAX (${config.database.poolMax})`,
+    );
+  }
+
+  if (
+    config.database.connectionTimeoutMs < 1000 ||
+    config.database.connectionTimeoutMs > 120000
+  ) {
+    errors.push(
+      `DB_CONNECTION_TIMEOUT_MS must be between 1000 and 120000 (got: ${config.database.connectionTimeoutMs})`,
+    );
+  }
+
+  if (config.database.idleTimeoutMs < 1000 || config.database.idleTimeoutMs > 600000) {
+    errors.push(
+      `DB_IDLE_TIMEOUT_MS must be between 1000 and 600000 (got: ${config.database.idleTimeoutMs})`,
+    );
+  }
+
+  // Log warnings if any
+  if (warnings.length > 0) {
+    for (const warning of warnings) {
+      logger.warn(`Rate limit configuration warning: ${warning}`);
+    }
+  }
+
+  return {
+    valid: errors.length === 0,
+    errors,
+    warnings,
+  };
+}
+
+/**
+ * Export singleton rate limit config instance
+ * Loaded once at startup and validated
+ */
+export const rateLimitConfig = loadRateLimitConfig();
+
+// Validate at module load time
+const rateLimitValidation = validateRateLimitConfig(rateLimitConfig);
+if (!rateLimitValidation.valid) {
+  throw new Error(
+    `Invalid rate limiting configuration:\n${rateLimitValidation.errors.map((e) => `  - ${e}`).join("\n")}`,
+  );
+}

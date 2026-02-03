@@ -1,5 +1,7 @@
 import type { Document, ProgressCallback } from "../../types";
+import { InvalidUrlError } from "../../utils/errors";
 import { logger } from "../../utils/logger";
+import { validateGitHubWikiUrl } from "../../utils/validation";
 import { HttpFetcher } from "../fetcher";
 import { PipelineFactory } from "../pipelines/PipelineFactory";
 import type { ContentPipeline } from "../pipelines/types";
@@ -58,11 +60,11 @@ export class GitHubWikiScraperStrategy extends BaseScraperStrategy {
     // Extract /<org>/<repo> from github.com/<org>/<repo>/wiki/...
     const match = parsedUrl.pathname.match(/^\/([^/]+)\/([^/]+)\/wiki/);
     if (!match) {
-      throw new Error(`Invalid GitHub wiki URL: ${url}`);
+      throw new InvalidUrlError(url, new Error("Invalid GitHub wiki URL"));
     }
 
     const [, owner, repo] = match;
-    return { owner, repo };
+    return { owner: owner!, repo: repo! };
   }
 
   /**
@@ -211,10 +213,7 @@ export class GitHubWikiScraperStrategy extends BaseScraperStrategy {
     signal?: AbortSignal,
   ): Promise<void> {
     // Validate it's a GitHub wiki URL
-    const url = new URL(options.url);
-    if (!url.hostname.includes("github.com") || !url.pathname.includes("/wiki")) {
-      throw new Error("URL must be a GitHub wiki URL");
-    }
+    const url = validateGitHubWikiUrl(options.url);
 
     // Ensure the starting URL points to the wiki home if no specific page is provided
     let startUrl = options.url;

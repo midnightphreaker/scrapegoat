@@ -6,9 +6,14 @@
  */
 
 export interface Context7LogoProps {
+  /** CSS class name for styling the logo */
   className?: string;
 }
 
+/**
+ * @param className - CSS classes to apply to the SVG element
+ * @default className - "w-10 h-11" if not provided
+ */
 const Context7Logo = ({ className = "w-10 h-11" }: Context7LogoProps) => (
   <svg
     width="42"

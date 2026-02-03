@@ -159,7 +159,7 @@ function findDocumentationStart(
   // This prevents pulling in a blank line above the doc block (tests expect the comment line).
   let sawComment = false;
   for (let i = idx - 1; i >= 0; i--) {
-    const s = siblings[i];
+    const s = siblings[i]!;
     const text = source.slice(s.startIndex, s.endIndex);
     if (s.type === "comment") {
       sawComment = true;

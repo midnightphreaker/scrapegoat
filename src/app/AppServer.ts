@@ -217,25 +217,31 @@ export class AppServer {
     // Setup Fastify error handler (if method exists - for testing compatibility)
     if (typeof this.server.setErrorHandler === "function") {
       this.server.setErrorHandler(async (error, request, reply) => {
+        // Type guard for Fastify errors
+        const err = error instanceof Error ? error : new Error(String(error));
+        const statusCode =
+          "statusCode" in err && typeof err.statusCode === "number"
+            ? err.statusCode
+            : 500;
+
         if (analytics.isEnabled()) {
-          analytics.captureException(error, {
+          analytics.captureException(err, {
             errorCategory: "http",
             component: "FastifyServer",
-            statusCode: error.statusCode || 500,
+            statusCode,
             method: request.method,
             route: request.routeOptions?.url || request.url,
             context: "http_request_error",
           });
         }
 
-        logger.error(`HTTP Error on ${request.method} ${request.url}: ${error.message}`);
+        logger.error(`HTTP Error on ${request.method} ${request.url}: ${err.message}`);
 
         // Send appropriate error response
-        const statusCode = error.statusCode || 500;
         reply.status(statusCode).send({
           error: "Internal Server Error",
           statusCode,
-          message: statusCode < 500 ? error.message : "An unexpected error occurred",
+          message: statusCode < 500 ? err.message : "An unexpected error occurred",
         });
       });
     }

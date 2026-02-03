@@ -1,7 +1,7 @@
 import { URL } from "node:url";
 import { CancellationError } from "../../pipeline/errors";
 import type { Document, ProgressCallback } from "../../types";
-import { DEFAULT_MAX_PAGES } from "../../utils/config";
+import { DEFAULT_MAX_PAGES, rateLimitConfig } from "../../utils/config";
 import { logger } from "../../utils/logger";
 import { normalizeUrl, type UrlNormalizerOptions } from "../../utils/url";
 import type { ScraperOptions, ScraperProgress, ScraperStrategy } from "../types";
@@ -10,7 +10,7 @@ import { isInScope } from "../utils/scope";
 
 // Define defaults for optional options
 const DEFAULT_MAX_DEPTH = 3;
-const DEFAULT_CONCURRENCY = 3;
+const DEFAULT_CONCURRENCY = rateLimitConfig.pipeline.pageConcurrency;
 
 export type QueueItem = {
   url: string;

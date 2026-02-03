@@ -207,11 +207,12 @@ export class SemanticMarkdownSplitter implements DocumentSplitter {
 
       if (headingMatch) {
         // Create new section for H1-H6 heading
-        const level = Number.parseInt(headingMatch[1], 10);
+        const level = Number.parseInt(headingMatch[1]!, 10);
         const title = fullTrim(element.textContent || "");
 
         // Pop sections from stack until we find the parent level
-        while (stack.length > 1 && stack[stack.length - 1].level >= level) {
+        const stackTop = stack[stack.length - 1];
+        while (stack.length > 1 && stackTop && stackTop.level >= level) {
           stack.pop();
         }
 

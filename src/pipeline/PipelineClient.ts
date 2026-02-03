@@ -5,6 +5,12 @@
 
 import { createTRPCProxyClient, httpBatchLink } from "@trpc/client";
 import type { ScraperOptions } from "../scraper/types";
+import {
+  JobNotFoundError,
+  JobStateError,
+  PipelineError,
+  ServiceUnavailableError,
+} from "../utils/errors";
 import { logger } from "../utils/logger";
 import type { IPipeline } from "./trpc/interfaces";
 import type { PipelineRouter } from "./trpc/router";
@@ -56,8 +62,9 @@ export class PipelineClient implements IPipeline {
       ).ping.query();
       logger.debug("PipelineClient connected to external worker via tRPC");
     } catch (error) {
-      throw new Error(
-        `Failed to connect to external worker at ${this.baseUrl}: ${error instanceof Error ? error.message : String(error)}`,
+      throw new ServiceUnavailableError(
+        `external worker at ${this.baseUrl}`,
+        error instanceof Error ? error : undefined,
       );
     }
   }
@@ -86,8 +93,10 @@ export class PipelineClient implements IPipeline {
       logger.debug(`Job ${result.jobId} enqueued successfully`);
       return result.jobId;
     } catch (error) {
-      throw new Error(
-        `Failed to enqueue job: ${error instanceof Error ? error.message : String(error)}`,
+      throw new PipelineError(
+        `Failed to enqueue job for library '${library}'`,
+        "enqueue",
+        error,
       );
     }
   }
@@ -99,9 +108,7 @@ export class PipelineClient implements IPipeline {
         ? deserializeJob(serializedJob as unknown as Record<string, unknown>)
         : undefined;
     } catch (error) {
-      throw new Error(
-        `Failed to get job ${jobId}: ${error instanceof Error ? error.message : String(error)}`,
-      );
+      throw new PipelineError(`Failed to get job ${jobId}`, "getJob", error);
     }
   }
 
@@ -141,7 +148,12 @@ export class PipelineClient implements IPipeline {
 
   async waitForJobCompletion(jobId: string): Promise<void> {
     if (this.activePolling.has(jobId)) {
-      throw new Error(`Already waiting for completion of job ${jobId}`);
+      throw new JobStateError(
+        jobId,
+        "polling",
+        ["idle"],
+        `Already waiting for completion of job ${jobId}`,
+      );
     }
 
     this.activePolling.add(jobId);
@@ -150,7 +162,7 @@ export class PipelineClient implements IPipeline {
       while (this.activePolling.has(jobId)) {
         const job = await this.getJob(jobId);
         if (!job) {
-          throw new Error(`Job ${jobId} not found`);
+          throw new JobNotFoundError(jobId);
         }
 
         // Check if job is in final state

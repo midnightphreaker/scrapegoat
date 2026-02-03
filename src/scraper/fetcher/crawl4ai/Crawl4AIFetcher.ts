@@ -3,6 +3,7 @@ import {
   CRAWL4AI_SERVICE_URL,
   CRAWL4AI_TIMEOUT,
 } from "../../../utils/config";
+import { FetcherType, MimeType } from "../../../utils/constants";
 import { ScraperError } from "../../../utils/errors";
 import { logger } from "../../../utils/logger";
 import type { ContentFetcher, FetchOptions, RawContent } from "../types";
@@ -61,6 +62,15 @@ export class Crawl4AIFetcher implements ContentFetcher {
    */
   async fetch(source: string, options?: FetchOptions): Promise<RawContent> {
     try {
+      // Warn about deprecated stealthMode option early (before health check)
+      if (options?.crawl4ai?.stealthMode) {
+        logger.warn(
+          "The crawl4ai.stealthMode option is deprecated and will be removed in a future version. " +
+            "Please use browser.enableStealth instead. " +
+            "Example: { crawl4ai: { browser: { enableStealth: true } } }",
+        );
+      }
+
       // Check if service is available first
       const isAvailable = await this.client.isAvailable();
       if (!isAvailable) {
@@ -88,22 +98,40 @@ export class Crawl4AIFetcher implements ContentFetcher {
       // Merge options: explicit options > environment defaults > false
       const enableScreenshot = options?.crawl4ai?.enableScreenshot ?? envScreenshots;
       const screenshotMode: "viewport" | "full" =
-        options?.crawl4ai?.screenshotMode === "fullpage"
+        options?.crawl4ai?.screenshotMode === "full"
           ? "full"
           : (options?.crawl4ai?.screenshotMode ?? envScreenshotMode);
       const enableMedia = options?.crawl4ai?.enableMedia ?? envMedia;
       const enableLinks = options?.crawl4ai?.enableLinks ?? envLinks;
 
+      // Normalize cacheMode and stealthMode from uppercase keys to lowercase values
+      const normalizedCacheMode = options?.crawl4ai?.cacheMode
+        ? (options.crawl4ai.cacheMode as string).toLowerCase()
+        : "fresh";
+      const normalizedStealthMode = options?.crawl4ai?.stealthMode
+        ? (options.crawl4ai.stealthMode as string).toLowerCase()
+        : undefined;
+
       // Build Crawl4AI request with all options from Section 0
       const crawl4aiConfig: Crawl4AIConfig = {
-        cacheMode: options?.crawl4ai?.cacheMode ?? "fresh", // Default: 'fresh' per Section 0
+        cacheMode: normalizedCacheMode as
+          | "enabled"
+          | "disabled"
+          | "bypass"
+          | "write_only"
+          | "read_only"
+          | "fresh",
         useFitMarkdown: true, // Hardcoded: BM25-filtered markdown (CURRENT_PLAN.md Section 0, option 15)
         removeOverlays: true, // Hardcoded: Auto-remove popups/modals (Section 0, option 14)
-        screenshot: enableScreenshot ? screenshotMode : false,
+        screenshot: enableScreenshot,
         extractMedia: enableMedia,
         waitFor: options?.crawl4ai?.waitFor, // CSS selector to wait for (default: undefined)
         waitForTimeout: options?.crawl4ai?.waitForTimeout ?? 30000, // Default: 30000ms per Section 0
-        stealthMode: options?.crawl4ai?.stealthMode ?? undefined,
+        stealthMode: normalizedStealthMode as
+          | "disabled"
+          | "basic"
+          | "advanced"
+          | undefined,
         customJs: options?.crawl4ai?.customJs, // Custom JavaScript (default: undefined)
       };
 
@@ -162,11 +190,11 @@ export class Crawl4AIFetcher implements ContentFetcher {
       // Build enhanced RawContent with optional features
       const rawContent: RawContent = {
         content: Buffer.from(markdown, "utf-8"),
-        mimeType: "text/markdown",
+        mimeType: MimeType.MARKDOWN,
         charset: "utf-8",
         encoding: undefined,
         source: finalUrl,
-        fetcherType: "crawl4ai",
+        fetcherType: FetcherType.CRAWL4AI,
       };
 
       // Add screenshot if captured

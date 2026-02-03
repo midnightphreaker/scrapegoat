@@ -49,11 +49,32 @@ export class PipelineWorker {
       );
 
       // Construct runtime options from job context + stored configuration
+      // Normalize scope, fetcher, and crawl4ai options to lowercase values
+      const normalizedScope = scraperOptions?.scope
+        ? (scraperOptions.scope as string).toLowerCase()
+        : undefined;
+      const normalizedFetcher = scraperOptions?.fetcher
+        ? (scraperOptions.fetcher as string).toLowerCase()
+        : undefined;
+      const normalizedCrawl4ai = scraperOptions?.crawl4ai
+        ? {
+            ...scraperOptions.crawl4ai,
+            screenshotMode: scraperOptions.crawl4ai.screenshotMode
+              ? ((scraperOptions.crawl4ai.screenshotMode as string).toLowerCase() as
+                  | "viewport"
+                  | "full")
+              : undefined,
+          }
+        : undefined;
+
       const runtimeOptions = {
         url: sourceUrl ?? "",
         library,
         version,
         ...scraperOptions,
+        scope: normalizedScope as "subpages" | "hostname" | "domain" | undefined,
+        fetcher: normalizedFetcher as "auto" | "http" | "crawl4ai" | "file" | undefined,
+        crawl4ai: normalizedCrawl4ai,
       };
 
       // --- Core Job Logic ---

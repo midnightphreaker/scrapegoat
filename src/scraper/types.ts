@@ -70,11 +70,26 @@ export interface ScraperOptions {
    */
   fetcher?: "auto" | "http" | "crawl4ai" | "file";
   /**
-   * @deprecated Use fetcher: 'crawl4ai' instead.
+   * @deprecated Use `fetcher: 'crawl4ai'` instead.
+   *
+   * **Migration Guide:**
+   * - Old: `{ useCrawl4AI: true }`
+   * - New: `{ fetcher: 'crawl4ai' }`
+   * - For auto-detection: `{ fetcher: 'auto' }`
+   *
    * Whether to use Crawl4AI for content fetching.
    * Crawl4AI provides JavaScript rendering, anti-bot bypass, and BM25-filtered markdown.
    * Note: Slower than standard HTTP fetching, but produces higher quality content.
+   *
    * @default false
+   * @example
+   * // Deprecated
+   * { useCrawl4AI: true }
+   *
+   * // New approach
+   * { fetcher: 'crawl4ai' }
+   * // OR for auto-detection with fallback
+   * { fetcher: 'auto' }
    */
   useCrawl4AI?: boolean;
   /**

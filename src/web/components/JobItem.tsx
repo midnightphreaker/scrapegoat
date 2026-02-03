@@ -1,6 +1,6 @@
 import type { JobInfo } from "../../tools/GetJobInfoTool";
 import { PipelineJobStatus } from "../../pipeline/types";
-import { VersionStatus, isActiveStatus } from "../../store/types";
+import { isActiveStatus } from "../../store/types";
 import VersionBadge from "./VersionBadge";
 import StatusBadge from "./StatusBadge";
 import ProgressBar from "./ProgressBar";
@@ -19,7 +19,7 @@ interface JobItemProps {
  */
 const JobItem = ({ job }: JobItemProps) => {
   // Use database status if available, fallback to pipeline status
-  const displayStatus = job.dbStatus || job.status;
+  const _displayStatus = job.dbStatus || job.status;
   const isActiveJob = job.dbStatus
     ? isActiveStatus(job.dbStatus)
     : job.status === PipelineJobStatus.QUEUED ||
@@ -88,6 +88,7 @@ const JobItem = ({ job }: JobItemProps) => {
               <button
                 type="button"
                 class="font-medium rounded-lg text-xs p-1 text-center inline-flex items-center transition-colors duration-150 ease-in-out border border-stone-300 dark:border-stone-600 bg-white dark:bg-stone-700 text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/30 focus:ring-4 focus:outline-none focus:ring-red-100 dark:focus:ring-red-900"
+                aria-label={`Stop job for ${job.library} ${job.version || ''}`}
                 title="Stop this job"
                 x-data="{}"
                 x-on:click={`

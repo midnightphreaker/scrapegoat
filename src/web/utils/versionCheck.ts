@@ -27,6 +27,7 @@ export const normalizeVersionTag = (input: unknown): string | null => {
 
 const extractComparableSegments = (version: string): number[] | null => {
   const base = version.split(/[+-]/)[0];
+  if (!base) return null;
   const segments = base.split(".");
 
   if (segments.length === 0) {
@@ -95,7 +96,7 @@ export const getComparableVersion = (input: unknown): string | null => {
   }
 
   const base = normalized.split(/[+-]/)[0];
-  return base.length > 0 ? base : null;
+  return base && base.length > 0 ? base : null;
 };
 
 export const fallbackReleaseLabel = (input: unknown): string | null => {

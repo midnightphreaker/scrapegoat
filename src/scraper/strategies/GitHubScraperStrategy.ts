@@ -1,5 +1,7 @@
 import type { ProgressCallback } from "../../types";
+import { InvalidUrlError } from "../../utils/errors";
 import { logger } from "../../utils/logger";
+import { validateGitHubUrl } from "../../utils/validation";
 import type { ScraperOptions, ScraperProgress, ScraperStrategy } from "../types";
 import { GitHubRepoScraperStrategy } from "./GitHubRepoScraperStrategy";
 import { GitHubWikiScraperStrategy } from "./GitHubWikiScraperStrategy";
@@ -52,15 +54,15 @@ export class GitHubScraperStrategy implements ScraperStrategy {
     signal?: AbortSignal,
   ): Promise<void> {
     // Validate it's a GitHub URL
-    const url = new URL(options.url);
-    if (!url.hostname.includes("github.com")) {
-      throw new Error("URL must be a GitHub URL");
-    }
+    const url = validateGitHubUrl(options.url);
 
     // Parse the repository information
     const pathMatch = url.pathname.match(/^\/([^/]+)\/([^/]+)\/?$/);
     if (!pathMatch) {
-      throw new Error("URL must be a base GitHub repository URL");
+      throw new InvalidUrlError(
+        options.url,
+        new Error("URL must be a base GitHub repository URL"),
+      );
     }
 
     const [, owner, repo] = pathMatch;

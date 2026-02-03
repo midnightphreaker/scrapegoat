@@ -8,18 +8,22 @@ import LoadingSpinner from "./LoadingSpinner"; // Import spinner
 interface VersionDetailsRowProps {
   version: VersionSummary;
   libraryName: string;
-  showDelete?: boolean; // Optional prop to control delete button visibility
+  /** Whether to show the delete button for this version */
+  showDelete?: boolean;
 }
 
 /**
  * Renders details for a single library version in a row format.
  * Includes version, stats, and an optional delete button.
- * @param props - Component props including version, libraryName, and showDelete flag.
+ * @param version - Version summary object
+ * @param libraryName - Name of the library
+ * @param showDelete - Whether to display delete button
+ * @default showDelete - true if not provided
  */
 const VersionDetailsRow = ({
   version,
   libraryName,
-  showDelete = true, // Default to true
+  showDelete = true,
 }: VersionDetailsRowProps) => {
   // Format the indexed date nicely, handle null case
   const indexedDate = version.indexedAt

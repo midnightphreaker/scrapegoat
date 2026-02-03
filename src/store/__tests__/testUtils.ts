@@ -210,8 +210,8 @@ export function generateTestDocuments(
   const verbs = ["using", "implementing", "configuring", "understanding", "deploying"];
 
   return Array.from({ length: count }, (_, i) => {
-    const topic = topics[i % topics.length];
-    const verb = verbs[i % verbs.length];
+    const topic = topics[i % topics.length] ?? "General";
+    const verb = verbs[i % verbs.length] ?? "about";
 
     return {
       pageContent: `This is a test document about ${verb} ${topic}. Document number ${i + 1}. ${topic} is an important technology for modern development. This content includes information about ${topic} features, best practices, and common use cases.`,

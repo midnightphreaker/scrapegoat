@@ -1,4 +1,5 @@
 import axios, { type AxiosError, type AxiosInstance } from "axios";
+import { rateLimitConfig } from "../../../utils/config";
 import { ScraperError } from "../../../utils/errors";
 import { logger } from "../../../utils/logger";
 import type {
@@ -11,7 +12,7 @@ import type {
 /**
  * Circuit breaker states
  */
-enum CircuitState {
+export enum CircuitState {
   Closed = "closed", // Normal operation
   Open = "open", // Circuit open, rejecting requests
   HalfOpen = "half-open", // Testing if service recovered
@@ -31,14 +32,20 @@ export class Crawl4AIClient {
   private circuitState: CircuitState = CircuitState.Closed;
   private failureCount = 0;
   private lastFailureTime = 0;
-  private readonly failureThreshold = 5; // Open circuit after 5 consecutive failures
-  private readonly resetTimeout = 60000; // Try to recover after 60s
+  private readonly failureThreshold: number;
+  private readonly resetTimeout: number;
 
   constructor(options: Crawl4AIClientOptions = {}) {
     this.baseUrl =
       options.baseUrl || process.env.CRAWL4AI_SERVICE_URL || "http://localhost:8001";
     this.maxRetries = options.maxRetries ?? 3;
     this.retryDelay = options.retryDelay ?? 1000;
+    this.failureThreshold =
+      options.circuitBreakerThreshold ??
+      rateLimitConfig.network.crawl4ai.circuitBreakerThreshold;
+    this.resetTimeout =
+      options.circuitBreakerResetTimeout ??
+      rateLimitConfig.network.crawl4ai.circuitBreakerResetTimeoutMs;
 
     this.client = axios.create({
       baseURL: this.baseUrl,
@@ -48,7 +55,9 @@ export class Crawl4AIClient {
       },
     });
 
-    logger.debug(`Crawl4AIClient initialized with baseUrl: ${this.baseUrl}`);
+    logger.debug(
+      `Crawl4AIClient initialized with baseUrl: ${this.baseUrl}, circuitBreakerThreshold: ${this.failureThreshold}, resetTimeout: ${this.resetTimeout}ms`,
+    );
   }
 
   /**

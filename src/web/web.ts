@@ -4,6 +4,7 @@ import formBody from "@fastify/formbody";
 import fastifyStatic from "@fastify/static";
 import Fastify, { type FastifyInstance, type FastifyRequest } from "fastify";
 import { metricsCollector } from "../monitoring/metrics";
+import { performanceMetrics } from "../monitoring/PerformanceMetrics";
 import type { PipelineManager } from "../pipeline/PipelineManager";
 import { Crawl4AIClient } from "../scraper/fetcher/crawl4ai/Crawl4AIClient";
 import type { DocumentManagementService } from "../store/DocumentManagementService";
@@ -79,7 +80,7 @@ export async function startWebServer(
    * GET /api/health/crawl4ai
    * Check Crawl4AI service health
    */
-  server.get("/api/health/crawl4ai", async (request, reply) => {
+  server.get("/api/health/crawl4ai", async (_request, reply) => {
     try {
       const client = new Crawl4AIClient();
       const health = await client.health();
@@ -108,7 +109,7 @@ export async function startWebServer(
    * GET /api/health/all
    * Get health status of all services
    */
-  server.get("/api/health/all", async (request, reply) => {
+  server.get("/api/health/all", async (_request, reply) => {
     const crawl4aiClient = new Crawl4AIClient();
 
     try {
@@ -141,7 +142,7 @@ export async function startWebServer(
    * GET /api/health/mcp
    * Check MCP server health
    */
-  server.get("/api/health/mcp", async (request, reply) => {
+  server.get("/api/health/mcp", async (_request, reply) => {
     try {
       // Read MCP configuration from environment variables
       // MCP_PORT is set by the container/orchestration and indicates where MCP server is running
@@ -169,7 +170,7 @@ export async function startWebServer(
           url: mcpUrl,
           port: mcpPort,
         });
-      } catch (error) {
+      } catch (_error) {
         reply.status(503).send({
           status: "down",
           connected: false,
@@ -206,16 +207,12 @@ export async function startWebServer(
         }
 
         // Query the database for the page
-        const result = await docService
-          .getStore()
-          .query("SELECT screenshot_path FROM pages WHERE id = $1", [pageId]);
+        const screenshotPath = await docService.getScreenshotPath(pageId);
 
-        if (result.rows.length === 0 || !result.rows[0].screenshot_path) {
+        if (!screenshotPath) {
           reply.status(404).send({ error: "Screenshot not found" });
           return;
         }
-
-        const screenshotPath = result.rows[0].screenshot_path;
         const fullPath = path.isAbsolute(screenshotPath)
           ? screenshotPath
           : path.join(getProjectRoot(), screenshotPath);
@@ -250,26 +247,18 @@ export async function startWebServer(
         }
 
         // Query the database for the page metadata
-        const result = await docService
-          .getStore()
-          .query(
-            "SELECT metadata, fetcher_type, screenshot_path FROM pages WHERE id = $1",
-            [pageId],
-          );
+        const pageData = await docService.getPageMetadata(pageId);
 
-        if (result.rows.length === 0) {
+        if (!pageData) {
           reply.status(404).send({ error: "Page not found" });
           return;
         }
 
-        const row = result.rows[0];
-        const metadata = row.metadata ? JSON.parse(row.metadata) : {};
-
         reply.send({
-          metadata,
-          fetcherType: row.fetcher_type,
-          hasScreenshot: !!row.screenshot_path,
-          screenshotPath: row.screenshot_path,
+          metadata: pageData.metadata,
+          fetcherType: pageData.fetcherType,
+          hasScreenshot: pageData.hasScreenshot,
+          screenshotPath: pageData.screenshotPath,
         });
       } catch (error) {
         logger.error(`Error retrieving page metadata: ${error}`);
@@ -282,7 +271,7 @@ export async function startWebServer(
    * GET /api/metrics
    * Get metrics in JSON format
    */
-  server.get("/api/metrics", async (request, reply) => {
+  server.get("/api/metrics", async (_request, reply) => {
     try {
       const metrics = metricsCollector.getAllMetrics();
 
@@ -313,10 +302,12 @@ export async function startWebServer(
    * GET /metrics
    * Prometheus metrics endpoint
    */
-  server.get("/metrics", async (request, reply) => {
+  server.get("/metrics", async (_request, reply) => {
     try {
-      const prometheusMetrics = metricsCollector.export();
-      reply.type("text/plain").send(prometheusMetrics);
+      // Combine fetcher metrics and performance metrics
+      const fetcherMetrics = metricsCollector.export();
+      const performanceMetricsText = performanceMetrics.exportPrometheus();
+      reply.type("text/plain").send(`${fetcherMetrics}\n\n${performanceMetricsText}`);
     } catch (error) {
       logger.error(`Error exporting Prometheus metrics: ${error}`);
       reply.status(500).send("# Error exporting metrics\n");
@@ -324,10 +315,100 @@ export async function startWebServer(
   });
 
   /**
+   * GET /api/performance
+   * Get performance metrics in JSON format
+   */
+  server.get("/api/performance", async (_request, reply) => {
+    try {
+      const allMetrics = performanceMetrics.getAllMetrics();
+
+      // Convert nested Maps to objects for JSON serialization
+      const serialized: Record<string, Record<string, unknown>> = {};
+      for (const [category, operations] of Object.entries(allMetrics)) {
+        serialized[category] = {};
+        for (const [operation, metrics] of Object.entries(operations)) {
+          serialized[category][operation] = {
+            ...metrics,
+            errorsByType: Object.fromEntries(metrics.errorsByType),
+          };
+        }
+      }
+
+      // Add category summaries
+      const summaries: Record<string, unknown> = {};
+      for (const category of [
+        "database",
+        "embedding",
+        "search",
+        "processing",
+        "fetcher",
+      ] as const) {
+        summaries[category] = performanceMetrics.getCategorySummary(category);
+      }
+
+      reply.send({
+        metrics: serialized,
+        summaries,
+        timestamp: new Date().toISOString(),
+      });
+    } catch (error) {
+      logger.error(`Error retrieving performance metrics: ${error}`);
+      reply.status(500).send({ error: "Failed to retrieve performance metrics" });
+    }
+  });
+
+  /**
+   * GET /api/performance/:category
+   * Get performance metrics for a specific category
+   */
+  server.get<{ Params: { category: string } }>(
+    "/api/performance/:category",
+    async (request, reply) => {
+      try {
+        const { category } = request.params;
+        const validCategories = [
+          "database",
+          "embedding",
+          "search",
+          "processing",
+          "fetcher",
+        ];
+
+        if (!validCategories.includes(category)) {
+          reply.status(400).send({ error: `Invalid category: ${category}` });
+          return;
+        }
+
+        const categoryMetrics = performanceMetrics.getCategoryMetrics(category as any);
+        const summary = performanceMetrics.getCategorySummary(category as any);
+
+        // Convert Maps to objects for JSON serialization
+        const serialized: Record<string, unknown> = {};
+        for (const [operation, metrics] of Object.entries(categoryMetrics)) {
+          serialized[operation] = {
+            ...metrics,
+            errorsByType: Object.fromEntries(metrics.errorsByType),
+          };
+        }
+
+        reply.send({
+          category,
+          metrics: serialized,
+          summary,
+          timestamp: new Date().toISOString(),
+        });
+      } catch (error) {
+        logger.error(`Error retrieving category performance metrics: ${error}`);
+        reply.status(500).send({ error: "Failed to retrieve category metrics" });
+      }
+    },
+  );
+
+  /**
    * GET /api/config
    * Get application configuration (read-only, sanitized)
    */
-  server.get("/api/config", async (request, reply) => {
+  server.get("/api/config", async (_request, reply) => {
     try {
       const validation = validateConfig(appConfig);
 

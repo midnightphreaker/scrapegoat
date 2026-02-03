@@ -69,6 +69,7 @@ export class HierarchicalAssemblyStrategy implements ContentAssemblyStrategy {
         if (documentChunks.length === 1) {
           // Single match: reconstruct complete structural subtree containing the match
           const matched = documentChunks[0];
+          if (!matched) continue;
 
           // Find nearest structural ancestor (class / interface / enum / namespace, etc.)
           const structuralAncestor =
@@ -86,8 +87,8 @@ export class HierarchicalAssemblyStrategy implements ContentAssemblyStrategy {
           let promotedAncestor = structuralAncestor;
           try {
             const path = (matched.metadata.path as string[]) || [];
-            if (promotedAncestor === matched && path.length > 0) {
-              const topLevelPath = [path[0]];
+            if (promotedAncestor === matched && path.length > 0 && path[0] !== undefined) {
+              const topLevelPath = [path[0]!];
               const containerIds = await this.findContainerChunks(
                 library,
                 version,
@@ -97,10 +98,10 @@ export class HierarchicalAssemblyStrategy implements ContentAssemblyStrategy {
               );
               if (containerIds.length > 0) {
                 const topChunks = await documentStore.findChunksByIds(library, version, [
-                  containerIds[0],
+                  containerIds[0]!,
                 ]);
                 if (topChunks.length > 0) {
-                  promotedAncestor = topChunks[0];
+                  promotedAncestor = topChunks[0]!;
                 }
               }
             }
@@ -308,7 +309,7 @@ export class HierarchicalAssemblyStrategy implements ContentAssemblyStrategy {
 
         if (potentialAncestors.length > 0) {
           // Return the first matching ancestor found
-          return potentialAncestors[0];
+          return potentialAncestors[0] ?? null;
         }
       } catch (error) {
         logger.debug(
@@ -431,7 +432,7 @@ export class HierarchicalAssemblyStrategy implements ContentAssemblyStrategy {
     const containerIds = await this.findContainerChunks(
       library,
       version,
-      documentChunks[0], // Use first chunk to get document URL
+      documentChunks[0]!, // Use first chunk to get document URL
       commonAncestorPath,
       documentStore,
     );
@@ -460,7 +461,7 @@ export class HierarchicalAssemblyStrategy implements ContentAssemblyStrategy {
    */
   private findCommonAncestorPath(chunks: Document[]): string[] {
     if (chunks.length === 0) return [];
-    if (chunks.length === 1) return (chunks[0].metadata.path as string[]) ?? [];
+    if (chunks.length === 1) return (chunks[0]!.metadata.path as string[]) ?? [];
 
     const paths = chunks.map((chunk) => (chunk.metadata.path as string[]) ?? []);
 
@@ -471,7 +472,10 @@ export class HierarchicalAssemblyStrategy implements ContentAssemblyStrategy {
     const commonPrefix: string[] = [];
 
     for (let i = 0; i < minLength; i++) {
-      const currentElement = paths[0][i];
+      const firstPath = paths[0];
+      if (!firstPath) break;
+      const currentElement = firstPath[i];
+      if (currentElement === undefined) break;
       if (paths.every((path) => path[i] === currentElement)) {
         commonPrefix.push(currentElement);
       } else {
@@ -496,17 +500,26 @@ export class HierarchicalAssemblyStrategy implements ContentAssemblyStrategy {
 
     // Try to find the opening chunk for this ancestor path
     try {
+      const url = referenceChunk.metadata.url as string;
+      if (!url) {
+        logger.warn("Reference chunk has no URL");
+        return containerIds;
+      }
+
       // Query for chunks with the exact ancestor path
       const ancestorChunks = await this.findChunksByExactPath(
         library,
         version,
-        referenceChunk.metadata.url as string,
+        url,
         ancestorPath,
         documentStore,
       );
 
       for (const chunk of ancestorChunks) {
-        containerIds.push(chunk.id as string);
+        const chunkId = chunk.id as string;
+        if (chunkId) {
+          containerIds.push(chunkId);
+        }
       }
     } catch (error) {
       logger.warn(
@@ -550,7 +563,7 @@ export class HierarchicalAssemblyStrategy implements ContentAssemblyStrategy {
         if (chunkPath.length !== path.length) return false;
 
         // All path elements must match
-        return chunkPath.every((part, index) => part === path[index]);
+        return chunkPath.every((part, index) => part === (path[index] ?? ''));
       });
 
       logger.debug(

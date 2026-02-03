@@ -7,6 +7,7 @@ import { VersionStatus, getStatusDescription } from "../../store/types";
 
 interface StatusBadgeProps {
   status: VersionStatus;
+  /** Whether to show descriptive text instead of status code */
   showDescription?: boolean;
 }
 
@@ -34,6 +35,11 @@ function getStatusClasses(status: VersionStatus): string {
   }
 }
 
+/**
+ * @param status - Version status to display
+ * @param showDescription - Whether to show description text
+ * @default showDescription - true if not provided
+ */
 const StatusBadge = ({ status, showDescription = true }: StatusBadgeProps) => (
   <span class={getStatusClasses(status)}>
     {showDescription ? getStatusDescription(status) : status}

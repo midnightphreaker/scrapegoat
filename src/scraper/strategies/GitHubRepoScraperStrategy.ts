@@ -1,6 +1,8 @@
 import type { Document, ProgressCallback } from "../../types";
+import { InvalidUrlError } from "../../utils/errors";
 import { logger } from "../../utils/logger";
 import { MimeTypeUtils } from "../../utils/mimeTypeUtils";
+import { validateGitHubUrl } from "../../utils/validation";
 import { HttpFetcher } from "../fetcher";
 import type { RawContent } from "../fetcher/types";
 import { PipelineFactory } from "../pipelines/PipelineFactory";
@@ -86,31 +88,34 @@ export class GitHubRepoScraperStrategy extends BaseScraperStrategy {
     // Extract /<org>/<repo> from github.com/<org>/<repo>/...
     const match = parsedUrl.pathname.match(/^\/([^/]+)\/([^/]+)/);
     if (!match) {
-      throw new Error(`Invalid GitHub repository URL: ${url}`);
+      throw new InvalidUrlError(url, new Error("Invalid GitHub repository URL"));
     }
 
     const [, owner, repo] = match;
+    const ownerStr = owner!;
+    const repoStr = repo!;
 
     // Extract branch and optional subpath from URLs like /tree/<branch>/<subPath>
     const segments = parsedUrl.pathname.split("/").filter(Boolean);
 
     // Handle /blob/ URLs for single file indexing
-    if (segments.length >= 4 && segments[2] === "blob") {
-      const branch = segments[3];
+    if (segments.length >= 4 && segments[2]! === "blob") {
+      const branch = segments[3] || "";
       const filePath = segments.length > 4 ? segments.slice(4).join("/") : undefined;
-      return { owner, repo, branch, filePath, isBlob: true };
+      return { owner: ownerStr, repo: repoStr, branch, filePath, isBlob: true };
     }
 
     // Only handle URLs of the form /owner/repo/tree/branch/subPath
-    if (segments.length < 4 || segments[2] !== "tree") {
+    if (segments.length < 4 || segments[2]! !== "tree") {
       // Unsupported format (missing branch, or not a tree/blob URL)
-      return { owner, repo };
+      return { owner: ownerStr, repo: repoStr };
     }
 
-    const branch = segments[3];
-    const subPath = segments.length > 4 ? segments.slice(4).join("/") : undefined;
+    const branch = segments[3] || "";
+    const subPath: string | undefined =
+      segments.length > 4 ? segments.slice(4).join("/") : undefined;
 
-    return { owner, repo, branch, subPath };
+    return { owner: ownerStr, repo: repoStr, branch, subPath };
   }
 
   /**
@@ -510,10 +515,7 @@ export class GitHubRepoScraperStrategy extends BaseScraperStrategy {
     signal?: AbortSignal,
   ): Promise<void> {
     // Validate it's a GitHub URL
-    const url = new URL(options.url);
-    if (!url.hostname.includes("github.com")) {
-      throw new Error("URL must be a GitHub URL");
-    }
+    validateGitHubUrl(options.url);
 
     return super.scrape(options, progressCallback, signal);
   }

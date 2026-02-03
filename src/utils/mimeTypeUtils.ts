@@ -1,4 +1,5 @@
 import mime from "mime";
+import { MimeType } from "./constants";
 
 /**
  * Represents a parsed Content-Type header.
@@ -24,12 +25,12 @@ export class MimeTypeUtils {
       return { mimeType: "application/octet-stream" };
     }
     const parts = contentTypeHeader.split(";").map((part) => part.trim());
-    const mimeType = parts[0].toLowerCase();
+    const mimeType = parts[0]?.toLowerCase() ?? "application/octet-stream";
     let charset: string | undefined;
 
     for (let i = 1; i < parts.length; i++) {
       const param = parts[i];
-      if (param.toLowerCase().startsWith("charset=")) {
+      if (param?.toLowerCase().startsWith("charset=")) {
         charset = param.substring("charset=".length).toLowerCase();
         break;
       }
@@ -41,14 +42,14 @@ export class MimeTypeUtils {
    * Checks if a MIME type represents HTML content.
    */
   public static isHtml(mimeType: string): boolean {
-    return mimeType === "text/html" || mimeType === "application/xhtml+xml";
+    return mimeType === MimeType.HTML || mimeType === MimeType.XHTML;
   }
 
   /**
    * Checks if a MIME type represents Markdown content.
    */
   public static isMarkdown(mimeType: string): boolean {
-    return mimeType === "text/markdown" || mimeType === "text/x-markdown";
+    return mimeType === MimeType.MARKDOWN || mimeType === MimeType.MARKDOWN_ALT;
   }
 
   /**
@@ -112,9 +113,7 @@ export class MimeTypeUtils {
    */
   public static isJson(mimeType: string): boolean {
     return (
-      mimeType === "application/json" ||
-      mimeType === "text/json" ||
-      mimeType === "text/x-json"
+      mimeType === MimeType.JSON || mimeType === "text/json" || mimeType === "text/x-json"
     );
   }
 
@@ -213,7 +212,7 @@ export class MimeTypeUtils {
 
     // Map problematic MIME types to correct ones
     const mimeTypeNormalization: Record<string, string> = {
-      "application/node": "text/javascript", // .cjs files are detected as this
+      "application/node": MimeType.JAVASCRIPT, // .cjs files are detected as this
     };
 
     return mimeTypeNormalization[mimeType] || mimeType;

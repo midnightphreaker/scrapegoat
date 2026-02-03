@@ -7,7 +7,9 @@
  * Based on React error boundaries pattern adapted for vanilla JS.
  */
 
-import type { Component, ComponentChildren } from "nano-jsx/esm";
+// Define types locally since nano-jsx/esm import may not be available
+export type ComponentChildren = HTMLElement | string | (() => HTMLElement) | null;
+export type Component = () => HTMLElement;
 
 export interface ErrorBoundaryProps {
   /** Child components to render */
@@ -33,7 +35,7 @@ export interface ErrorBoundaryState {
  */
 export function createErrorBoundary(
   element: HTMLElement,
-  props: ErrorBoundaryProps = {}
+  props: ErrorBoundaryProps = { children: null }
 ): {
   render: () => void;
   destroy: () => void;
@@ -107,6 +109,9 @@ export function createErrorBoundary(
       }
     }
   }
+
+  // Initial render with props
+  render();
 
   /**
    * Reset the error boundary
@@ -288,13 +293,13 @@ export function createAsyncComponent<T>(
       const result = await asyncFn();
 
       // Check if aborted
-      if (signal.aborted) return;
+      if (signal.aborted) return void 0;
 
       if (onSuccess) {
         onSuccess(result);
       }
 
-      return result;
+      return void 0;
     } catch (error) {
       if (signal.aborted) return;
 
