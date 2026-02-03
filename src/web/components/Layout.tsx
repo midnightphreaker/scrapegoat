@@ -275,7 +275,7 @@ const Layout = ({ title, version, children }: LayoutProps) => {
 
                       <p class="text-xs text-stone-500 dark:text-stone-400 mt-4">
                         Configuration file location:
-                        <code class="bg-stone-100 dark:bg-stone-900 text-stone-800 dark:text-stone-200 px-2 py-0.5 rounded">~/Library/Application Support/Claude/claude_desktop_config.json</code>
+                        <code class="bg-stone-100 dark:bg-stone-900 text-stone-800 dark:text-stone-200 px-2 py-0.5 rounded">~/claude/settings.json</code>
                       </p>
                     </div>
                   </div>
@@ -416,7 +416,7 @@ const Layout = ({ title, version, children }: LayoutProps) => {
 
                       <p class="text-xs text-stone-500 dark:text-stone-400 mt-4">
                         Configuration file location:
-                        <code class="bg-stone-100 dark:bg-stone-900 text-stone-800 dark:text-stone-200 px-2 py-0.5 rounded">~/Library/Application Support/Claude/claude_desktop_config.json</code>
+                        <code class="bg-stone-100 dark:bg-stone-900 text-stone-800 dark:text-stone-200 px-2 py-0.5 rounded">~/claude/settings.json</code>
                       </p>
                     </div>
                   </div>
