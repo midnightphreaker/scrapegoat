@@ -61,8 +61,9 @@ export async function registerWebService(
    */
   server.get("/api/health/mcp", async (request, reply) => {
     try {
-      const mcpHost = "localhost";
-      const mcpPort = DEFAULT_HTTP_PORT;
+      // Read MCP configuration from environment variables
+      const mcpPort = process.env.MCP_PORT ? Number.parseInt(process.env.MCP_PORT, 10) : DEFAULT_HTTP_PORT;
+      const mcpHost = process.env.MCP_HOST || "localhost";
       const mcpUrl = `http://${mcpHost}:${mcpPort}`;
 
       // Simple reachability check
@@ -108,6 +109,11 @@ export async function registerWebService(
     try {
       const validation = validateConfig(appConfig);
 
+      // Read MCP configuration from environment variables
+      const mcpPort = process.env.MCP_PORT ? Number.parseInt(process.env.MCP_PORT, 10) : DEFAULT_HTTP_PORT;
+      const mcpHost = process.env.MCP_HOST || "localhost";
+      const mcpUrl = `http://${mcpHost}:${mcpPort}`;
+
       reply.send({
         config: {
           fetcher: {
@@ -132,9 +138,9 @@ export async function registerWebService(
         },
         mcp: {
           enabled: true, // MCP server runs as a separate service
-          host: "localhost",
-          port: DEFAULT_HTTP_PORT,
-          url: `http://localhost:${DEFAULT_HTTP_PORT}`,
+          host: mcpHost,
+          port: mcpPort,
+          url: mcpUrl,
         },
         validation,
       });

@@ -143,19 +143,10 @@ export async function startWebServer(
    */
   server.get("/api/health/mcp", async (request, reply) => {
     try {
-      const mcpEnabled = appConfig.enableMcpServer;
-
-      if (!mcpEnabled) {
-        reply.status(503).send({
-          status: "down",
-          connected: false,
-          error: "MCP server not enabled in configuration",
-        });
-        return;
-      }
-
-      const mcpHost = appConfig.mcpHost || "localhost";
-      const mcpPort = appConfig.mcpPort || 6280;
+      // Read MCP configuration from environment variables
+      // MCP_PORT is set by the container/orchestration and indicates where MCP server is running
+      const mcpPort = process.env.MCP_PORT ? Number.parseInt(process.env.MCP_PORT, 10) : 6280;
+      const mcpHost = process.env.MCP_HOST || "localhost";
       const mcpUrl = `http://${mcpHost}:${mcpPort}`;
 
       // Simple reachability check
@@ -338,6 +329,11 @@ export async function startWebServer(
     try {
       const validation = validateConfig(appConfig);
 
+      // Read MCP configuration from environment variables
+      const mcpPort = process.env.MCP_PORT ? Number.parseInt(process.env.MCP_PORT, 10) : 6280;
+      const mcpHost = process.env.MCP_HOST || "localhost";
+      const mcpUrl = `http://${mcpHost}:${mcpPort}`;
+
       reply.send({
         config: {
           fetcher: {
@@ -361,10 +357,10 @@ export async function startWebServer(
           },
         },
         mcp: {
-          enabled: appConfig.enableMcpServer,
-          host: appConfig.mcpHost || "localhost",
-          port: appConfig.mcpPort || 6280,
-          url: `http://${appConfig.mcpHost || "localhost"}:${appConfig.mcpPort || 6280}`,
+          enabled: true, // MCP is enabled when running in web mode
+          host: mcpHost,
+          port: mcpPort,
+          url: mcpUrl,
         },
         validation,
       });
