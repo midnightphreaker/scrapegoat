@@ -93,7 +93,7 @@ document.addEventListener("alpine:init", () => {
     mcpUrl: "",
     mcpHost: "",
     mcpPort: 6280,
-    displayText: "Checking...",
+    displayText: "Server Checking...",
     showPopup: false,
     configSnippet: "",
 
@@ -136,14 +136,14 @@ document.addEventListener("alpine:init", () => {
 
         if (data.connected) {
           this.status = "connected";
-          this.displayText = `${this.mcpHost}:${this.mcpPort} - Connected`;
+          this.displayText = "Server Available (click for details)";
         } else {
           this.status = "disconnected";
-          this.displayText = "Disconnected";
+          this.displayText = "Server Not Available (check config)";
         }
       } catch (error) {
         this.status = "disconnected";
-        this.displayText = "Disconnected";
+        this.displayText = "Server Not Available (check config)";
       }
     },
 
@@ -163,7 +163,7 @@ document.addEventListener("alpine:init", () => {
 
     async retryConnection() {
       this.status = "checking";
-      this.displayText = "Connecting...";
+      this.displayText = "Server Checking...";
       await this.checkMcpHealth();
     },
 
