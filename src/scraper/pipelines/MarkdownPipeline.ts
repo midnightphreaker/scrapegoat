@@ -55,6 +55,10 @@ export class MarkdownPipeline extends BasePipeline {
     options: ScraperOptions,
     fetcher?: ContentFetcher,
   ): Promise<ProcessedContent> {
+    logger.info(
+      `[PIPELINE] MarkdownPipeline processing ${rawContent.source} (mime-type: ${rawContent.mimeType}, charset: ${rawContent.charset})`,
+    );
+
     const contentString = convertToString(rawContent.content, rawContent.charset);
 
     const context: MiddlewareContext = {
