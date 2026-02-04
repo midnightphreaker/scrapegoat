@@ -68,6 +68,10 @@ export class HtmlPipeline extends BasePipeline {
     options: ScraperOptions,
     fetcher?: ContentFetcher,
   ): Promise<ProcessedContent> {
+    logger.info(
+      `[PIPELINE] HtmlPipeline processing ${rawContent.source} (mime-type: ${rawContent.mimeType}, charset: ${rawContent.charset})`,
+    );
+
     // Use enhanced charset detection that considers HTML meta tags
     const resolvedCharset = resolveCharset(
       rawContent.charset,

@@ -18,6 +18,10 @@ export class MarkdownLinkExtractorMiddleware implements ContentProcessorMiddlewa
       context.links = [];
     }
 
+    logger.info(
+      `[LINKS-DEBUG] MarkdownLinkExtractorMiddleware running for ${context.source}, content length: ${context.content?.length || 0}`,
+    );
+
     try {
       const extractedLinks: string[] = [];
 
@@ -72,11 +76,9 @@ export class MarkdownLinkExtractorMiddleware implements ContentProcessorMiddlewa
 
       // Deduplicate and assign to context
       context.links = [...new Set(validLinks)];
-      if (context.links.length > 0) {
-        logger.info(
-          `[LINKS] Extracted ${context.links.length} unique, valid links from Markdown at ${context.source}`,
-        );
-      }
+      logger.info(
+        `[LINKS] Extracted ${context.links.length} unique, valid links from Markdown at ${context.source} (found ${extractedLinks.length} raw matches)`,
+      );
     } catch (error) {
       logger.error(`❌ Error extracting links from Markdown: ${error}`);
       context.errors.push(
