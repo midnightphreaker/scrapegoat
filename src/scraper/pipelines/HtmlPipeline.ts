@@ -4,6 +4,7 @@ import {
   SPLITTER_MIN_CHUNK_SIZE,
   SPLITTER_PREFERRED_CHUNK_SIZE,
 } from "../../utils/config";
+import { logger } from "../../utils/logger";
 import { MimeTypeUtils } from "../../utils/mimeTypeUtils";
 import type { ContentFetcher, RawContent } from "../fetcher/types";
 import { HtmlSanitizerMiddleware } from "../middleware";
