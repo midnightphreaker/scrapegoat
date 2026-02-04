@@ -25,7 +25,14 @@ export class MimeTypeUtils {
       return { mimeType: "application/octet-stream" };
     }
     const parts = contentTypeHeader.split(";").map((part) => part.trim());
-    const mimeType = parts[0]?.toLowerCase() ?? "application/octet-stream";
+    let mimeType = parts[0]?.toLowerCase() ?? "application/octet-stream";
+
+    // Handle malformed headers with multiple MIME types (e.g., "text/html,text/html; charset=utf-8")
+    // Take only the first type before the comma
+    if (mimeType.includes(",")) {
+      mimeType = mimeType.split(",")[0]?.trim() ?? mimeType;
+    }
+
     let charset: string | undefined;
 
     for (let i = 1; i < parts.length; i++) {
