@@ -50,7 +50,8 @@ export class PipelineWorker {
 
       // Construct runtime options from job context + stored configuration
       // Normalize scope, fetcher, and crawl4ai options to lowercase values
-      const normalizedScope = scraperOptions?.scope
+      const rawScope = scraperOptions?.scope;
+      const normalizedScope = rawScope
         ? (scraperOptions.scope as string).toLowerCase()
         : undefined;
       const normalizedFetcher = scraperOptions?.fetcher
@@ -67,12 +68,18 @@ export class PipelineWorker {
           }
         : undefined;
 
+      // Debug logging to verify scope is being used correctly
+      logger.debug(
+        `[${jobId}] Worker using scope: "${normalizedScope || "subpages"}" (raw: "${rawScope}"), fetcher: "${normalizedFetcher || "auto"}"`,
+      );
+
       const runtimeOptions = {
         url: sourceUrl ?? "",
         library,
         version,
         ...scraperOptions,
-        scope: normalizedScope as "subpages" | "hostname" | "domain" | undefined,
+        // Ensure scope is never null/undefined - default to "subpages"
+        scope: (normalizedScope || "subpages") as "subpages" | "hostname" | "domain",
         fetcher: normalizedFetcher as "auto" | "http" | "crawl4ai" | "file" | undefined,
         crawl4ai: normalizedCrawl4ai,
       };

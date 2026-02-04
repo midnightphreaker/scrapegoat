@@ -154,7 +154,8 @@ export function registerNewJobRoutes(
             maxDepth: body.maxDepth
               ? Number.parseInt(body.maxDepth, 10)
               : undefined,
-            scope: body.scope,
+            // Use "hostname" as default if scope is empty or undefined (Issue: Unity3D scraping)
+            scope: body.scope || "subpages",
             // Checkboxes send 'on' when checked, otherwise undefined
             followRedirects: body.followRedirects === "on",
             ignoreErrors: body.ignoreErrors === "on",
@@ -165,6 +166,11 @@ export function registerNewJobRoutes(
             ),
           },
         };
+
+        // Debug logging for scope parameter
+        logger.debug(
+          `Scrape request - URL: ${sanitized.url}, Library: ${sanitized.library}, Scope: "${scrapeOptions.options.scope}" (raw: "${body.scope}")`
+        );
 
         // Execute the scrape tool
         const result = await scrapeTool.execute(scrapeOptions);
