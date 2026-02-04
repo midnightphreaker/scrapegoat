@@ -168,8 +168,8 @@ export function registerNewJobRoutes(
         };
 
         // Debug logging for scope parameter
-        logger.debug(
-          `Scrape request - URL: ${sanitized.url}, Library: ${sanitized.library}, Scope: "${scrapeOptions.options.scope}" (raw: "${body.scope}")`
+        logger.info(
+          `[SCOPE] Scrape request - URL: ${sanitized.url}, Library: ${sanitized.library}, Scope: "${scrapeOptions.options.scope}" (raw: "${body.scope}")`
         );
 
         // Execute the scrape tool

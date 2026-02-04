@@ -69,8 +69,8 @@ export class PipelineWorker {
         : undefined;
 
       // Debug logging to verify scope is being used correctly
-      logger.debug(
-        `[${jobId}] Worker using scope: "${normalizedScope || "subpages"}" (raw: "${rawScope}"), fetcher: "${normalizedFetcher || "auto"}"`,
+      logger.info(
+        `[SCOPE] [${jobId}] Worker using scope: "${normalizedScope || "subpages"}" (raw: "${rawScope}"), fetcher: "${normalizedFetcher || "auto"}"`,
       );
 
       const runtimeOptions = {

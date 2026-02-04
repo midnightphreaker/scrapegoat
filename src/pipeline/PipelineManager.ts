@@ -308,8 +308,8 @@ export class PipelineManager implements IPipeline {
     };
 
     // Debug logging to verify scope is stored correctly
-    logger.debug(
-      `Job ${jobId} enqueued with scope: "${versionOptions.scope}", fetcher: "${versionOptions.fetcher}", maxDepth: ${versionOptions.maxDepth}, maxPages: ${versionOptions.maxPages}`,
+    logger.info(
+      `[SCOPE] Job ${jobId} enqueued with scope: "${versionOptions.scope}", fetcher: "${versionOptions.fetcher}", maxDepth: ${versionOptions.maxDepth}, maxPages: ${versionOptions.maxPages}`,
     );
 
     this.jobMap.set(jobId, job);
