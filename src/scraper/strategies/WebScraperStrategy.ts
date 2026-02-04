@@ -128,14 +128,24 @@ export class WebScraperStrategy extends BaseScraperStrategy {
         try {
           const targetUrl = new URL(link);
           const scope = options.scope || "subpages";
+          const inScope = isInScope(baseUrl, targetUrl, scope);
+          if (!inScope) {
+            logger.debug(`[SCOPE] Link ${link} filtered out by scope (${scope})`);
+          }
           return (
-            isInScope(baseUrl, targetUrl, scope) &&
+            inScope &&
             (!this.shouldFollowLinkFn || this.shouldFollowLinkFn(baseUrl, targetUrl))
           );
         } catch {
           return false;
         }
       });
+
+      if (processed.links.length > 0) {
+        logger.info(
+          `[LINKS] ${processed.links.length} links extracted, ${filteredLinks.length} passed scope filter (scope: ${options.scope || "subpages"})`,
+        );
+      }
 
       // --- Build Enhanced Metadata (Phase 3B) ---
       const enhancedMetadata = {
