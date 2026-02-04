@@ -72,9 +72,11 @@ export class MarkdownLinkExtractorMiddleware implements ContentProcessorMiddlewa
 
       // Deduplicate and assign to context
       context.links = [...new Set(validLinks)];
-      logger.debug(
-        `Extracted ${context.links.length} unique, valid links from Markdown at ${context.source}`,
-      );
+      if (context.links.length > 0) {
+        logger.info(
+          `[LINKS] Extracted ${context.links.length} unique, valid links from Markdown at ${context.source}`,
+        );
+      }
     } catch (error) {
       logger.error(`❌ Error extracting links from Markdown: ${error}`);
       context.errors.push(
