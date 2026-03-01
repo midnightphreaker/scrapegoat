@@ -29,11 +29,13 @@ Scrapegoat enables AI assistants to search, retrieve, and index web documentatio
 
 ## Quick Start
 
+> **⚠️ Important**: This project requires Zod v3.x for MCP SDK compatibility. Do not upgrade to Zod v4 until MCP SDK adds support (tracked in [PR #869](https://github.com/modelcontextprotocol/typescript-sdk/pull/869)).
+
 ### Docker Deployment (Recommended)
 
 ```bash
 # 1. Clone the repository
-git clone https://github.com/your-org/scrapegoat.git
+git clone https://git.fenrirsden.org/mcp/scrapegoat.git
 cd scrapegoat
 
 # 2. Configure environment
@@ -62,7 +64,7 @@ Uncomment the `postgres` service section in `docker-compose.yml` and update the 
 
 ### Manual Setup
 
-For development or non-Docker deployments, see [CONTRIBUTING.md](docs/CONTRIBUTING.md).
+For development or non-Docker deployments, see [CONTRIBUTING.md](docs/CONTRIBUTING.md) or [DEPLOYMENT.md](docs/DEPLOYMENT.md).
 
 ## Architecture
 
