@@ -98,7 +98,8 @@ volumes:
 # Then in the scrapegoat service above, replace:
 #   - DATABASE_URL=${DATABASE_URL:?DATABASE_URL is required}
 # With:
-#   - DATABASE_URL=postgresql://scrapegoat:scrapegoat@postgres:5432/scrapegoat
+#   - DATABASE_URL=postgresql://scrapegoat:${POSTGRES_PASSWORD:-CHANGE_ME_IN_PRODUCTION}@postgres:5432/scrapegoat
+# NOTE: Password must match POSTGRES_PASSWORD set in postgres service above
 # And add:
 #   depends_on:
 #     postgres:
