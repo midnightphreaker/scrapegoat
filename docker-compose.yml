@@ -18,6 +18,7 @@ services:
     environment:
       - DATABASE_URL=${DATABASE_URL:?DATABASE_URL is required}
       - OPENAI_API_BASE=${OPENAI_API_BASE:-https://api.openai.com/v1}
+      # OPENAI_API_KEY: Required for OpenAI embeddings, optional for some providers (e.g., Google AI)
       - OPENAI_API_KEY=${OPENAI_API_KEY:-}
       - DOCS_MCP_EMBEDDING_MODEL=${DOCS_MCP_EMBEDDING_MODEL:-openai:text-embedding-3-small}
       - VECTOR_DIMENSION=${VECTOR_DIMENSION:-1536}
@@ -28,6 +29,9 @@ services:
       - scrapegoat-data:/data
     networks:
       - scrapegoat-net
+    depends_on:
+      crawl4ai:
+        condition: service_healthy
     restart: unless-stopped
     healthcheck:
       test: ["CMD", "node", "-e", "require('http').get('http://localhost:6280/health', (r) => process.exit(r.statusCode === 200 ? 0 : 1))"]
@@ -71,13 +75,14 @@ volumes:
 #   1. Comment out the DATABASE_URL line in scrapegoat environment
 #   2. Uncomment the DATABASE_URL line below (hardcoded connection)
 #   3. Uncomment depends_on: [postgres] in scrapegoat service
+#   4. Set POSTGRES_PASSWORD env var or change the default below!
 #
 # postgres:
 #   image: postgres:16-alpine
 #   container_name: scrapegoat-postgres
 #   environment:
 #     POSTGRES_USER: scrapegoat
-#     POSTGRES_PASSWORD: scrapegoat
+#     POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-CHANGE_ME_IN_PRODUCTION}
 #     POSTGRES_DB: scrapegoat
 #   volumes:
 #     - scrapegoat-pgdata:/var/lib/postgresql/data
