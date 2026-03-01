@@ -187,7 +187,7 @@ The application shows this warning on startup:
 - **Reranker:** rerank.den.lan (10.1.1.62) - optional
 
 ### Repository
-- **Git:** http://gitlab.den.lan/pub/scrapegoat.git
+- **Git:** http://git.fenrirsden.org/pub/scrapegoat.git
 - **Branch:** postgres-fork
 - **Tests:** 164/164 passing (100%)
 

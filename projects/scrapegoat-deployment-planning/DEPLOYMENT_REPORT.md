@@ -394,7 +394,7 @@ ssh root@postgres.den.lan "sudo -u postgres psql -c '\conninfo'"
 ## Contact and Support
 
 **Application Repository:**
-- Git: http://gitlab.den.lan/pub/scrapegoat.git
+- Git: http://git.fenrirsden.org/pub/scrapegoat.git
 - Branch: postgres-fork
 
 **Infrastructure:**

@@ -441,7 +441,7 @@ npm run build
 
 ## Key Contacts & Resources
 
-**Git**: http://gitlab.den.lan/pub/scrapegoat
+**Git**: http://git.fenrirsden.org/pub/scrapegoat
 **Production**: docs.den.lan (SSH: root@docs.den.lan, password: P@ssw0rd)
 **Crawl4AI Docs**: https://docs.crawl4ai.com/
 **Project Planning**: `/home/mp/Workspace/scrapegoat/projects/crawl4ai-enhancements-planning/`

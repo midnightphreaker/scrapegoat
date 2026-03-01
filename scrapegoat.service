@@ -3,7 +3,7 @@ Description=Scrapegoat Documentation Scraping Service
 Requires=docker.service
 After=docker.service network-online.target
 Wants=network-online.target
-Documentation=http://git.den.lan/pub/scrapegoat
+Documentation=http://git.fenrirsden.org/pub/scrapegoat
 
 [Service]
 Type=oneshot

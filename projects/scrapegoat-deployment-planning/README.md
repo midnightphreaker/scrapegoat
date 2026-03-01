@@ -45,7 +45,7 @@ This document outlines the production deployment of Scrapegoat to docs.den.lan
 - **Application**: docs.den.lan (10.1.1.27)
 
 ## Repository
-- **Source**: http://gitlab.den.lan/pub/scrapegoat.git
+- **Source**: http://git.fenrirsden.org/pub/scrapegoat.git
 - **Branch**: postgres-fork
 - **Tests**: 164/164 passing (100%)
 

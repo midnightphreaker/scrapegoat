@@ -59,7 +59,7 @@
 **Goal**: Clone, build, and configure Scrapegoat application
 
 ### Tasks
-- [ ] Clone repository from gitlab.den.lan/pub/scrapegoat.git
+- [ ] Clone repository from git.fenrirsden.org/pub/scrapegoat.git
 - [ ] Checkout postgres-fork branch
 - [ ] Run npm install
 - [ ] Run npm run build
