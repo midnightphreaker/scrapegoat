@@ -1,0 +1,103 @@
+# Scrapegoat - MCP Documentation Server
+#
+# Quick Start:
+#   1. cp .env.example .env
+#   2. Edit DATABASE_URL in .env
+#   3. Edit OPENAI_API_KEY (or other provider) in .env
+#   4. docker compose up -d
+#
+# For dedicated PostgreSQL: Uncomment the 'postgres' service below
+
+services:
+  scrapegoat:
+    image: ${SCRAPEGOAT_IMAGE:-git.fenrirsden.org/pub/scrapegoat:latest}
+    pull_policy: always
+    container_name: scrapegoat
+    ports:
+      - "${SCRAPEGOAT_PORT:-6280}:6280"
+    environment:
+      - DATABASE_URL=${DATABASE_URL:?DATABASE_URL is required}
+      - OPENAI_API_BASE=${OPENAI_API_BASE:-https://api.openai.com/v1}
+      - OPENAI_API_KEY=${OPENAI_API_KEY:-}
+      - DOCS_MCP_EMBEDDING_MODEL=${DOCS_MCP_EMBEDDING_MODEL:-openai:text-embedding-3-small}
+      - VECTOR_DIMENSION=${VECTOR_DIMENSION:-1536}
+      - DOCS_MCP_STORE_PATH=/data
+      - CRAWL4AI_SERVICE_URL=http://crawl4ai:8001
+      - NODE_ENV=production
+    volumes:
+      - scrapegoat-data:/data
+    networks:
+      - scrapegoat-net
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "node", "-e", "require('http').get('http://localhost:6280/health', (r) => process.exit(r.statusCode === 200 ? 0 : 1))"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  crawl4ai:
+    image: ${CRAWL4AI_IMAGE:-unclecode/crawl4ai:latest}
+    pull_policy: always
+    container_name: scrapegoat-crawl4ai
+    ports:
+      - "${CRAWL4AI_PORT:-8001}:8001"
+    environment:
+      - CRAWL4AI_PORT=8001
+    networks:
+      - scrapegoat-net
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8001/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 20s
+
+networks:
+  scrapegoat-net:
+    driver: bridge
+
+volumes:
+  scrapegoat-data:
+
+# ═══════════════════════════════════════════════════════════════════════════
+# OPTIONAL: Dedicated PostgreSQL Database
+# ═══════════════════════════════════════════════════════════════════════════
+# Uncomment this section and the depends_on lines above to deploy a dedicated
+# PostgreSQL database for Scrapegoat.
+#
+# When using this PostgreSQL:
+#   1. Comment out the DATABASE_URL line in scrapegoat environment
+#   2. Uncomment the DATABASE_URL line below (hardcoded connection)
+#   3. Uncomment depends_on: [postgres] in scrapegoat service
+#
+# postgres:
+#   image: postgres:16-alpine
+#   container_name: scrapegoat-postgres
+#   environment:
+#     POSTGRES_USER: scrapegoat
+#     POSTGRES_PASSWORD: scrapegoat
+#     POSTGRES_DB: scrapegoat
+#   volumes:
+#     - scrapegoat-pgdata:/var/lib/postgresql/data
+#   networks:
+#     - scrapegoat-net
+#   restart: unless-stopped
+#   healthcheck:
+#     test: ["CMD-SHELL", "pg_isready -U scrapegoat -d scrapegoat"]
+#     interval: 5s
+#     timeout: 5s
+#     retries: 5
+#
+# Then in the scrapegoat service above, replace:
+#   - DATABASE_URL=${DATABASE_URL:?DATABASE_URL is required}
+# With:
+#   - DATABASE_URL=postgresql://scrapegoat:scrapegoat@postgres:5432/scrapegoat
+# And add:
+#   depends_on:
+#     postgres:
+#       condition: service_healthy
+#
+# volumes:
+#   scrapegoat-pgdata:
