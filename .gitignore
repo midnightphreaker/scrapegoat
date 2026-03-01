@@ -117,3 +117,6 @@ docker-compose.override.yml
 # macOS
 .AppleDouble
 .LSOverride
+
+# Archive
+.archive/
