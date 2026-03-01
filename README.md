@@ -29,39 +29,40 @@ Scrapegoat enables AI assistants to search, retrieve, and index web documentatio
 
 ## Quick Start
 
-### Prerequisites
-
-- Node.js 20+
-- PostgreSQL 14+ with pgvector extension
-- Docker (optional, for Crawl4AI)
-
-> **⚠️ Important**: This project requires Zod v3.x for MCP SDK compatibility. Do not upgrade to Zod v4 until MCP SDK adds support (tracked in [PR #869](https://github.com/modelcontextprotocol/typescript-sdk/pull/869)).
-
-### Installation
+### Docker Deployment (Recommended)
 
 ```bash
-# Clone repository
-git clone <repository-url>
+# 1. Clone the repository
+git clone https://github.com/your-org/scrapegoat.git
 cd scrapegoat
 
-# Install dependencies
-npm install
-
-# Set up environment
+# 2. Configure environment
 cp .env.example .env
-# Edit .env with your settings
+# Edit .env and set:
+#   - DATABASE_URL (your PostgreSQL connection)
+#   - OPENAI_API_KEY (or other embedding provider)
 
-# Set up database
-createdb scrapegoat
-psql scrapegoat -c "CREATE EXTENSION vector;"
-npm run db:push
+# 3. Start services
+docker compose up -d
 
-# Build and start
-npm run build
-npm start
+# 4. Verify
+docker compose ps
+curl http://localhost:6280/health
 ```
 
-For detailed installation and deployment instructions, see [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md).
+**Access Points:**
+- Web UI: http://localhost:6280
+- MCP HTTP: http://localhost:6280/mcp
+- API: http://localhost:6280/api
+- Crawl4AI: http://localhost:8001
+
+### With Dedicated PostgreSQL
+
+Uncomment the `postgres` service section in `docker-compose.yml` and update the `DATABASE_URL` as documented in the comments.
+
+### Manual Setup
+
+For development or non-Docker deployments, see [CONTRIBUTING.md](docs/CONTRIBUTING.md).
 
 ## Architecture
 
