@@ -176,7 +176,7 @@ DOCS_MCP_TELEMETRY=false
 
 ```bash
 # Clone repository (if not already done)
-git clone http://gitlab.den.lan/pub/scrapegoat.git
+git clone http://git.fenrirsden.org/pub/scrapegoat.git
 cd scrapegoat
 
 # Install dependencies
@@ -449,7 +449,7 @@ curl -fsSL https://rpm.nodesource.com/setup_20.x | sudo bash -
 sudo yum install -y nodejs
 
 # Install application
-git clone http://gitlab.den.lan/pub/scrapegoat.git
+git clone http://git.fenrirsden.org/pub/scrapegoat.git
 cd scrapegoat
 npm install
 npm run build
