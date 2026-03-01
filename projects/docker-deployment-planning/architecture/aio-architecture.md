@@ -51,7 +51,7 @@ The AIO configuration provides a complete, self-contained Scrapegoat deployment 
 │  │  │  Scrapegoat Worker                                     │      │  │
 │  │  │  Container: scrapegoat-worker                          │      │  │
 │  │  │  Port: 8080                                            │      │  │
-│  │  │  Image: gitlab.fenrirsden.org/pub/scrapegoat:latest            │      │  │
+│  │  │  Image: git.fenrirsden.org/pub/scrapegoat:latest            │      │  │
 │  │  │  Command: worker --host 0.0.0.0 --port 8080            │      │  │
 │  │  │  Volume: scrapegoat-data                               │      │  │
 │  │  │  Resources: 2GB RAM limit, 1GB reserved                │      │  │
@@ -174,7 +174,7 @@ curl -f http://localhost:8082/health
 **Purpose**: Core application logic for documentation processing
 
 **Specifications**:
-- Image: `gitlab.fenrirsden.org/pub/scrapegoat:latest`
+- Image: `git.fenrirsden.org/pub/scrapegoat:latest`
 - Port: 8080
 - Command: `worker --host 0.0.0.0 --port 8080`
 
@@ -221,7 +221,7 @@ node -e 'require("net").connect(8080, "127.0.0.1")
 **Purpose**: Model Context Protocol server for AI tool integration
 
 **Specifications**:
-- Image: `gitlab.fenrirsden.org/pub/scrapegoat:latest`
+- Image: `git.fenrirsden.org/pub/scrapegoat:latest`
 - Port: 6280
 - Command: `mcp --protocol http --host 0.0.0.0 --port 6280 --server-url http://localhost:8080/api`
 
@@ -249,7 +249,7 @@ node -e 'require("net").connect(8080, "127.0.0.1")
 **Purpose**: Browser-based management interface
 
 **Specifications**:
-- Image: `gitlab.fenrirsden.org/pub/scrapegoat:latest`
+- Image: `git.fenrirsden.org/pub/scrapegoat:latest`
 - Port: 6281
 - Command: `web --host 0.0.0.0 --port 6281 --server-url http://localhost:8080/api`
 

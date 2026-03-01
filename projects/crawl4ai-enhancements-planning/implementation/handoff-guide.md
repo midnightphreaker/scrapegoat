@@ -293,7 +293,7 @@ npm run test:e2e
 1. Work on feature branch (e.g., `feature/phase-2-fetcher-selection`)
 2. Run tests locally
 3. Commit with descriptive messages
-4. Push to GitLab
+4. Push to Git
 
 ### Staging
 1. Merge to `addCrawl4AI` branch
@@ -428,7 +428,7 @@ npm run build
 - [ ] Documentation updated
 - [ ] Manual testing complete
 - [ ] Committed with clear message
-- [ ] Pushed to GitLab
+- [ ] Pushed to Git
 
 ### Before Production Deployment
 - [ ] All phases complete
@@ -441,7 +441,7 @@ npm run build
 
 ## Key Contacts & Resources
 
-**GitLab**: http://gitlab.den.lan/pub/scrapegoat
+**Git**: http://gitlab.den.lan/pub/scrapegoat
 **Production**: docs.den.lan (SSH: root@docs.den.lan, password: P@ssw0rd)
 **Crawl4AI Docs**: https://docs.crawl4ai.com/
 **Project Planning**: `/home/mp/Workspace/scrapegoat/projects/crawl4ai-enhancements-planning/`

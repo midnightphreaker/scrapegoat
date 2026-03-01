@@ -104,7 +104,7 @@ history | grep -i password
 Name: scrapegoat-worker
 Status: Up About a minute (healthy)
 Health Check: healthy ✅
-Image: gitlab.fenrirsden.org/pub/scrapegoat:latest
+Image: git.fenrirsden.org/pub/scrapegoat:latest
 Startup Logs:
   - DocumentStore initialized successfully
   - Pool: 1 total, 1 idle

@@ -200,7 +200,7 @@ kill {PID}
 **Category**: Technical
 
 #### Description
-Unable to pull gitlab.fenrirsden.org/pub/scrapegoat:latest or crawl4ai images.
+Unable to pull git.fenrirsden.org/pub/scrapegoat:latest or crawl4ai images.
 
 #### Impact
 - Cannot start services
@@ -221,11 +221,11 @@ Unable to pull gitlab.fenrirsden.org/pub/scrapegoat:latest or crawl4ai images.
 ping ghcr.io
 
 # 2. Try manual pull
-docker pull gitlab.fenrirsden.org/pub/scrapegoat:latest
+docker pull git.fenrirsden.org/pub/scrapegoat:latest
 
 # 3. Alternative: Build locally
 cd /home/mp/Workspace/scrapegoat
-docker build -t gitlab.fenrirsden.org/pub/scrapegoat:latest .
+docker build -t git.fenrirsden.org/pub/scrapegoat:latest .
 
 # 4. Update docker-compose.yml to use local build
 ```
