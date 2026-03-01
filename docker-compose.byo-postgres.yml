@@ -22,7 +22,7 @@
 services:
   # Worker service - handles documentation processing and API
   worker:
-    image: gitlab.fenrirsden.org/pub/scrapegoat:latest
+    image: git.fenrirsden.org/pub/scrapegoat:latest
     build:
       context: .
       dockerfile: Dockerfile
@@ -62,7 +62,7 @@ services:
 
   # MCP server - provides AI tool integration endpoint
   mcp:
-    image: gitlab.fenrirsden.org/pub/scrapegoat:latest
+    image: git.fenrirsden.org/pub/scrapegoat:latest
     build:
       context: .
       dockerfile: Dockerfile
@@ -102,7 +102,7 @@ services:
   # Web interface - provides browser-based management
   # MODIFIED: Port 80 for direct HTTP access at http://scrapegoat.den.lan/
   web:
-    image: gitlab.fenrirsden.org/pub/scrapegoat:latest
+    image: git.fenrirsden.org/pub/scrapegoat:latest
     build:
       context: .
       dockerfile: Dockerfile

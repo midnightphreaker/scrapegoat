@@ -8,7 +8,7 @@
 services:
   # Worker service - handles the actual documentation processing
   worker:
-    image: gitlab.fenrirsden.org/pub/scrapegoat:latest
+    image: git.fenrirsden.org/pub/scrapegoat:latest
     build:
       context: .
       dockerfile: Dockerfile
@@ -38,7 +38,7 @@ services:
     build:
       context: ./services/crawl4ai
       dockerfile: Dockerfile
-    image: gitlab.fenrirsden.org/pub/scrapegoat-crawl4ai:latest
+    image: git.fenrirsden.org/pub/scrapegoat-crawl4ai:latest
     container_name: scrapegoat-crawl4ai
     restart: unless-stopped
     network_mode: host

@@ -797,7 +797,7 @@ EXPLAIN ANALYZE SELECT ...;
 
 ---
 
-**Still Having Issues?** Open an issue on GitLab with:
+**Still Having Issues?** Open an issue on Git with:
 - Error message (full text)
 - PostgreSQL version (`SELECT version();`)
 - pgvector version (`SELECT * FROM pg_available_extensions WHERE name = 'vector';`)

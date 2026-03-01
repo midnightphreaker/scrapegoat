@@ -1,6 +1,6 @@
-# GitLab Issues to Create for TODOs
+# Git Issues to Create for TODOs
 
-Since GitLab API authorization failed, these issues should be created manually or via the GitLab web interface.
+Since Git API authorization failed, these issues should be created manually or via the Git web interface.
 
 ## Project: pub/scrapegoat
 
@@ -486,7 +486,7 @@ From the unified issues report:
 
 ## Bulk Creation Instructions
 
-If using GitLab CLI or API:
+If using Git CLI or API:
 
 ```bash
 # For each issue, use:
@@ -498,7 +498,7 @@ glab issue create \
 ```
 
 Or use the web interface at:
-https://gitlab.fenrirsden.org/pub/scrapegoat/-issues/new
+https://git.fenrirsden.org/pub/scrapegoat/-issues/new
 
 ---
 
