@@ -41,7 +41,7 @@ const IMAGE_EMBEDDING_TIMEOUT = 30000; // 30 seconds
 export interface ImageEmbeddingConfig {
   /** Whether image embedding is enabled */
   enabled: boolean;
-  /** Model specification for image embeddings (e.g., "openai:qwen3-vl-embedding") */
+  /** Model specification for image embeddings (e.g., "openai:qwen3-text-embedding") */
   model?: string;
   /** Custom base URL for self-hosted models */
   baseURL?: string;
@@ -105,7 +105,7 @@ export type ProgressCallback = (progress: BatchProgress) => void;
  * Service for generating image embeddings from screenshots and media items.
  *
  * This service integrates with the screenshot storage system to load images
- * and generate embeddings using vision-language models like qwen3-vl-embedding.
+ * and generate embeddings using vision-language models like qwen3-text-embedding.
  */
 export class ImageEmbeddingService {
   private embeddings?: MultimodalEmbeddings;

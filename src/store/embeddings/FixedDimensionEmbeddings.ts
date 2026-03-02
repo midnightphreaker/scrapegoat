@@ -169,7 +169,7 @@ export class MultimodalEmbeddings extends Embeddings {
     }
 
     // Convert images to base64 format for vision-language models
-    // Models like qwen3-vl-embedding accept images as base64 data URIs
+    // Models like qwen3-text-embedding accept images as base64 data URIs
     const imageInputs = images.map((img) => {
       // Validate buffer size before base64 conversion (which increases size by ~33%)
       validateImageSize(img.buffer, MAX_IMAGE_SIZE, "Image buffer");
