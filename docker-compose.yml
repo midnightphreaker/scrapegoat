@@ -12,10 +12,11 @@ services:
   scrapegoat:
     image: git.fenrirsden.org/pub/scrapegoat:latest
     container_name: scrapegoat
+    command: ["--protocol", "http"]
     ports:
       - "10.1.1.6:${SCRAPEGOAT_PORT:-8080}:8080"
     environment:
-      - DATABASE_URL="postgresql://scrapegoat:scrapegoat@pgsql.fenrirsden.org:5432/scrapegoat"
+      - DATABASE_URL=${DATABASE_URL}
       - OPENAI_API_BASE=https://embed.fenrirsden.org/v1
       - OPENAI_API_KEY=
       - DOCS_MCP_EMBEDDING_MODEL=qwen3-text-embedding
@@ -32,7 +33,7 @@ services:
         condition: service_healthy
     restart: unless-stopped
     healthcheck:
-      test: ["CMD", "node", "-e", "require('http').get('http://localhost:8080/health', (r) => process.exit(r.statusCode === 200 ? 0 : 1))"]
+      test: ["CMD", "node", "-e", "require('http').get('http://localhost:8080/', (r) => process.exit(r.statusCode === 200 ? 0 : 1))"]
       interval: 30s
       timeout: 10s
       retries: 3
