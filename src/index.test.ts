@@ -94,12 +94,12 @@ describe("CLI Flag Validation", () => {
         }
       };
 
-      expect(() => validateResumeFlag(true, "http://localhost:8080")).toThrow(
+      expect(() => validateResumeFlag(true, "http://localhost:8181")).toThrow(
         "--resume flag is incompatible with --server-url",
       );
 
       // These should NOT throw
-      expect(() => validateResumeFlag(false, "http://localhost:8080")).not.toThrow();
+      expect(() => validateResumeFlag(false, "http://localhost:8181")).not.toThrow();
       expect(() => validateResumeFlag(true, undefined)).not.toThrow();
       expect(() => validateResumeFlag(false, undefined)).not.toThrow();
     });
@@ -120,7 +120,7 @@ describe("CLI Flag Validation", () => {
       expect(() => validatePort("65536")).toThrow("Invalid port number");
 
       // These should work
-      expect(validatePort("8080")).toBe(8080);
+      expect(validatePort("8181")).toBe(8181);
       expect(validatePort("3000")).toBe(3000);
       expect(validatePort("65535")).toBe(65535);
     });
@@ -208,7 +208,7 @@ describe("Double Initialization Prevention", () => {
     // External worker mode configuration
     await PipelineFactory.createPipeline({} as any, {
       recoverJobs: false,
-      serverUrl: "http://localhost:8080/api",
+      serverUrl: "http://localhost:8181/api",
     });
 
     expect(vi.mocked(PipelineFactory.createPipeline)).toHaveBeenCalledTimes(3);
@@ -219,7 +219,7 @@ describe("Double Initialization Prevention", () => {
     expect(calls[1][1]).toEqual({ recoverJobs: false, concurrency: 1 });
     expect(calls[2][1]).toEqual({
       recoverJobs: false,
-      serverUrl: "http://localhost:8080/api",
+      serverUrl: "http://localhost:8181/api",
     });
   });
 });
@@ -236,7 +236,7 @@ describe("Service Configuration Validation", () => {
       enableMcpServer: false,
       enableApiServer: true,
       enableWorker: true,
-      port: 8080,
+      port: 8181,
     };
 
     // Simulate worker command behavior

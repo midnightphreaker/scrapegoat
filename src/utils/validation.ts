@@ -33,7 +33,7 @@ export function validateRequiredString(value: unknown, fieldName: string): void 
  * @throws {ValidationError} If port is invalid
  * @example
  * ```typescript
- * const port = validatePort(8080); // Returns 8080
+ * const port = validatePort(8181); // Returns 8181
  * validatePort(0); // Throws error
  * validatePort(70000); // Throws error
  * ```
@@ -57,7 +57,7 @@ export function validatePort(port: number): number {
  * @throws {ValidationError} If the value cannot be parsed or is invalid
  * @example
  * ```typescript
- * const port = validatePortString("8080"); // Returns "8080"
+ * const port = validatePortString("8181"); // Returns "8181"
  * validatePortString("invalid"); // Throws error
  * ```
  */

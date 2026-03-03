@@ -92,7 +92,7 @@ describe("AppServer Behavior Tests", () => {
         enableMcpServer: false,
         enableApiServer: false,
         enableWorker: false,
-        port: 3000,
+        port: 8080,
         host: "127.0.0.1",
         // externalWorkerUrl not provided
       };
@@ -114,7 +114,7 @@ describe("AppServer Behavior Tests", () => {
         enableMcpServer: true,
         enableApiServer: false,
         enableWorker: false,
-        port: 3000,
+        port: 8080,
         host: "127.0.0.1",
         // externalWorkerUrl not provided
       };
@@ -136,7 +136,7 @@ describe("AppServer Behavior Tests", () => {
         enableMcpServer: false,
         enableApiServer: false,
         enableWorker: true,
-        port: 3000,
+        port: 8080,
         host: "127.0.0.1",
       };
 
@@ -155,9 +155,9 @@ describe("AppServer Behavior Tests", () => {
         enableMcpServer: false,
         enableApiServer: false,
         enableWorker: false,
-        port: 3000,
+        port: 8080,
         host: "127.0.0.1",
-        externalWorkerUrl: "http://external-worker:8080",
+        externalWorkerUrl: "http://external-worker:8181",
       };
 
       const server = new AppServer(
@@ -175,7 +175,7 @@ describe("AppServer Behavior Tests", () => {
         enableMcpServer: true,
         enableApiServer: true,
         enableWorker: true,
-        port: 3000,
+        port: 8080,
         host: "127.0.0.1",
       };
 
@@ -196,7 +196,7 @@ describe("AppServer Behavior Tests", () => {
         enableMcpServer: false,
         enableApiServer: false,
         enableWorker: false,
-        port: 3000,
+        port: 8080,
         host: "127.0.0.1",
       };
 
@@ -222,7 +222,7 @@ describe("AppServer Behavior Tests", () => {
         enableMcpServer: false,
         enableApiServer: false,
         enableWorker: true, // Required for web interface
-        port: 3000,
+        port: 8080,
         host: "127.0.0.1",
       };
 
@@ -250,7 +250,7 @@ describe("AppServer Behavior Tests", () => {
         enableMcpServer: true,
         enableApiServer: false,
         enableWorker: true, // Required for MCP server
-        port: 3000,
+        port: 8080,
         host: "127.0.0.1",
       };
 
@@ -281,7 +281,7 @@ describe("AppServer Behavior Tests", () => {
         enableMcpServer: false,
         enableApiServer: true,
         enableWorker: false,
-        port: 3000,
+        port: 8080,
         host: "127.0.0.1",
       };
 
@@ -309,7 +309,7 @@ describe("AppServer Behavior Tests", () => {
         enableMcpServer: true,
         enableApiServer: true,
         enableWorker: true,
-        port: 3000,
+        port: 8080,
         host: "127.0.0.1",
       };
 
@@ -347,7 +347,7 @@ describe("AppServer Behavior Tests", () => {
         enableMcpServer: false,
         enableApiServer: false,
         enableWorker: true,
-        port: 3000,
+        port: 8080,
         host: "127.0.0.1",
       };
 
@@ -405,7 +405,7 @@ describe("AppServer Behavior Tests", () => {
         enableMcpServer: true,
         enableApiServer: true,
         enableWorker: true,
-        port: 3000,
+        port: 8080,
         host: "127.0.0.1",
       };
 
@@ -438,9 +438,9 @@ describe("AppServer Behavior Tests", () => {
         enableMcpServer: false,
         enableApiServer: false,
         enableWorker: false,
-        port: 3000,
+        port: 8080,
         host: "127.0.0.1",
-        externalWorkerUrl: "http://external-worker:8080",
+        externalWorkerUrl: "http://external-worker:8181",
       };
 
       const server = new AppServer(
@@ -452,7 +452,7 @@ describe("AppServer Behavior Tests", () => {
       await server.start();
 
       expect(mockLogger.info).toHaveBeenCalledWith(
-        expect.stringContaining("External worker: http://external-worker:8080"),
+        expect.stringContaining("External worker: http://external-worker:8181"),
       );
     });
 
@@ -465,7 +465,7 @@ describe("AppServer Behavior Tests", () => {
         enableMcpServer: false,
         enableApiServer: true,
         enableWorker: false,
-        port: 3000,
+        port: 8080,
         host: "127.0.0.1",
       };
 
@@ -490,7 +490,7 @@ describe("AppServer Behavior Tests", () => {
         enableMcpServer: true,
         enableApiServer: true,
         enableWorker: true,
-        port: 3000,
+        port: 8080,
         host: "127.0.0.1",
       };
 
@@ -517,7 +517,7 @@ describe("AppServer Behavior Tests", () => {
         enableMcpServer: false,
         enableApiServer: true,
         enableWorker: false,
-        port: 3000,
+        port: 8080,
         host: "127.0.0.1",
       };
 
@@ -544,7 +544,7 @@ describe("AppServer Behavior Tests", () => {
         enableMcpServer: true, // Enable MCP server so it gets cleaned up too
         enableApiServer: false,
         enableWorker: true,
-        port: 3000,
+        port: 8080,
         host: "127.0.0.1",
       };
 
@@ -573,7 +573,7 @@ describe("AppServer Behavior Tests", () => {
         enableMcpServer: false,
         enableApiServer: true,
         enableWorker: false,
-        port: 3000,
+        port: 8080,
         host: "127.0.0.1",
       };
 
@@ -600,9 +600,9 @@ describe("AppServer Behavior Tests", () => {
         enableMcpServer: false,
         enableApiServer: false,
         enableWorker: true,
-        port: 3000,
+        port: 8080,
         host: "127.0.0.1",
-        externalWorkerUrl: "http://external-worker:8080", // This should be ignored
+        externalWorkerUrl: "http://external-worker:8181", // This should be ignored
       };
 
       const server = new AppServer(

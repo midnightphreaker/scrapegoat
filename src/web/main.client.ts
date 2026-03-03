@@ -99,7 +99,7 @@ document.addEventListener("alpine:init", () => {
     status: "checking",
     mcpUrl: "",
     mcpHost: "",
-    mcpPort: 6280,
+    mcpPort: 8080,
     displayText: "Server Checking...",
     showPopup: false,
     configSnippet: "",

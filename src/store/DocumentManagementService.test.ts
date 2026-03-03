@@ -220,7 +220,7 @@ describe("DocumentManagementService", () => {
 
     it("createDocumentManagement({serverUrl}) returns initialized remote client", async () => {
       const { createDocumentManagement } = await import("./index");
-      const url = "http://localhost:8080";
+      const url = "http://localhost:8181";
 
       const dm = await createDocumentManagement({ serverUrl: url });
 

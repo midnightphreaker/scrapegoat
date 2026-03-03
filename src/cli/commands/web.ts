@@ -49,7 +49,7 @@ export function createWebCommand(program: Command): Command {
     )
     .option(
       "--server-url <url>",
-      "URL of external pipeline worker RPC (e.g., http://localhost:6280/api)",
+      "URL of external pipeline worker RPC (e.g., http://localhost:8080/api)",
     )
     .action(
       async (

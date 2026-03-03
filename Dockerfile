@@ -69,8 +69,8 @@ ENV DOCS_MCP_STORE_PATH=/data
 VOLUME /data
 
 # Expose the default port of the application
-EXPOSE 6280
-ENV PORT=6280
+EXPOSE 8080
+ENV PORT=8080
 ENV HOST=0.0.0.0
 
 # Set the command to run the application

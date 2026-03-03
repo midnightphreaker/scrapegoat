@@ -336,11 +336,9 @@ describe("ServiceUnavailableError", () => {
   });
 
   it("should handle various service names", () => {
-    const qdrantError = new ServiceUnavailableError("Qdrant");
     const embeddingError = new ServiceUnavailableError("Embedding service");
     const dbError = new ServiceUnavailableError("Database");
 
-    expect(qdrantError.service).toBe("Qdrant");
     expect(embeddingError.service).toBe("Embedding service");
     expect(dbError.service).toBe("Database");
   });

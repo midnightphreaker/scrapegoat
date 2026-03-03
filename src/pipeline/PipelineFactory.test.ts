@@ -36,14 +36,14 @@ describe("PipelineFactory", () => {
     });
 
     it("should create PipelineClient when serverUrl provided", async () => {
-      const options = { serverUrl: "http://localhost:8080", concurrency: 3 };
+      const options = { serverUrl: "http://localhost:8181", concurrency: 3 };
 
       const pipeline = await PipelineFactory.createPipeline(
         mockDocService as DocumentManagementService,
         options,
       );
 
-      expect(PipelineClient).toHaveBeenCalledWith("http://localhost:8080");
+      expect(PipelineClient).toHaveBeenCalledWith("http://localhost:8181");
       expect(PipelineManager).not.toHaveBeenCalled();
       // Behavior: returned instance is the one constructed by PipelineClient
       const ClientMock = PipelineClient as unknown as { mock: { instances: any[] } };

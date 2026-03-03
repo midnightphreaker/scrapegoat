@@ -295,12 +295,12 @@ describe("createPipelineWithCallbacks behavior", () => {
     } as any);
 
     const pipeline = await createPipelineWithCallbacks(undefined, {
-      serverUrl: "http://localhost:8080",
+      serverUrl: "http://localhost:8181",
       concurrency: 1,
     });
 
     expect(PipelineFactory.createPipeline).toHaveBeenCalledWith(undefined, {
-      serverUrl: "http://localhost:8080",
+      serverUrl: "http://localhost:8181",
       concurrency: 1,
     });
     expect(mockSetCallbacks).toHaveBeenCalledWith(
@@ -502,7 +502,7 @@ describe("CLI Validation Logic", () => {
   describe("validatePort", () => {
     it("should accept valid port numbers", () => {
       expect(validatePort("3000")).toBe(3000);
-      expect(validatePort("8080")).toBe(8080);
+      expect(validatePort("8181")).toBe(8181);
       expect(validatePort("1")).toBe(1);
       expect(validatePort("65535")).toBe(65535);
     });

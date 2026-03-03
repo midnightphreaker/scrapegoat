@@ -195,7 +195,7 @@ describe("sanitizeUrl", () => {
 
   it("should warn but allow private IP addresses", () => {
     // Should not throw, but logs warning
-    expect(sanitizeUrl("http://localhost:8080")).toBe("http://localhost:8080");
+    expect(sanitizeUrl("http://localhost:8181")).toBe("http://localhost:8181");
     expect(sanitizeUrl("http://127.0.0.1")).toBe("http://127.0.0.1");
   });
 

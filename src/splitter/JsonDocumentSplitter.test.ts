@@ -45,7 +45,7 @@ describe("JsonDocumentSplitter", () => {
 
   describe("nested structure handling", () => {
     it("should create concatenable chunks for nested objects", async () => {
-      const content = '{"config": {"debug": true, "port": 8080}}';
+      const content = '{"config": {"debug": true, "port": 8181}}';
       const chunks = await splitter.splitText(content);
 
       // Should be able to concatenate to valid JSON
@@ -55,7 +55,7 @@ describe("JsonDocumentSplitter", () => {
       // Should have hierarchical structure with proper indentation
       expect(chunks.some((c) => c.content.includes('"config": '))).toBe(true);
       expect(chunks.some((c) => c.content.includes('  "debug": true'))).toBe(true);
-      expect(chunks.some((c) => c.content.includes('  "port": 8080'))).toBe(true);
+      expect(chunks.some((c) => c.content.includes('  "port": 8181'))).toBe(true);
 
       // Verify level/path relationship for nested chunks
       const configChunk = chunks.find((c) => c.content.includes('"config":'));

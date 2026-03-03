@@ -318,7 +318,7 @@ export function warnHttpUsage(authConfig: AuthConfig | undefined, port: number):
   // Check if we're likely running in production (not localhost)
   const isLocalhost =
     process.env.NODE_ENV !== "production" ||
-    port === 6280 || // default dev port
+    port === 8080 || // default dev port
     process.env.HOSTNAME?.includes("localhost");
 
   if (!isLocalhost) {

@@ -66,7 +66,7 @@ describe("validatePort", () => {
   it("should accept valid port numbers", () => {
     expect(validatePort(1)).toBe(1);
     expect(validatePort(80)).toBe(80);
-    expect(validatePort(8080)).toBe(8080);
+    expect(validatePort(8181)).toBe(8181);
     expect(validatePort(65535)).toBe(65535);
   });
 
@@ -101,7 +101,7 @@ describe("validatePort", () => {
     expect(() => validatePort(-1)).toThrow(
       "Validation failed for port: Port must be an integer between 1 and 65535",
     );
-    expect(() => validatePort(-8080)).toThrow(
+    expect(() => validatePort(-8181)).toThrow(
       "Validation failed for port: Port must be an integer between 1 and 65535",
     );
   });
@@ -111,7 +111,7 @@ describe("validatePortString", () => {
   it("should accept valid port strings and return as string", () => {
     expect(validatePortString("1")).toBe("1");
     expect(validatePortString("80")).toBe("80");
-    expect(validatePortString("8080")).toBe("8080");
+    expect(validatePortString("8181")).toBe("8181");
     expect(validatePortString("65535")).toBe("65535");
   });
 

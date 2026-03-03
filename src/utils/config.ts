@@ -21,10 +21,10 @@ export const DEFAULT_MAX_CONCURRENCY = 3;
 export const DEFAULT_PROTOCOL = "auto";
 
 /** Default port for the HTTP protocol */
-export const DEFAULT_HTTP_PORT = 6280;
+export const DEFAULT_HTTP_PORT = 8080;
 
 /** Default port for the Web UI */
-export const DEFAULT_WEB_PORT = 6281;
+export const DEFAULT_WEB_PORT = 8080;
 
 /** Default host for server binding */
 export const DEFAULT_HOST = "127.0.0.1";

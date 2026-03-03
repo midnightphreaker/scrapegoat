@@ -28,7 +28,7 @@ export function createWorkerCommand(program: Command): Command {
       new Option("--port <number>", "Port for worker API")
         .env("DOCS_MCP_PORT")
         .env("PORT")
-        .default("8080")
+        .default("8181")
         .argParser(validatePortString),
     )
     .addOption(

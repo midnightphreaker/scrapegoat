@@ -22,7 +22,7 @@ vi.mock("@trpc/client", () => {
 
 describe("PipelineClient", () => {
   let client: PipelineClient;
-  const serverUrl = "http://localhost:8080";
+  const serverUrl = "http://localhost:8181";
 
   beforeEach(() => {
     vi.resetAllMocks();
