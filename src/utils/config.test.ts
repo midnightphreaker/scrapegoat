@@ -10,8 +10,11 @@ import {
   loadRateLimitConfig,
   type RateLimitConfig,
   rateLimitConfig,
+  resetConfigCache,
   validateConfig,
   validateRateLimitConfig,
+  MIN_RERANK_TIMEOUT,
+  MAX_RERANK_TIMEOUT,
 } from "./config";
 
 describe("loadConfig", () => {
@@ -406,10 +409,12 @@ describe("RerankerConfig", () => {
 
   beforeEach(() => {
     process.env = { ...originalEnv };
+    resetConfigCache(); // Reset cache to ensure fresh config per test
   });
 
   afterEach(() => {
     process.env = originalEnv;
+    resetConfigCache(); // Clean up after test
   });
 
   it("should load reranker config with defaults", () => {
@@ -436,10 +441,53 @@ describe("RerankerConfig", () => {
     expect(config.reranker.model).toBe("reranker-model");
   });
   
-  it("should validate reranker config when enabled", () => {
+  it("should reject missing RERANK_API_BASE when enabled", () => {
     process.env.RERANK_ENABLED = "true";
+    process.env.RERANK_MODEL = "reranker-model";
     delete process.env.RERANK_API_BASE;
     
-    expect(() => loadConfig()).toThrow("RERANK_API_BASE is required when RERANK_ENABLED=true");
+    expect(() => loadConfig()).toThrow(/RERANK_API_BASE is required when RERANK_ENABLED=true/);
+  });
+  
+  it("should reject missing RERANK_MODEL when enabled", () => {
+    process.env.RERANK_ENABLED = "true";
+    process.env.RERANK_API_BASE = "https://rerank.example.com/v1";
+    delete process.env.RERANK_MODEL;
+    
+    expect(() => loadConfig()).toThrow(/RERANK_MODEL is required when RERANK_ENABLED=true/);
+  });
+  
+  it("should reject timeout below minimum", () => {
+    process.env.RERANK_ENABLED = "true";
+    process.env.RERANK_API_BASE = "https://rerank.example.com/v1";
+    process.env.RERANK_MODEL = "reranker-model";
+    process.env.RERANK_TIMEOUT = "500"; // Below minimum
+    
+    expect(() => loadConfig()).toThrow(new RegExp(`RERANK_TIMEOUT must be between ${MIN_RERANK_TIMEOUT} and ${MAX_RERANK_TIMEOUT}ms`));
+  });
+  
+  it("should reject timeout above maximum", () => {
+    process.env.RERANK_ENABLED = "true";
+    process.env.RERANK_API_BASE = "https://rerank.example.com/v1";
+    process.env.RERANK_MODEL = "reranker-model";
+    process.env.RERANK_TIMEOUT = "50000"; // Above maximum
+    
+    expect(() => loadConfig()).toThrow(new RegExp(`RERANK_TIMEOUT must be between ${MIN_RERANK_TIMEOUT} and ${MAX_RERANK_TIMEOUT}ms`));
+  });
+  
+  it("should reject invalid URL format", () => {
+    process.env.RERANK_ENABLED = "true";
+    process.env.RERANK_API_BASE = "not-a-valid-url";
+    process.env.RERANK_MODEL = "reranker-model";
+    
+    expect(() => loadConfig()).toThrow(/RERANK_API_BASE must be a valid URL/);
+  });
+  
+  it("should reject non-HTTP URL", () => {
+    process.env.RERANK_ENABLED = "true";
+    process.env.RERANK_API_BASE = "ftp://rerank.example.com";
+    process.env.RERANK_MODEL = "reranker-model";
+    
+    expect(() => loadConfig()).toThrow(/RERANK_API_BASE must be a valid HTTP or HTTPS URL/);
   });
 });

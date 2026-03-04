@@ -131,6 +131,17 @@ export const CRAWL4AI_MAX_RETRIES = Number.parseInt(
   10,
 );
 
+
+// ============================================================================
+// Reranker Configuration Constants
+// ============================================================================
+
+/** Minimum reranker timeout in milliseconds */
+export const MIN_RERANK_TIMEOUT = 1000;
+
+/** Maximum reranker timeout in milliseconds */
+export const MAX_RERANK_TIMEOUT = 30000;
+
 // ============================================================================
 // Advanced Configuration System for Phases 4 & 5
 // ============================================================================
@@ -259,8 +270,68 @@ export interface ValidationResult {
  *
  * @returns Configuration object with values from environment or defaults
  */
+/**
+ * Validate reranker configuration
+ * 
+ * @param config Reranker configuration to validate
+ * @returns Array of error messages (empty if valid)
+ */
+function validateRerankerConfig(config: RerankerConfig): string[] {
+  const errors: string[] = [];
+  
+  if (config.enabled) {
+    if (!config.baseURL) {
+      errors.push("RERANK_API_BASE is required when RERANK_ENABLED=true");
+    } else {
+      // Basic URL format validation
+      try {
+        const url = new URL(config.baseURL);
+        if (!url.protocol.startsWith("http")) {
+          errors.push("RERANK_API_BASE must be a valid HTTP or HTTPS URL");
+        }
+      } catch {
+        errors.push("RERANK_API_BASE must be a valid URL");
+      }
+    }
+    
+    if (!config.model) {
+      errors.push("RERANK_MODEL is required when RERANK_ENABLED=true");
+    }
+    
+    if (config.timeout < MIN_RERANK_TIMEOUT || config.timeout > MAX_RERANK_TIMEOUT) {
+      errors.push(`RERANK_TIMEOUT must be between ${MIN_RERANK_TIMEOUT} and ${MAX_RERANK_TIMEOUT}ms`);
+    }
+  }
+  
+  return errors;
+}
+
+/**
+ * Configuration cache (for singleton pattern)
+ * 
+ * @internal
+ */
+let _configCache: Config | null = null;
+
+/**
+ * Reset the configuration cache (for testing)
+ * 
+ * This function clears the cached configuration singleton,
+ * forcing the next call to loadConfig() to read fresh values
+ * from environment variables.
+ * 
+ * @internal This is intended for testing purposes only
+ */
+export function resetConfigCache(): void {
+  _configCache = null;
+}
+
 export function loadConfig(): Config {
   const config: Config = {
+  if (_configCache) {
+    return _configCache;
+  }
+
     fetcher: {
       defaultFetcher: (process.env.DEFAULT_FETCHER as FetcherType) || "auto",
       http: {
@@ -313,27 +384,14 @@ export function loadConfig(): Config {
   };
 
   // Validate reranker configuration at load time
-  const errors: string[] = [];
-  if (config.reranker.enabled) {
-    if (!config.reranker.baseURL) {
-      errors.push("RERANK_API_BASE is required when RERANK_ENABLED=true");
-    }
-    if (!config.reranker.model) {
-      errors.push("RERANK_MODEL is required when RERANK_ENABLED=true");
-    }
-    if (config.reranker.timeout < 1000 || config.reranker.timeout > 30000) {
-      errors.push("RERANK_TIMEOUT must be between 1000 and 30000ms");
-    }
+  const rerankerErrors = validateRerankerConfig(config.reranker);
+  if (rerankerErrors.length > 0) {
+    throw new Error(`Configuration errors:\n${rerankerErrors.join("\n")}`);
   }
 
-  if (errors.length > 0) {
-    throw new Error(`Configuration errors:\n${errors.join("\n")}`);
-  }
-
+  _configCache = config;
   return config;
 }
-
-/**
  * Validate configuration
  *
  * Checks for invalid values and returns validation errors.
@@ -410,17 +468,7 @@ export function validateConfig(config: Config): ValidationResult {
   }
 
   // Validate reranker configuration
-  if (config.reranker.enabled) {
-    if (!config.reranker.baseURL) {
-      errors.push("RERANK_API_BASE is required when RERANK_ENABLED=true");
-    }
-    if (!config.reranker.model) {
-      errors.push("RERANK_MODEL is required when RERANK_ENABLED=true");
-    }
-    if (config.reranker.timeout < 1000 || config.reranker.timeout > 30000) {
-      errors.push("RERANK_TIMEOUT must be between 1000 and 30000ms");
-    }
-  }
+  errors.push(...validateRerankerConfig(config.reranker));
 
   return {
     valid: errors.length === 0,
