@@ -131,7 +131,6 @@ export const CRAWL4AI_MAX_RETRIES = Number.parseInt(
   10,
 );
 
-
 // ============================================================================
 // Reranker Configuration Constants
 // ============================================================================
@@ -272,13 +271,13 @@ export interface ValidationResult {
  */
 /**
  * Validate reranker configuration
- * 
+ *
  * @param config Reranker configuration to validate
  * @returns Array of error messages (empty if valid)
  */
 function validateRerankerConfig(config: RerankerConfig): string[] {
   const errors: string[] = [];
-  
+
   if (config.enabled) {
     if (!config.baseURL) {
       errors.push("RERANK_API_BASE is required when RERANK_ENABLED=true");
@@ -293,33 +292,35 @@ function validateRerankerConfig(config: RerankerConfig): string[] {
         errors.push("RERANK_API_BASE must be a valid URL");
       }
     }
-    
+
     if (!config.model) {
       errors.push("RERANK_MODEL is required when RERANK_ENABLED=true");
     }
-    
+
     if (config.timeout < MIN_RERANK_TIMEOUT || config.timeout > MAX_RERANK_TIMEOUT) {
-      errors.push(`RERANK_TIMEOUT must be between ${MIN_RERANK_TIMEOUT} and ${MAX_RERANK_TIMEOUT}ms`);
+      errors.push(
+        `RERANK_TIMEOUT must be between ${MIN_RERANK_TIMEOUT} and ${MAX_RERANK_TIMEOUT}ms`,
+      );
     }
   }
-  
+
   return errors;
 }
 
 /**
  * Configuration cache (for singleton pattern)
- * 
+ *
  * @internal
  */
 let _configCache: Config | null = null;
 
 /**
  * Reset the configuration cache (for testing)
- * 
+ *
  * This function clears the cached configuration singleton,
  * forcing the next call to loadConfig() to read fresh values
  * from environment variables.
- * 
+ *
  * @internal This is intended for testing purposes only
  */
 export function resetConfigCache(): void {
@@ -392,7 +393,7 @@ export function loadConfig(): Config {
   _configCache = config;
   return config;
 }
- * Validate configuration
+/** Validate configuration
  *
  * Checks for invalid values and returns validation errors.
  * Should be called after loadConfig() to ensure configuration is valid.

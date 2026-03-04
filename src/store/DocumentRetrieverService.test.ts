@@ -776,4 +776,124 @@ describe("DocumentRetrieverService (consolidated logic)", () => {
       });
     });
   });
+
+  describe("Reranker Integration", () => {
+    it("should retrieve 3x docs when reranker is ready", async () => {
+      const doc1 = new Document({
+        id: "doc1",
+        pageContent: "First document",
+        metadata: { url: "url1", score: 0.9 },
+      });
+      const doc2 = new Document({
+        id: "doc2",
+        pageContent: "Second document",
+        metadata: { url: "url2", score: 0.8 },
+      });
+
+      vi.spyOn(mockDocumentStore, "findByContent").mockResolvedValue([
+        doc1,
+        doc2,
+        doc1,
+        doc2,
+        doc1,
+        doc2,
+        doc1,
+        doc2,
+        doc1,
+        doc2,
+        doc1,
+      ]);
+      vi.spyOn(mockDocumentStore, "findParentChunk").mockResolvedValue(null);
+      vi.spyOn(mockDocumentStore, "findPrecedingSiblingChunks").mockResolvedValue([]);
+      vi.spyOn(mockDocumentStore, "findChildChunks").mockResolvedValue([]);
+      vi.spyOn(mockDocumentStore, "findSubsequentSiblingChunks").mockResolvedValue([]);
+      vi.spyOn(mockDocumentStore, "findChunksByIds").mockResolvedValue([doc1, doc2]);
+
+      const mockReranker = {
+        isReady: () => true,
+        initialize: async () => {},
+        rerank: vi.fn().mockResolvedValue([
+          { index: 0, relevanceScore: 0.95, document: { text: "First document" } },
+          { index: 2, relevanceScore: 0.85, document: { text: "Third document" } },
+        ]),
+      };
+
+      const service = new DocumentRetrieverService(
+        mockDocumentStore,
+        mockReranker as any,
+      );
+      const results = await service.search("lib", "1.0.0", "test query", 10);
+
+      expect(mockDocumentStore.findByContent).toHaveBeenCalledWith(
+        "lib",
+        "1.0.0",
+        "test query",
+        30,
+      );
+      expect(mockReranker.rerank).toHaveBeenCalled();
+    });
+
+    it("should retrieve limit docs when reranker is disabled", async () => {
+      const doc1 = new Document({
+        id: "doc1",
+        pageContent: "First document",
+        metadata: { url: "url1", score: 0.9 },
+      });
+
+      vi.spyOn(mockDocumentStore, "findByContent").mockResolvedValue([doc1]);
+      vi.spyOn(mockDocumentStore, "findParentChunk").mockResolvedValue(null);
+      vi.spyOn(mockDocumentStore, "findPrecedingSiblingChunks").mockResolvedValue([]);
+      vi.spyOn(mockDocumentStore, "findChildChunks").mockResolvedValue([]);
+      vi.spyOn(mockDocumentStore, "findSubsequentSiblingChunks").mockResolvedValue([]);
+      vi.spyOn(mockDocumentStore, "findChunksByIds").mockResolvedValue([doc1]);
+
+      const mockReranker = { isReady: () => false, initialize: async () => {} };
+      const service = new DocumentRetrieverService(
+        mockDocumentStore,
+        mockReranker as any,
+      );
+      const results = await service.search("lib", "1.0.0", "test query", 10);
+
+      expect(mockDocumentStore.findByContent).toHaveBeenCalledWith(
+        "lib",
+        "1.0.0",
+        "test query",
+        10,
+      );
+    });
+
+    it("should fallback gracefully when reranker fails", async () => {
+      const initialResult = new Document({
+        id: "doc1",
+        pageContent: "Main chunk",
+        metadata: { url: "url", score: 0.5 },
+      });
+
+      vi.spyOn(mockDocumentStore, "findByContent").mockResolvedValue([
+        initialResult,
+        initialResult,
+        initialResult,
+      ]);
+      vi.spyOn(mockDocumentStore, "findParentChunk").mockResolvedValue(null);
+      vi.spyOn(mockDocumentStore, "findPrecedingSiblingChunks").mockResolvedValue([]);
+      vi.spyOn(mockDocumentStore, "findChildChunks").mockResolvedValue([]);
+      vi.spyOn(mockDocumentStore, "findSubsequentSiblingChunks").mockResolvedValue([]);
+      vi.spyOn(mockDocumentStore, "findChunksByIds").mockResolvedValue([initialResult]);
+
+      const mockReranker = {
+        isReady: () => true,
+        initialize: async () => {},
+        rerank: vi.fn().mockRejectedValue(new Error("API error")),
+      };
+
+      const service = new DocumentRetrieverService(
+        mockDocumentStore,
+        mockReranker as any,
+      );
+      const results = await service.search("lib", "1.0.0", "test query", 10);
+
+      expect(results).toBeDefined();
+      expect(results.length).toBeGreaterThan(0);
+    });
+  });
 });

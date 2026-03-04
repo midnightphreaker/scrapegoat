@@ -1,13 +1,17 @@
 import type { Document } from "@langchain/core/documents";
+import { logger } from "../utils/logger.js";
 import { createContentAssemblyStrategy } from "./assembly/ContentAssemblyStrategyFactory";
 import type { DocumentStore } from "./DocumentStore";
+import type { RerankerService } from "./RerankerService.js";
 import type { StoreSearchResult } from "./types";
 
 export class DocumentRetrieverService {
   private documentStore: DocumentStore;
+  private reranker?: RerankerService;
 
-  constructor(documentStore: DocumentStore) {
+  constructor(documentStore: DocumentStore, reranker?: RerankerService) {
     this.documentStore = documentStore;
+    this.reranker = reranker;
   }
 
   /**
@@ -26,16 +30,57 @@ export class DocumentRetrieverService {
   ): Promise<StoreSearchResult[]> {
     // Normalize version: null/undefined becomes empty string, then lowercase
     const normalizedVersion = (version ?? "").toLowerCase();
+    const requestedLimit = limit ?? 10;
+
+    // Determine retrieval multiplier based on reranker availability
+    const retrieveLimit = this.reranker?.isReady() ? requestedLimit * 3 : requestedLimit;
 
     const initialResults = await this.documentStore.findByContent(
       library,
       normalizedVersion,
       query,
-      limit ?? 10,
+      retrieveLimit,
     );
 
     if (initialResults.length === 0) {
       return [];
+    }
+
+    // Apply reranking if available and we retrieved more documents
+    if (this.reranker?.isReady() && initialResults.length > requestedLimit) {
+      try {
+        // Extract document texts for reranking
+        const documents = initialResults.map((result) => result.pageContent);
+
+        // Rerank documents
+        const rerankedResults = await this.reranker.rerank(
+          query,
+          documents,
+          requestedLimit,
+        );
+
+        // Map reranked results back to original documents with updated scores
+        const rerankedDocuments = rerankedResults.map((result) => {
+          const originalDoc = initialResults[result.index];
+          // Update the score with the reranked relevance score
+          return new Document({
+            id: originalDoc.id,
+            pageContent: originalDoc.pageContent,
+            metadata: {
+              ...originalDoc.metadata,
+              score: result.relevanceScore,
+              reranked: true,
+            },
+          });
+        });
+
+        // Replace initialResults with reranked documents
+        initialResults.length = 0;
+        initialResults.push(...rerankedDocuments);
+      } catch (error) {
+        logger.warn("Reranking failed, returning original order", error);
+        // Continue with original results, sliced to requested limit
+      }
     }
 
     // Group initial results by URL
