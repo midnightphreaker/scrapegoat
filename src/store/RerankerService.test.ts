@@ -14,7 +14,6 @@ describe("RerankerService", () => {
 
   afterEach(() => {
     vi.clearAllMocks();
-    vi.useRealTimers();
   });
 
   describe("isReady", () => {
@@ -151,41 +150,43 @@ describe("RerankerService", () => {
     });
 
     it("should abort request and return fallback on timeout", async () => {
-      vi.useFakeTimers();
-
-      const abortSpy = vi.fn();
       const mockFetch = vi.fn().mockImplementation((url, options) => {
         return new Promise((resolve, reject) => {
-          const controller = options.signal as AbortController;
-          if (controller) {
-            controller.abort = abortSpy;
-          }
+          options.signal.addEventListener("abort", () => {
+            reject(new DOMException("Aborted", "AbortError"));
+          });
         });
       });
 
       global.fetch = mockFetch;
 
-      const svc = new RerankerService({
-        enabled: true,
-        baseURL: "https://rerank.example.com/v1",
-        model: "test-model",
-        timeout: 100,
-      });
+      try {
+        vi.useFakeTimers();
 
-      await svc.initialize();
+        const svc = new RerankerService({
+          enabled: true,
+          baseURL: "https://rerank.example.com/v1",
+          model: "test-model",
+          timeout: 100,
+        });
 
-      const documents = ["doc1", "doc2", "doc3"];
-      const rerankPromise = svc.rerank("test query", documents, 3);
+        await svc.initialize();
 
-      // Fast-forward time to trigger timeout
-      vi.advanceTimersByTime(100);
+        const documents = ["doc1", "doc2", "doc3"];
+        const rerankPromise = svc.rerank("test query", documents, 3);
 
-      const results = await rerankPromise;
+        // Fast-forward time to trigger timeout
+        vi.advanceTimersByTime(100);
 
-      // Should return fallback results
-      expect(results).toHaveLength(3);
-      expect(results[0].index).toBe(0);
-      expect(results[0].relevanceScore).toBe(0.5);
+        const results = await rerankPromise;
+
+        // Should return fallback results
+        expect(results).toHaveLength(3);
+        expect(results[0].index).toBe(0);
+        expect(results[0].relevanceScore).toBe(0.5);
+      } finally {
+        vi.useRealTimers();
+      }
     });
   });
 });
