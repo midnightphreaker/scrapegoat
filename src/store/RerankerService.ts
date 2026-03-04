@@ -47,14 +47,14 @@ export class RerankerService {
       throw new Error("Reranker service not ready");
     }
 
-    if (documents.length === 0) {
+    if (documents.length === 0 || topN <= 0) {
       return [];
     }
 
-    try {
-      const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), this.config.timeout);
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), this.config.timeout);
 
+    try {
       const response = await fetch(`${this.config.baseURL}/rerank`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -86,8 +86,14 @@ export class RerankerService {
         document: result.document,
       }));
     } catch (error) {
+      clearTimeout(timeoutId);
+      
       if (error instanceof Error) {
-        logger.warn(`Reranker failed: ${error.message}, using original order`);
+        if (error.name === 'AbortError') {
+          logger.warn(`Reranker timeout after ${this.config.timeout}ms, using original order`);
+        } else {
+          logger.warn(`Reranker failed: ${error.message}, using original order`);
+        }
       }
 
       return documents.slice(0, topN).map((doc, idx) => ({

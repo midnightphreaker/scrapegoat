@@ -14,6 +14,7 @@ describe("RerankerService", () => {
 
   afterEach(() => {
     vi.clearAllMocks();
+    vi.useRealTimers();
   });
 
   describe("isReady", () => {
@@ -106,6 +107,23 @@ describe("RerankerService", () => {
       expect(results).toEqual([]);
     });
 
+    it("should handle invalid topN parameter", async () => {
+      const svc = new RerankerService({
+        enabled: true,
+        baseURL: "https://rerank.example.com/v1",
+        model: "test-model",
+        timeout: 5000,
+      });
+
+      await svc.initialize();
+
+      const results = await svc.rerank("test query", ["doc1", "doc2"], 0);
+      expect(results).toEqual([]);
+
+      const results2 = await svc.rerank("test query", ["doc1", "doc2"], -5);
+      expect(results2).toEqual([]);
+    });
+
     it("should return original order on API error", async () => {
       global.fetch = vi.fn().mockResolvedValue({
         ok: false,
@@ -130,6 +148,44 @@ describe("RerankerService", () => {
       expect(results[0].index).toBe(0);
       expect(results[1].index).toBe(1);
       expect(results[2].index).toBe(2);
+    });
+
+    it("should abort request and return fallback on timeout", async () => {
+      vi.useFakeTimers();
+
+      const abortSpy = vi.fn();
+      const mockFetch = vi.fn().mockImplementation((url, options) => {
+        return new Promise((resolve, reject) => {
+          const controller = options.signal as AbortController;
+          if (controller) {
+            controller.abort = abortSpy;
+          }
+        });
+      });
+
+      global.fetch = mockFetch;
+
+      const svc = new RerankerService({
+        enabled: true,
+        baseURL: "https://rerank.example.com/v1",
+        model: "test-model",
+        timeout: 100,
+      });
+
+      await svc.initialize();
+
+      const documents = ["doc1", "doc2", "doc3"];
+      const rerankPromise = svc.rerank("test query", documents, 3);
+
+      // Fast-forward time to trigger timeout
+      vi.advanceTimersByTime(100);
+
+      const results = await rerankPromise;
+
+      // Should return fallback results
+      expect(results).toHaveLength(3);
+      expect(results[0].index).toBe(0);
+      expect(results[0].relevanceScore).toBe(0.5);
     });
   });
 });
