@@ -327,11 +327,11 @@ export function resetConfigCache(): void {
 }
 
 export function loadConfig(): Config {
-  const config: Config = {
   if (_configCache) {
     return _configCache;
   }
 
+  const config: Config = {
     fetcher: {
       defaultFetcher: (process.env.DEFAULT_FETCHER as FetcherType) || "auto",
       http: {
