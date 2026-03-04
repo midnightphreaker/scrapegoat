@@ -47,6 +47,54 @@ export class RerankerService {
       throw new Error("Reranker service not ready");
     }
 
-    throw new Error("Not implemented yet");
+    if (documents.length === 0) {
+      return [];
+    }
+
+    try {
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), this.config.timeout);
+
+      const response = await fetch(`${this.config.baseURL}/rerank`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          model: this.config.model,
+          query,
+          documents,
+          top_n: Math.min(topN, documents.length),
+        }),
+        signal: controller.signal,
+      });
+
+      clearTimeout(timeoutId);
+
+      if (!response.ok) {
+        logger.warn(`Reranker returned ${response.status}, using original order`);
+        return documents.slice(0, topN).map((doc, idx) => ({
+          index: idx,
+          relevanceScore: 0.5,
+          document: { text: doc },
+        }));
+      }
+
+      const data: RerankResponse = await response.json();
+
+      return data.results.map((result) => ({
+        index: result.index,
+        relevanceScore: result.relevance_score,
+        document: result.document,
+      }));
+    } catch (error) {
+      if (error instanceof Error) {
+        logger.warn(`Reranker failed: ${error.message}, using original order`);
+      }
+
+      return documents.slice(0, topN).map((doc, idx) => ({
+        index: idx,
+        relevanceScore: 0.5,
+        document: { text: doc },
+      }));
+    }
   }
 }
