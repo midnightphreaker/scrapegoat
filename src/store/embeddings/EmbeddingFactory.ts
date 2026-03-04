@@ -142,7 +142,7 @@ export function createEmbeddingModel(providerAndModel: string): Embeddings {
           ...baseConfig,
           modelName: model,
           batchSize, // Adjusted based on whether using self-hosted model
-          dimensions: VECTOR_DIMENSION, // Force dimension for Matryoshka models (e.g., qwen3-text-embedding)
+          // dimensions: VECTOR_DIMENSION, // Removed: qwen3-text-embedding does not support matryoshka (e.g., qwen3-text-embedding)
         };
       // Add custom base URL if specified
       if (baseURL) {
