@@ -11,6 +11,8 @@ import type { ContentChunk } from "../splitter/types";
 import { analytics, extractHostname, TelemetryEvent } from "../telemetry";
 import type { DocumentMetadata } from "../types";
 import { logger } from "../utils/logger";
+import { appConfig } from "../utils/config";
+import { RerankerService } from "./RerankerService";
 import { DocumentRetrieverService } from "./DocumentRetrieverService";
 import { DocumentStore } from "./DocumentStore";
 import type { EmbeddingModelConfig } from "./embeddings/EmbeddingConfig";
@@ -40,6 +42,7 @@ export class DocumentManagementService {
   private readonly store: DocumentStore;
   private readonly documentRetriever: DocumentRetrieverService;
   private readonly pipelines: ContentPipeline[];
+  private readonly rerankerService?: RerankerService;
 
   /**
    * Normalizes a version string, converting null or undefined to an empty string
@@ -67,9 +70,25 @@ export class DocumentManagementService {
     logger.debug(
       `Using PostgreSQL connection: ${connectionString.replace(/:[^:@]+@/, ":***@")}`,
     );
+    // Initialize RerankerService if enabled
+    if (appConfig.reranker.enabled) {
+      try {
+        this.rerankerService = new RerankerService(appConfig.reranker);
+        logger.info("RerankerService initialized successfully");
+      } catch (error) {
+        logger.error("Failed to initialize RerankerService:", error);
+        this.rerankerService = undefined;
+      }
+    } else {
+      logger.info("RerankerService is disabled in configuration");
+      this.rerankerService = undefined;
+    }
 
     this.store = new DocumentStore(connectionString, embeddingConfig);
-    this.documentRetriever = new DocumentRetrieverService(this.store);
+    this.documentRetriever = new DocumentRetrieverService(
+      this.store,
+      this.rerankerService?.isReady() ? this.rerankerService : undefined,
+    );
 
     // Initialize content pipelines for different content types including universal TextPipeline fallback
     this.pipelines = PipelineFactory.createStandardPipelines(pipelineConfig);
