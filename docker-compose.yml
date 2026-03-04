@@ -18,7 +18,7 @@ services:
     environment:
       - DATABASE_URL=${DATABASE_URL}
       - OPENAI_API_BASE=https://embed.fenrirsden.org/v1
-      - OPENAI_API_KEY=
+      - OPENAI_API_KEY=SK-FAKEKEY
       - DOCS_MCP_EMBEDDING_MODEL=qwen3-text-embedding
       - VECTOR_DIMENSION=1024
       - DOCS_MCP_STORE_PATH=/data
