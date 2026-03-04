@@ -225,10 +225,25 @@ export interface MonitoringConfig {
 /**
  * Complete application configuration
  */
+/**
+ * Reranker service configuration
+ */
+export interface RerankerConfig {
+  /** Whether reranking is enabled */
+  enabled: boolean;
+  /** Reranker API base URL */
+  baseURL?: string;
+  /** Reranker model name */
+  model?: string;
+  /** Request timeout in milliseconds */
+  timeout: number;
+}
+
 export interface Config {
   fetcher: FetcherConfig;
   storage: StorageConfig;
   monitoring: MonitoringConfig;
+  reranker: RerankerConfig;
 }
 
 /**
@@ -245,7 +260,7 @@ export interface ValidationResult {
  * @returns Configuration object with values from environment or defaults
  */
 export function loadConfig(): Config {
-  return {
+  const config: Config = {
     fetcher: {
       defaultFetcher: (process.env.DEFAULT_FETCHER as FetcherType) || "auto",
       http: {
@@ -289,7 +304,33 @@ export function loadConfig(): Config {
       },
       maxSamples: Number.parseInt(process.env.PERF_MAX_SAMPLES || "1000", 10),
     },
+    reranker: {
+      enabled: process.env.RERANK_ENABLED === "true",
+      baseURL: process.env.RERANK_API_BASE,
+      model: process.env.RERANK_MODEL,
+      timeout: Number.parseInt(process.env.RERANK_TIMEOUT || "5000", 10),
+    },
   };
+
+  // Validate reranker configuration at load time
+  const errors: string[] = [];
+  if (config.reranker.enabled) {
+    if (!config.reranker.baseURL) {
+      errors.push("RERANK_API_BASE is required when RERANK_ENABLED=true");
+    }
+    if (!config.reranker.model) {
+      errors.push("RERANK_MODEL is required when RERANK_ENABLED=true");
+    }
+    if (config.reranker.timeout < 1000 || config.reranker.timeout > 30000) {
+      errors.push("RERANK_TIMEOUT must be between 1000 and 30000ms");
+    }
+  }
+
+  if (errors.length > 0) {
+    throw new Error(`Configuration errors:\n${errors.join("\n")}`);
+  }
+
+  return config;
 }
 
 /**
@@ -366,6 +407,19 @@ export function validateConfig(config: Config): ValidationResult {
     config.monitoring.exportInterval > 600000
   ) {
     errors.push("Metrics export interval must be between 1000 and 600000ms");
+  }
+
+  // Validate reranker configuration
+  if (config.reranker.enabled) {
+    if (!config.reranker.baseURL) {
+      errors.push("RERANK_API_BASE is required when RERANK_ENABLED=true");
+    }
+    if (!config.reranker.model) {
+      errors.push("RERANK_MODEL is required when RERANK_ENABLED=true");
+    }
+    if (config.reranker.timeout < 1000 || config.reranker.timeout > 30000) {
+      errors.push("RERANK_TIMEOUT must be between 1000 and 30000ms");
+    }
   }
 
   return {

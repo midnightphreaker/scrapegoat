@@ -400,3 +400,46 @@ describe("singleton config instances", () => {
     expect(rateLimitConfig.database).toBeDefined();
   });
 });
+
+describe("RerankerConfig", () => {
+  const originalEnv = process.env;
+
+  beforeEach(() => {
+    process.env = { ...originalEnv };
+  });
+
+  afterEach(() => {
+    process.env = originalEnv;
+  });
+
+  it("should load reranker config with defaults", () => {
+    delete process.env.RERANK_ENABLED;
+    delete process.env.RERANK_API_BASE;
+    delete process.env.RERANK_MODEL;
+    delete process.env.RERANK_TIMEOUT;
+    
+    const config = loadConfig();
+    
+    expect(config.reranker.enabled).toBe(false);
+    expect(config.reranker.timeout).toBe(5000);
+  });
+  
+  it("should enable reranker when RERANK_ENABLED=true", () => {
+    process.env.RERANK_ENABLED = "true";
+    process.env.RERANK_API_BASE = "https://rerank.example.com/v1";
+    process.env.RERANK_MODEL = "reranker-model";
+    
+    const config = loadConfig();
+    
+    expect(config.reranker.enabled).toBe(true);
+    expect(config.reranker.baseURL).toBe("https://rerank.example.com/v1");
+    expect(config.reranker.model).toBe("reranker-model");
+  });
+  
+  it("should validate reranker config when enabled", () => {
+    process.env.RERANK_ENABLED = "true";
+    delete process.env.RERANK_API_BASE;
+    
+    expect(() => loadConfig()).toThrow("RERANK_API_BASE is required when RERANK_ENABLED=true");
+  });
+});
