@@ -305,18 +305,24 @@ export function getStatusDescription(status: VersionStatus): string {
  * Checks if a status represents a final state (job completed).
  */
 export function isFinalStatus(status: VersionStatus): boolean {
-  return ([
-    VersionStatus.COMPLETED,
-    VersionStatus.FAILED,
-    VersionStatus.CANCELLED,
-  ] as VersionStatus[]).includes(status);
+  return (
+    [
+      VersionStatus.COMPLETED,
+      VersionStatus.FAILED,
+      VersionStatus.CANCELLED,
+    ] as VersionStatus[]
+  ).includes(status);
 }
 
 /**
  * Checks if a status represents an active state (job in progress).
  */
 export function isActiveStatus(status: VersionStatus): boolean {
-  return ([VersionStatus.QUEUED, VersionStatus.RUNNING, VersionStatus.UPDATING] as VersionStatus[]).includes(
-    status,
-  );
+  return (
+    [
+      VersionStatus.QUEUED,
+      VersionStatus.RUNNING,
+      VersionStatus.UPDATING,
+    ] as VersionStatus[]
+  ).includes(status);
 }

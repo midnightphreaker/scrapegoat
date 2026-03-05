@@ -10,9 +10,8 @@ import type { ScraperOptions } from "../scraper/types";
 import type { ContentChunk } from "../splitter/types";
 import { analytics, extractHostname, TelemetryEvent } from "../telemetry";
 import type { DocumentMetadata } from "../types";
-import { logger } from "../utils/logger";
 import { appConfig } from "../utils/config";
-import { RerankerService } from "./RerankerService";
+import { logger } from "../utils/logger";
 import { DocumentRetrieverService } from "./DocumentRetrieverService";
 import { DocumentStore } from "./DocumentStore";
 import type { EmbeddingModelConfig } from "./embeddings/EmbeddingConfig";
@@ -23,6 +22,7 @@ import {
   StoreError,
   VersionNotFoundInStoreError,
 } from "./errors";
+import { RerankerService } from "./RerankerService";
 import type {
   DbVersionWithLibrary,
   FindVersionResult,

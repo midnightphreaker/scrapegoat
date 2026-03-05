@@ -87,7 +87,11 @@ export class HierarchicalAssemblyStrategy implements ContentAssemblyStrategy {
           let promotedAncestor = structuralAncestor;
           try {
             const path = (matched.metadata.path as string[]) || [];
-            if (promotedAncestor === matched && path.length > 0 && path[0] !== undefined) {
+            if (
+              promotedAncestor === matched &&
+              path.length > 0 &&
+              path[0] !== undefined
+            ) {
               const topLevelPath = [path[0]!];
               const containerIds = await this.findContainerChunks(
                 library,
@@ -563,7 +567,7 @@ export class HierarchicalAssemblyStrategy implements ContentAssemblyStrategy {
         if (chunkPath.length !== path.length) return false;
 
         // All path elements must match
-        return chunkPath.every((part, index) => part === (path[index] ?? ''));
+        return chunkPath.every((part, index) => part === (path[index] ?? ""));
       });
 
       logger.debug(

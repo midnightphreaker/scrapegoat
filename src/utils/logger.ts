@@ -25,7 +25,9 @@ const LOG_LEVEL_MAP: Record<string, LogLevel> = {
  */
 function getLogLevelFromEnv(): LogLevel {
   const envLevel = process.env.LOG_LEVEL?.toUpperCase();
-  return envLevel && envLevel in LOG_LEVEL_MAP ? (LOG_LEVEL_MAP[envLevel] ?? LogLevel.INFO) : LogLevel.INFO;
+  return envLevel && envLevel in LOG_LEVEL_MAP
+    ? (LOG_LEVEL_MAP[envLevel] ?? LogLevel.INFO)
+    : LogLevel.INFO;
 }
 
 let currentLogLevel: LogLevel = getLogLevelFromEnv();

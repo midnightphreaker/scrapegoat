@@ -13,6 +13,8 @@ RUN apt-get update \
   python3 \
   make \
   g++ \
+  nodejs \
+  npm \
   && rm -rf /var/lib/apt/lists/*
 
 # Copy package files
@@ -20,6 +22,7 @@ COPY package*.json ./
 
 # Force-refresh baseline-browser-mapping (avoids stale Baseline dataset warnings)
 RUN npm pkg delete overrides.baseline-browser-mapping >/dev/null 2>&1 || true
+
 RUN npm i -D baseline-browser-mapping@latest --package-lock-only --legacy-peer-deps
 
 # Install all dependencies (including dev dependencies for building)
@@ -58,6 +61,11 @@ RUN apt-get update \
   && if [ -z "$CHROMIUM_PATH" ]; then echo "Chromium executable not found!" && exit 1; fi \
   && if [ "$CHROMIUM_PATH" != "/usr/bin/chromium" ]; then echo "Unexpected Chromium path: $CHROMIUM_PATH" && exit 1; fi \
   && echo "Chromium installed at $CHROMIUM_PATH"
+
+RUN apt-get update \
+    && apt-get install -y \
+    nodejs \
+    npm && npm install -g npm@11.11.0
 
 # Set Playwright to use system Chromium (hardcoded path, as ENV cannot use shell vars)
 ENV PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH=/usr/bin/chromium
