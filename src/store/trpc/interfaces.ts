@@ -68,8 +68,8 @@ import type {
   LibrarySummary,
   StoredScraperOptions,
   StoreSearchResult,
+  VersionStatus,
 } from "../types";
-import { VersionStatus } from "../types";
 
 export interface IDocumentManagement {
   /**

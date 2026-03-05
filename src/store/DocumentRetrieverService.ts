@@ -35,11 +35,19 @@ export class DocumentRetrieverService {
     // Determine retrieval multiplier based on reranker availability
     const retrieveLimit = this.reranker?.isReady() ? requestedLimit * 3 : requestedLimit;
 
+    logger.info(
+      `Retrieval config: requestedLimit=${requestedLimit}, rerankerReady=${this.reranker?.isReady()}, retrieveLimit=${retrieveLimit}`,
+    );
+
     const initialResults = await this.documentStore.findByContent(
       library,
       normalizedVersion,
       query,
       retrieveLimit,
+    );
+
+    logger.info(
+      `Retrieval results: got ${initialResults.length} documents, need >${requestedLimit} for reranking`,
     );
 
     if (initialResults.length === 0) {
@@ -49,6 +57,9 @@ export class DocumentRetrieverService {
     // Apply reranking if available and we retrieved more documents
     if (this.reranker?.isReady() && initialResults.length > requestedLimit) {
       try {
+        logger.info(
+          `Reranking ${initialResults.length} documents for top ${requestedLimit}`,
+        );
         // Extract document texts for reranking
         const documents = initialResults.map((result) => result.pageContent);
 

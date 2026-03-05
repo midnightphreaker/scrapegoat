@@ -9,8 +9,8 @@ import type {
   DbVersionWithLibrary,
   FindVersionResult,
   StoreSearchResult,
+  VersionStatus,
 } from "../types";
-import { VersionStatus } from "../types";
 import type { IDocumentManagement } from "./interfaces";
 
 // Context carries the document management API

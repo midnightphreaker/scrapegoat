@@ -80,7 +80,16 @@ export function getFocusableElements(container: HTMLElement): HTMLElement[] {
 export function isFocusable(element: HTMLElement): boolean {
   if (element.tabIndex < 0) return false;
   // Check for disabled property on elements that support it
-  if ("disabled" in element && (element as HTMLInputElement | HTMLButtonElement | HTMLSelectElement | HTMLTextAreaElement).disabled) {
+  if (
+    "disabled" in element &&
+    (
+      element as
+        | HTMLInputElement
+        | HTMLButtonElement
+        | HTMLSelectElement
+        | HTMLTextAreaElement
+    ).disabled
+  ) {
     return false;
   }
 

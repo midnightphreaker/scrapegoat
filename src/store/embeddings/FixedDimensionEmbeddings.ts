@@ -245,12 +245,7 @@ function detectImageFormat(buffer: Buffer): string {
   const b3 = buffer[3];
 
   // PNG magic bytes: 89 50 4E 47
-  if (
-    b0 === 0x89 &&
-    b1 === 0x50 &&
-    b2 === 0x4e &&
-    b3 === 0x47
-  ) {
+  if (b0 === 0x89 && b1 === 0x50 && b2 === 0x4e && b3 === 0x47) {
     return "png";
   }
   // JPEG magic bytes: FF D8 FF
@@ -258,32 +253,16 @@ function detectImageFormat(buffer: Buffer): string {
     return "jpeg";
   }
   // GIF magic bytes: 47 49 46 38
-  if (
-    b0 === 0x47 &&
-    b1 === 0x49 &&
-    b2 === 0x46 &&
-    b3 === 0x38
-  ) {
+  if (b0 === 0x47 && b1 === 0x49 && b2 === 0x46 && b3 === 0x38) {
     return "gif";
   }
   // WebP magic bytes: 52 49 46 46 ... 57 45 42 50
-  if (
-    b0 === 0x52 &&
-    b1 === 0x49 &&
-    b2 === 0x46 &&
-    b3 === 0x46 &&
-    buffer.length > 11
-  ) {
+  if (b0 === 0x52 && b1 === 0x49 && b2 === 0x46 && b3 === 0x46 && buffer.length > 11) {
     const b8 = buffer[8];
     const b9 = buffer[9];
     const b10 = buffer[10];
     const b11 = buffer[11];
-    if (
-      b8 === 0x57 &&
-      b9 === 0x45 &&
-      b10 === 0x42 &&
-      b11 === 0x50
-    ) {
+    if (b8 === 0x57 && b9 === 0x45 && b10 === 0x42 && b11 === 0x50) {
       return "webp";
     }
   }

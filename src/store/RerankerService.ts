@@ -87,10 +87,12 @@ export class RerankerService {
       }));
     } catch (error) {
       clearTimeout(timeoutId);
-      
+
       if (error instanceof Error) {
-        if (error.name === 'AbortError') {
-          logger.warn(`Reranker timeout after ${this.config.timeout}ms, using original order`);
+        if (error.name === "AbortError") {
+          logger.warn(
+            `Reranker timeout after ${this.config.timeout}ms, using original order`,
+          );
         } else {
           logger.warn(`Reranker failed: ${error.message}, using original order`);
         }

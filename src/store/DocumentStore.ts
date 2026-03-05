@@ -907,7 +907,7 @@ export class DocumentStore {
     const metadataForEmbedding: Array<{ url: string; metadata: ImageMetadata }> = [];
     for (const [url, urlDocs] of Array.from(docsByUrl.entries())) {
       if (urlDocs.length === 0) continue;
-      const firstMeta = (urlDocs[0]?.metadata) as DocumentMetadata | undefined;
+      const firstMeta = urlDocs[0]?.metadata as DocumentMetadata | undefined;
       if (firstMeta && firstMeta.screenshotPath) {
         metadataForEmbedding.push({
           url,

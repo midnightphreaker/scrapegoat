@@ -24,6 +24,10 @@ services:
       - DOCS_MCP_STORE_PATH=/data
       - CRAWL4AI_SERVICE_URL=http://crawl4ai:8001
       - NODE_ENV=production
+      - RERANK_ENABLED=${RERANK_ENABLED:-false}
+      - RERANK_API_BASE=${RERANK_API_BASE}
+      - RERANK_MODEL=${RERANK_MODEL}
+      - RERANK_TIMEOUT=${RERANK_TIMEOUT:-5000}
     volumes:
       - scrapegoat-data:/data
     networks:
