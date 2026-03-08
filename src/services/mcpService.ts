@@ -110,6 +110,8 @@ export async function registerMcpService(
     preHandler: authMiddleware ? [authMiddleware] : undefined,
     handler: async (request: FastifyRequest, reply: FastifyReply) => {
       try {
+        // Disable nginx buffering for SSE streaming
+        reply.header('X-Accel-Buffering', 'no');
         // In stateless mode, create a new instance of server and transport for each request
         const requestServer = createMcpServerInstance(mcpTools, readOnly);
         const requestTransport = new StreamableHTTPServerTransport({
