@@ -119,15 +119,8 @@ export async function registerMcpService(
           sessionIdGenerator: undefined,
         });
 
-        // Setup heartbeat to prevent idle timeout (every 30 seconds)
-        const heartbeatInterval = setInterval(() => {
-          if (!reply.raw.writableEnded) {
-            reply.raw.write(": heartbeat\n\n");
-          }
-        }, 30000);
 
         reply.raw.on("close", () => {
-          clearInterval(heartbeatInterval);
           logger.debug("Streamable HTTP request closed");
           requestTransport.close();
           requestServer.close(); // Close the per-request server instance
