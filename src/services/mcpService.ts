@@ -111,14 +111,23 @@ export async function registerMcpService(
     handler: async (request: FastifyRequest, reply: FastifyReply) => {
       try {
         // Disable nginx buffering for SSE streaming
-        reply.header('X-Accel-Buffering', 'no');
+        reply.header("X-Accel-Buffering", "no");
+
         // In stateless mode, create a new instance of server and transport for each request
         const requestServer = createMcpServerInstance(mcpTools, readOnly);
         const requestTransport = new StreamableHTTPServerTransport({
           sessionIdGenerator: undefined,
         });
 
+        // Setup heartbeat to prevent idle timeout (every 30 seconds)
+        const heartbeatInterval = setInterval(() => {
+          if (!reply.raw.writableEnded) {
+            reply.raw.write(": heartbeat\n\n");
+          }
+        }, 30000);
+
         reply.raw.on("close", () => {
+          clearInterval(heartbeatInterval);
           logger.debug("Streamable HTTP request closed");
           requestTransport.close();
           requestServer.close(); // Close the per-request server instance
