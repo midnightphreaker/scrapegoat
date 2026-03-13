@@ -123,3 +123,8 @@ docker-compose.override.yml
 
 # Git worktrees
 .worktrees/
+
+# SvelteKit
+src/web-sveltekit/.svelte-kit/
+src/web-sveltekit/build/
+src/web-sveltekit/node_modules/
