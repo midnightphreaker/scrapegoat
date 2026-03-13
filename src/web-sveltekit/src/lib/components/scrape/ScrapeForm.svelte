@@ -136,11 +136,10 @@
 						/>
 					{/each}
 				</div>
-				{#if canAddUrl}
-					<Button type="button" variant="outline" size="sm" class="mt-2" onclick={addUrl}>
-						+ Add URL
-					</Button>
-				{/if}
+				<Button type="button" variant="outline" size="sm" class="mt-2" onclick={addUrl} disabled={!canAddUrl}>
+					<Plus class="w-4 h-4 mr-1" />
+					Add URL
+				</Button>
 			</div>
 
 			<div class="grid grid-cols-2 gap-4">
