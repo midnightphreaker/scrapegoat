@@ -58,13 +58,17 @@ describe("JobItem", () => {
 
   it("shows cancel button for running jobs", () => {
     render(JobItem, { props: { job: mockJob } });
-    expect(screen.getByRole("button", { name: /cancel/i })).toBeTruthy();
+    const buttons = screen.getAllByRole("button");
+    const cancelButton = buttons.find((b) => b.textContent?.trim() === "Cancel");
+    expect(cancelButton).toBeTruthy();
   });
 
   it("shows cancel button for queued jobs", () => {
     const queuedJob: Job = { ...mockJob, status: "queued", progress: null };
     render(JobItem, { props: { job: queuedJob } });
-    expect(screen.getByRole("button", { name: /cancel/i })).toBeTruthy();
+    const buttons = screen.getAllByRole("button");
+    const cancelButton = buttons.find((b) => b.textContent?.trim() === "Cancel");
+    expect(cancelButton).toBeTruthy();
   });
 
   it("hides cancel button for completed jobs", () => {
@@ -74,6 +78,8 @@ describe("JobItem", () => {
       progress: { pages: 10, totalPages: 10 },
     };
     render(JobItem, { props: { job: completedJob } });
-    expect(screen.queryByRole("button", { name: /cancel/i })).toBeNull();
+    const buttons = screen.queryAllByRole("button");
+    const cancelButton = buttons.find((b) => b.textContent?.trim() === "Cancel");
+    expect(cancelButton).toBeFalsy();
   });
 });
