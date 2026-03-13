@@ -1,5 +1,5 @@
 import { createTRPCProxyClient, httpBatchLink } from "@trpc/client";
-import type { AnyRouter } from "@trpc/server";
+import type { AppRouter } from "../../../../services/trpcService";
 
 const getApiUrl = () => {
   if (typeof window !== "undefined") {
@@ -8,7 +8,7 @@ const getApiUrl = () => {
   return "http://localhost:6281/api/trpc";
 };
 
-export const trpc = createTRPCProxyClient<AnyRouter>({
+export const trpc = createTRPCProxyClient<AppRouter>({
   links: [
     httpBatchLink({
       url: getApiUrl(),
