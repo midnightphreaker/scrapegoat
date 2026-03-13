@@ -357,12 +357,32 @@ export class AppServer {
 
   /**
    * Setup static file serving with root prefix as fallback.
+   * Serves both the legacy public folder and SvelteKit build output.
    */
   private async setupStaticFiles(): Promise<void> {
+    const projectRoot = getProjectRoot();
+    const webuiBuildPath = path.join(projectRoot, "public/webui");
+
     await this.server.register(fastifyStatic, {
-      root: path.join(getProjectRoot(), "public"),
+      root: webuiBuildPath,
       prefix: "/",
       index: false,
+      decorateReply: true,
+    });
+
+    this.server.setNotFoundHandler((request, reply) => {
+      if (
+        request.url.startsWith("/api/") ||
+        request.url.startsWith("/web/") ||
+        request.url.startsWith("/mcp") ||
+        request.url.startsWith("/sse") ||
+        request.url.startsWith("/trpc") ||
+        request.url.startsWith("/oauth")
+      ) {
+        return reply.code(404).send({ error: "Not found" });
+      }
+
+      return reply.sendFile("index.html");
     });
   }
 
