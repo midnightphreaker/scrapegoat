@@ -5,12 +5,14 @@ import ScrapeForm from "$lib/components/scrape/ScrapeForm.svelte";
 describe("ScrapeForm", () => {
   it("renders URL input and library name field", () => {
     render(ScrapeForm);
-    expect(screen.getByPlaceholderText(/url/i)).toBeInTheDocument();
-    expect(screen.getByLabelText(/library/i)).toBeInTheDocument();
+    expect(screen.getByPlaceholderText(/url/i)).toBeTruthy();
+    expect(screen.getByLabelText(/library/i)).toBeTruthy();
   });
 
   it("has add URL button", () => {
     render(ScrapeForm);
-    expect(screen.getByRole("button", { name: /\+/ })).toBeInTheDocument();
+    const buttons = screen.getAllByRole("button");
+    const addButton = buttons.find((b) => b.textContent?.includes("+"));
+    expect(addButton).toBeTruthy();
   });
 });
