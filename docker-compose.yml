@@ -14,7 +14,8 @@ services:
     container_name: scrapegoat
     command: ["--protocol", "http"]
     ports:
-      - "10.1.1.6:${SCRAPEGOAT_PORT:-8080}:8080"
+      - "10.1.1.6:${SCRAPEGOAT_PORT:-8080}:8080"  # MCP HTTP endpoint
+      - "10.1.1.6:${WEBUI_PORT:-6281}:6281"          # WebUI + API
     environment:
       - DATABASE_URL=${DATABASE_URL}
       - OPENAI_API_BASE=https://embed.fenrirsden.org/v1
