@@ -13,28 +13,29 @@ import { createDataRouter, type DataTrpcContext } from "../store/trpc/router";
 
 type UnifiedContext = PipelineTrpcContext & DataTrpcContext;
 
+const t = initTRPC.context<UnifiedContext>().create();
+
+const healthRouter = t.router({
+  ping: t.procedure.query(async () => ({ status: "ok", ts: Date.now() })),
+});
+
+export const appRouter = t.mergeRouters(
+  healthRouter,
+  createPipelineRouter(t),
+  createDataRouter(t),
+);
+
+export type AppRouter = typeof appRouter;
+
 export async function registerTrpcService(
   server: FastifyInstance,
   pipeline: IPipeline,
   docService: IDocumentManagement,
 ): Promise<void> {
-  const t = initTRPC.context<UnifiedContext>().create();
-
-  // Define a single root-level health check to avoid duplicate keys from feature routers
-  const healthRouter = t.router({
-    ping: t.procedure.query(async () => ({ status: "ok", ts: Date.now() })),
-  });
-
-  const router = t.mergeRouters(
-    healthRouter,
-    createPipelineRouter(t),
-    createDataRouter(t),
-  );
-
   await server.register(fastifyTRPCPlugin, {
     prefix: "/api",
     trpcOptions: {
-      router,
+      router: appRouter,
       createContext: async (): Promise<UnifiedContext> => ({ pipeline, docService }),
     },
   });
