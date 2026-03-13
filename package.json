@@ -3,6 +3,9 @@
   "version": "1.0.0",
   "description": "PostgreSQL-powered MCP server for fetching and searching documentation with pgvector",
   "type": "module",
+  "workspaces": [
+    "src/web-sveltekit"
+  ],
   "bin": {
     "scrapegoat": "dist/index.js"
   },
