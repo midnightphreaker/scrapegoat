@@ -128,3 +128,7 @@ docker-compose.override.yml
 src/web-sveltekit/.svelte-kit/
 src/web-sveltekit/build/
 src/web-sveltekit/node_modules/
+gitbot-token
+
+# Generated WebUI build output
+public/webui/
