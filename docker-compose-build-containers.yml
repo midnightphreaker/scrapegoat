@@ -8,68 +8,23 @@
 #   docker compose -f docker-compose-build-containers.yml up -d --build
 #
 services:
-  # Main Scrapegoat service
-  # - Port 8080: MCP HTTP endpoint
-  # - Port 6280: gRPC (internal)
-  # - Port 6281: WebUI + REST API + tRPC
   scrapegoat:
     build:
       context: .
       dockerfile: Dockerfile
-    image: git.fenrirsden.org/pub/scrapegoat:latest
-    command: ["--protocol", "http"]
+    image: git.fenrirsden.org/mcp/scrapegoat:latest
     container_name: scrapegoat
-    restart: unless-stopped
     network_mode: host
-    env_file:
-      - .env
-    volumes:
-      - scrapegoat-data:/data
-    healthcheck:
-      test: ["CMD", "node", "-e", "require('http').get('http://localhost:6281/', (r) => process.exit(r.statusCode === 200 ? 0 : 1))"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-      start_period: 40s
-    deploy:
-      resources:
-        limits:
-          memory: 2G
-        reservations:
-          memory: 1G
 
-  # Crawl4AI service - AI-optimized web crawling with BM25-filtered markdown
   crawl4ai:
     build:
       context: ./services/crawl4ai
+# Change to;
+# CPU - Dockerfile.cpu
+# nVIDIA GPU CUDA 12.8 - Dockerfile.cu128
+# nVIDIA GPU CUDA 13.1 - Dockerfile.cu131
+#      dockerfile: Dockerfile.cu128
       dockerfile: Dockerfile
-    image: git.fenrirsden.org/pub/scrapegoat-crawl4ai:latest
+    image: git.fenrirsden.org/mcp/scrapegoat-crawl4ai:latest
     container_name: scrapegoat-crawl4ai
-    restart: unless-stopped
     network_mode: host
-    environment:
-      - HOST=0.0.0.0
-      - PORT=8001
-      - VERBOSE=false
-      - HEADLESS=true
-      - MAX_CONCURRENT_CRAWLS=5
-      - REQUEST_TIMEOUT=30
-    # Playwright/Chromium requires increased shared memory and privileged mode in Proxmox
-    shm_size: 2gb
-    privileged: true
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8001/health"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-      start_period: 40s
-    deploy:
-      resources:
-        limits:
-          memory: 2G
-        reservations:
-          memory: 1G
-
-volumes:
-  scrapegoat-data:
-    name: scrapegoat-data
