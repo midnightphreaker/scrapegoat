@@ -370,6 +370,10 @@ export class AppServer {
       decorateReply: true,
     });
 
+    this.server.get("/", async (_request, reply) => {
+      return reply.sendFile("index.html");
+    });
+
     this.server.setNotFoundHandler((request, reply) => {
       if (
         request.url.startsWith("/api/") ||

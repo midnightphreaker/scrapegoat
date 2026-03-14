@@ -15,7 +15,9 @@ const mockFastify = vi.hoisted(() => ({
   register: vi.fn(),
   listen: vi.fn(),
   close: vi.fn(),
-  setErrorHandler: vi.fn(), // Add missing mock method
+  setErrorHandler: vi.fn(),
+  get: vi.fn(),
+  setNotFoundHandler: vi.fn(),
 }));
 
 const mockMcpService = vi.hoisted(() => ({
