@@ -82,28 +82,26 @@
 		submitting = true;
 
 		try {
-			const baseInput: Omit<EnqueueJobInput, "url"> = {
-				library: library.trim(),
-				version: version.trim() || null,
-				options: {
-					maxPages: advancedOptions.maxPages,
-					maxDepth: advancedOptions.maxDepth,
-					scope: advancedOptions.scope,
-					followRedirects: advancedOptions.followRedirects,
-					ignoreErrors: advancedOptions.ignoreErrors,
-					includePatterns: advancedOptions.includePatterns.length > 0 ? advancedOptions.includePatterns : undefined,
-					excludePatterns: advancedOptions.excludePatterns.length > 0 ? advancedOptions.excludePatterns : undefined,
-					headers: Object.keys(advancedOptions.headers).length > 0 ? advancedOptions.headers : undefined,
-				},
-			};
-
 			for (const urlInput of urls) {
 				if (urlInput.value.trim()) {
 					const input: EnqueueJobInput = {
-						...baseInput,
-						url: urlInput.value.trim(),
+						library: library.trim(),
+						version: version.trim() || null,
+						options: {
+							url: urlInput.value.trim(),
+							library: library.trim(),
+							version: version.trim() || "",
+							maxPages: advancedOptions.maxPages,
+							maxDepth: advancedOptions.maxDepth,
+							scope: advancedOptions.scope,
+							followRedirects: advancedOptions.followRedirects,
+							ignoreErrors: advancedOptions.ignoreErrors,
+							includePatterns: advancedOptions.includePatterns.length > 0 ? advancedOptions.includePatterns : undefined,
+							excludePatterns: advancedOptions.excludePatterns.length > 0 ? advancedOptions.excludePatterns : undefined,
+							headers: Object.keys(advancedOptions.headers).length > 0 ? advancedOptions.headers : undefined,
+						},
 					};
-					await trpc.pipeline.enqueueJob.mutate(input);
+					await trpc.enqueueJob.mutate(input);
 				}
 			}
 

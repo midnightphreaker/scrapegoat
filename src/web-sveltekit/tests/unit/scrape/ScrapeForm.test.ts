@@ -5,10 +5,8 @@ import ScrapeForm from "$lib/components/scrape/ScrapeForm.svelte";
 
 vi.mock("$lib/api/trpc", () => ({
   trpc: {
-    pipeline: {
-      enqueueJob: {
-        mutate: vi.fn(),
-      },
+    enqueueJob: {
+      mutate: vi.fn(),
     },
   },
 }));
@@ -16,7 +14,7 @@ vi.mock("$lib/api/trpc", () => ({
 describe("ScrapeForm", () => {
   beforeEach(async () => {
     const { trpc } = await import("$lib/api/trpc");
-    vi.mocked(trpc.pipeline.enqueueJob.mutate).mockClear();
+    vi.mocked(trpc.enqueueJob.mutate).mockClear();
   });
 
   it("renders URL input and library name field", () => {
@@ -175,7 +173,7 @@ describe("ScrapeForm", () => {
   describe("Form submission", () => {
     it("calls trpc mutate with correct data for single URL", async () => {
       const { trpc } = await import("$lib/api/trpc");
-      vi.mocked(trpc.pipeline.enqueueJob.mutate).mockResolvedValue({ id: "test-job" });
+      vi.mocked(trpc.enqueueJob.mutate).mockResolvedValue({ jobId: "test-job" });
       render(ScrapeForm);
 
       const urlInput = screen.getByPlaceholderText(/url/i);
@@ -188,20 +186,21 @@ describe("ScrapeForm", () => {
       await fireEvent.click(submitButton);
 
       await waitFor(() => {
-        expect(trpc.pipeline.enqueueJob.mutate).toHaveBeenCalledTimes(1);
-        expect(trpc.pipeline.enqueueJob.mutate).toHaveBeenCalledWith(
+        expect(trpc.enqueueJob.mutate).toHaveBeenCalledWith(
           expect.objectContaining({
-            url: "https://react.dev",
             library: "react",
-            version: null,
+            options: expect.objectContaining({
+              url: "https://react.dev",
+              library: "react",
+            }),
           }),
         );
       });
     });
 
-    it("calls trpc mutate for each valid URL", async () => {
+    it("calls trpc mutate for each URL when multiple URLs provided", async () => {
       const { trpc } = await import("$lib/api/trpc");
-      vi.mocked(trpc.pipeline.enqueueJob.mutate).mockResolvedValue({ id: "test-job" });
+      vi.mocked(trpc.enqueueJob.mutate).mockResolvedValue({ jobId: "test-job" });
       render(ScrapeForm);
 
       const urlInputs = screen.getAllByPlaceholderText(/url/i);
@@ -222,7 +221,7 @@ describe("ScrapeForm", () => {
       await fireEvent.click(submitButton);
 
       await waitFor(() => {
-        expect(trpc.pipeline.enqueueJob.mutate).toHaveBeenCalledTimes(2);
+        expect(trpc.enqueueJob.mutate).toHaveBeenCalledTimes(2);
       });
     });
 
@@ -237,13 +236,13 @@ describe("ScrapeForm", () => {
       await fireEvent.click(submitButton);
 
       await waitFor(() => {
-        expect(trpc.pipeline.enqueueJob.mutate).not.toHaveBeenCalled();
+        expect(trpc.enqueueJob.mutate).not.toHaveBeenCalled();
       });
     });
 
     it("includes version when provided", async () => {
       const { trpc } = await import("$lib/api/trpc");
-      vi.mocked(trpc.pipeline.enqueueJob.mutate).mockResolvedValue({ id: "test-job" });
+      vi.mocked(trpc.enqueueJob.mutate).mockResolvedValue({ jobId: "test-job" });
       render(ScrapeForm);
 
       const urlInput = screen.getByPlaceholderText(/url/i);
@@ -258,11 +257,15 @@ describe("ScrapeForm", () => {
       await fireEvent.click(submitButton);
 
       await waitFor(() => {
-        expect(trpc.pipeline.enqueueJob.mutate).toHaveBeenCalledWith(
+        expect(trpc.enqueueJob.mutate).toHaveBeenCalledWith(
           expect.objectContaining({
-            url: "https://react.dev",
             library: "react",
             version: "18.0.0",
+            options: expect.objectContaining({
+              url: "https://react.dev",
+              library: "react",
+              version: "18.0.0",
+            }),
           }),
         );
       });

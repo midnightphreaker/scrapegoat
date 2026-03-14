@@ -1,3 +1,4 @@
+import { toast } from "svelte-sonner";
 import { trpc } from "$lib/api/trpc";
 import type { Library } from "$lib/api/types";
 
@@ -44,8 +45,11 @@ class LibrariesStore {
           this.libraries.splice(libIndex, 1);
         }
       }
+      toast.success(`Version "${version || "default"}" deleted`);
     } catch (e) {
-      this.error = e instanceof Error ? e.message : "Failed to delete version";
+      const message = e instanceof Error ? e.message : "Failed to delete version";
+      this.error = message;
+      toast.error(message);
     }
   }
 
@@ -53,8 +57,54 @@ class LibrariesStore {
     throw new Error("Not implemented");
   }
 
-  async rescrape(_library: string, _version: string): Promise<void> {
-    throw new Error("Not implemented");
+  async rescrapeLibrary(versionId: number): Promise<void> {
+    try {
+      const versionInfo = this.findVersionById(versionId);
+      if (!versionInfo) {
+        throw new Error("Version not found");
+      }
+
+      const { library, version } = versionInfo;
+
+      const storedOptions = await trpc.getScraperOptions.query({ versionId });
+      if (!storedOptions) {
+        throw new Error("Could not retrieve scraper options");
+      }
+
+      await trpc.enqueueJob.mutate({
+        library,
+        version,
+        options: {
+          url: storedOptions.sourceUrl,
+          library,
+          version: version ?? "",
+          ...storedOptions.options,
+        },
+      });
+
+      toast.success("Rescrape job enqueued");
+
+      await this.fetch(true);
+    } catch (e) {
+      const message = e instanceof Error ? e.message : "Failed to enqueue rescrape job";
+      this.error = message;
+      toast.error(message);
+    }
+  }
+
+  private findVersionById(
+    versionId: number,
+  ): { library: string; version: string | null } | null {
+    for (const lib of this.libraries) {
+      const version = lib.versions.find((v) => v.id === versionId);
+      if (version) {
+        return {
+          library: lib.library,
+          version: version.ref.version,
+        };
+      }
+    }
+    return null;
   }
 }
 
