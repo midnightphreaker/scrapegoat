@@ -1252,6 +1252,67 @@ export class DocumentStore {
   }
 
   /**
+   * Removes all pages (and their documents) whose URLs are NOT in the provided set.
+   * This is used for atomic rescrape: after successfully scraping new documents,
+   * delete all old pages that weren't part of this scrape.
+   *
+   * @param {string} library - The library name (case-insensitive)
+   * @param {string} version - The version string (will be normalized)
+   * @param {Set<string>} urlsToKeep - Set of URLs that should be preserved
+   * @returns {Promise<number>} The number of pages deleted
+   * @throws {StoreError} If database operation fails
+   *
+   * @example
+   * ```typescript
+   * const scrapedUrls = new Set(["https://react.dev/learn", "https://react.dev/api"]);
+   * const deleted = await store.deletePagesNotInUrls("react", "18.2.0", scrapedUrls);
+   * console.log(`Cleaned up ${deleted} old pages`);
+   * ```
+   */
+  async deletePagesNotInUrls(
+    library: string,
+    version: string,
+    urlsToKeep: Set<string>,
+  ): Promise<number> {
+    try {
+      const normalizedVersion = normalizeVersionName(version);
+
+      if (urlsToKeep.size === 0) {
+        const result = await this.pool.query(
+          `DELETE FROM pages
+           WHERE version_id IN (
+             SELECT v.id
+             FROM versions v
+             INNER JOIN libraries l ON v.library_id = l.id
+             WHERE LOWER(l.name) = LOWER($1) AND LOWER(v.name) = LOWER($2)
+           )`,
+          [library, normalizedVersion],
+        );
+        return result.rowCount || 0;
+      }
+
+      const urlArray = Array.from(urlsToKeep);
+      const placeholders = urlArray.map((_, i) => `$${i + 3}`).join(", ");
+
+      const result = await this.pool.query(
+        `DELETE FROM pages
+         WHERE version_id IN (
+           SELECT v.id
+           FROM versions v
+           INNER JOIN libraries l ON v.library_id = l.id
+           WHERE LOWER(l.name) = LOWER($1) AND LOWER(v.name) = LOWER($2)
+         )
+         AND url NOT IN (${placeholders})`,
+        [library, normalizedVersion, ...urlArray],
+      );
+
+      return result.rowCount || 0;
+    } catch (error) {
+      throw new StoreError(`Failed to delete old pages for ${library}:${version}`, error);
+    }
+  }
+
+  /**
    * Completely removes a library version and all associated documents.
    * Optionally removes the library record if it has no remaining versions.
    * This is a destructive operation that cannot be undone.

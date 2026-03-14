@@ -367,6 +367,31 @@ export class DocumentManagementService {
   }
 
   /**
+   * Removes documents whose URLs are NOT in the provided set for atomic replace.
+   * Used during rescrapes to keep only the documents that were just scraped.
+   *
+   * @param library - The library name (case-insensitive)
+   * @param version - The version string (will be normalized)
+   * @param urlsToKeep - Set of URLs that should be preserved (not deleted)
+   * @returns Number of documents deleted
+   */
+  async removeDocumentsNotInSet(
+    library: string,
+    version: string | null,
+    urlsToKeep: Set<string>,
+  ): Promise<number> {
+    const normalizedVersion = this.normalizeVersion(version);
+    if (urlsToKeep.size === 0) {
+      return 0;
+    }
+    return await this.store.deleteDocumentsNotInUrls(
+      library,
+      normalizedVersion,
+      urlsToKeep,
+    );
+  }
+
+  /**
    * Completely removes a library version and all associated documents.
    * Also removes the library if no other versions remain.
    * @param library Library name
