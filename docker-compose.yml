@@ -10,64 +10,53 @@
 
 services:
   scrapegoat:
-    image: git.fenrirsden.org/pub/scrapegoat:latest
+    image: git.fenrirsden.org/mcp/scrapegoat:latest
     container_name: scrapegoat
     command: ["--protocol", "http"]
-    ports:
-      - "10.1.1.6:${SCRAPEGOAT_PORT:-8080}:8080"  # MCP HTTP endpoint
-      - "10.1.1.6:${WEBUI_PORT:-6281}:6281"          # WebUI + API
+    network: host
     environment:
-      - DATABASE_URL=${DATABASE_URL}
-      - OPENAI_API_BASE=https://embed.fenrirsden.org/v1
-      - OPENAI_API_KEY=SK-FAKEKEY
-      - DOCS_MCP_EMBEDDING_MODEL=qwen3-text-embedding
-      - VECTOR_DIMENSION=1024
-      - DOCS_MCP_STORE_PATH=/data
-      - CRAWL4AI_SERVICE_URL=http://crawl4ai:8001
-      - NODE_ENV=production
+      - POSTGRES_USERNAME=${POSTGRES_USERNAME:-scrapegoat}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-scrapegoat}
+      - POSTGRES_DATABASE=${POSTGRES_DATABASE:-scrapegoat}
+      - SCRAPEGOAT_PORT=${SCRAPEGOAT_PORT:-8080}
+      - DATABASE_URL=${DATABASE_URL:-postgresql://$POSTGRES_USERNAME:$POSTGRES_PASSWORD@localhost:5432/$POSTGRES_DATABASE}
+      - OPENAI_API_BASE=${OPENAI_API_BASE:-https://api.openai.com/v1}
+      - OPENAI_API_KEY=${OPENAI_API_KEY:-sk-your-openai-api-key-here}
+      - DOCS_MCP_EMBEDDING_MODEL=${DOCS_MCP_EMBEDDING_MODEL:-openai:text-embedding-3-small}
+      - VECTOR_DIMENSION=${VECTOR_DIMENSION:-1024}
+      - DOCS_MCP_STORE_PATH=${DOCS_MCP_STORE_PATH:-/data}
+      - CRAWL4AI_SERVICE_URL=${CRAWL4AI_SERVICE_URL:-http://localhost:$CRAWL4AI_PORT}
+      - NODE_ENV=${NODE_ENV:-production}
       - RERANK_ENABLED=${RERANK_ENABLED:-false}
-      - RERANK_API_BASE=${RERANK_API_BASE}
-      - RERANK_MODEL=${RERANK_MODEL}
+      - RERANK_API_BASE=${RERANK_API_BASE:-https://api.openai.com/v1}
+      - RERANK_MODEL=${RERANK_MODEL:-openai:GPT-4o-mini}
       - RERANK_TIMEOUT=${RERANK_TIMEOUT:-5000}
     volumes:
-      - scrapegoat-data:/data
-    networks:
-      - scrapegoat-net
+      - ./data:/data
     depends_on:
       crawl4ai:
         condition: service_healthy
     restart: unless-stopped
     healthcheck:
-      test: ["CMD", "node", "-e", "require('http').get('http://localhost:8080/', (r) => process.exit(r.statusCode === 200 ? 0 : 1))"]
+      test: ["CMD", "node", "-e", "require('http').get('http://localhost:${SCRAPEGOAT_PORT}/', (r) => process.exit(r.statusCode === 200 ? 0 : 1))"]
       interval: 30s
       timeout: 10s
       retries: 3
       start_period: 40s
 
   crawl4ai:
-    image: git.fenrirsden.org/pub/scrapegoat-crawl4ai:latest
+    image: git.fenrirsden.org/mcp/scrapegoat-crawl4ai:latest
     container_name: scrapegoat-crawl4ai
-    ports:
-      - "10.1.1.6:${CRAWL4AI_PORT:-8001}:8001"
-      - "10.1.1.6:8002:8001"
+    network: host
     environment:
-      - CRAWL4AI_PORT=8001
-    networks:
-      - scrapegoat-net
+      - CRAWL4AI_PORT=${CRAWL4AI_PORT:-8001}
     restart: unless-stopped
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8001/health"]
+      test: ["CMD", "curl", "-f", "http://localhost:${CRAWL4AI_PORT}/health"]
       interval: 30s
       timeout: 10s
       retries: 3
       start_period: 20s
-
-networks:
-  scrapegoat-net:
-    driver: bridge
-
-volumes:
-  scrapegoat-data:
 
 # ═══════════════════════════════════════════════════════════════════════════
 # OPTIONAL: Dedicated PostgreSQL Database
@@ -79,19 +68,18 @@ volumes:
 #   1. Comment out the DATABASE_URL line in scrapegoat environment
 #   2. Uncomment the DATABASE_URL line below (hardcoded connection)
 #   3. Uncomment depends_on: [postgres] in scrapegoat service
-#   4. Set POSTGRES_PASSWORD env var or change the default below!
+#   4. Set POSTGRES_* env var or change the default below!
 #
 # postgres:
 #   image: postgres:16-alpine
 #   container_name: scrapegoat-postgres
+#   network: host
 #   environment:
-#     POSTGRES_USER: scrapegoat
-#     POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-CHANGE_ME_IN_PRODUCTION}
-#     POSTGRES_DB: scrapegoat
+#     - POSTGRES_USERNAME=${POSTGRES_USERNAME:-scrapegoat}
+#     - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-scrapegoat}
+#     - POSTGRES_DATABASE=${POSTGRES_DATABASE:-scrapegoat}
 #   volumes:
 #     - scrapegoat-pgdata:/var/lib/postgresql/data
-#   networks:
-#     - scrapegoat-net
 #   restart: unless-stopped
 #   healthcheck:
 #     test: ["CMD-SHELL", "pg_isready -U scrapegoat -d scrapegoat"]
