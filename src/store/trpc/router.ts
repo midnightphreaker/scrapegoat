@@ -161,6 +161,7 @@ export function createDataRouter(trpc: unknown) {
           opts.input.status as VersionStatus,
           opts.input.errorMessage ?? undefined,
         );
+        invalidateLibrariesCache();
         return { ok: true } as const;
       }),
 
@@ -178,6 +179,7 @@ export function createDataRouter(trpc: unknown) {
           opts.input.pages,
           opts.input.maxPages,
         );
+        invalidateLibrariesCache();
         return { ok: true } as const;
       }),
 
