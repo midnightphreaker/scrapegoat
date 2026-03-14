@@ -35,6 +35,13 @@ export function createCachedResponse<T>(
 
 const middlewareMarker = Symbol("middlewareMarker");
 
+function wrapWithMeta<T>(data: T, cached: boolean, etag: string) {
+  if (typeof data === "object" && data !== null) {
+    return { ...data, _cacheMeta: { cached, etag } };
+  }
+  return { data, _cacheMeta: { cached, etag } };
+}
+
 // biome-ignore lint/suspicious/noExplicitAny: tRPC middleware types are complex and require any for interop
 export function cacheMiddleware(
   options: CacheMiddlewareOptions,
@@ -42,38 +49,32 @@ export function cacheMiddleware(
   return async (opts: { next: () => Promise<{ ok: boolean; data: unknown }> }) => {
     const { cache, cacheKey, ttl } = options;
 
-    const entry = cache.get(cacheKey) as CacheEntry<unknown> | null;
-    if (entry) {
-      const data = entry.data as Record<string, unknown>;
-      return {
-        ok: true,
-        data: {
-          ...data,
-          _cacheMeta: {
-            cached: true,
-            etag: entry.etag,
-          },
-        },
-        marker: middlewareMarker,
-      };
+    try {
+      const entry = cache.get(cacheKey);
+      if (entry) {
+        return {
+          ok: true,
+          data: wrapWithMeta(entry.data, true, entry.etag),
+          marker: middlewareMarker,
+        };
+      }
+    } catch (error) {
+      console.warn("Cache read failed, executing uncached:", error);
     }
 
     const result = await opts.next();
     if (!result.ok) return result;
 
-    const data = result.data as Record<string, unknown>;
-    const newEntry = cache.set(cacheKey, result.data, ttl);
-
-    return {
-      ok: true,
-      data: {
-        ...data,
-        _cacheMeta: {
-          cached: false,
-          etag: newEntry.etag,
-        },
-      },
-      marker: middlewareMarker,
-    };
+    try {
+      const newEntry = cache.set(cacheKey, result.data, ttl);
+      return {
+        ok: true,
+        data: wrapWithMeta(result.data, false, newEntry.etag),
+        marker: middlewareMarker,
+      };
+    } catch (error) {
+      console.warn("Cache write failed, returning uncached:", error);
+      return result;
+    }
   };
 }
