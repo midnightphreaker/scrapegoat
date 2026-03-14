@@ -133,3 +133,6 @@ gitbot-token
 # Generated WebUI build output
 public/webui/
 *.LOG
+
+# Git worktrees for parallel development
+.worktrees/
