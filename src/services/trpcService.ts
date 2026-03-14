@@ -33,7 +33,7 @@ export async function registerTrpcService(
   docService: IDocumentManagement,
 ): Promise<void> {
   await server.register(fastifyTRPCPlugin, {
-    prefix: "/api",
+    prefix: "/api/trpc",
     trpcOptions: {
       router: appRouter,
       createContext: async (): Promise<UnifiedContext> => ({ pipeline, docService }),

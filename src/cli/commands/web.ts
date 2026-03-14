@@ -103,7 +103,7 @@ export function createWebCommand(program: Command): Command {
           const config = createAppServerConfig({
             enableWebInterface: true,
             enableMcpServer: false,
-            enableApiServer: false,
+            enableApiServer: true,
             enableWorker: !serverUrl,
             port,
             host,
