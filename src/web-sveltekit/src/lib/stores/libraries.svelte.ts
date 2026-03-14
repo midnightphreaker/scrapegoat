@@ -35,10 +35,10 @@ class LibrariesStore {
     try {
       await trpc.removeVersion.mutate({ library, version });
 
-      const libIndex = this.libraries.findIndex((l) => l.name === library);
+      const libIndex = this.libraries.findIndex((l) => l.library === library);
       if (libIndex >= 0) {
         const lib = this.libraries[libIndex];
-        lib.versions = lib.versions.filter((v) => v.version !== version);
+        lib.versions = lib.versions.filter((v) => v.ref.version !== version);
 
         if (lib.versions.length === 0) {
           this.libraries.splice(libIndex, 1);

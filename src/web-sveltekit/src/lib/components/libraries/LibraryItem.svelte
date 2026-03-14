@@ -24,12 +24,12 @@
   let rescrapeConfirmVersion = $state<string | null>(null);
 
   function startEdit() {
-    editValue = library.name;
+    editValue = library.library;
     isEditing = true;
   }
 
   function commitEdit() {
-    if (editValue.trim() && editValue !== library.name) {
+    if (editValue.trim() && editValue !== library.library) {
       onRename?.(editValue.trim());
     }
     isEditing = false;
@@ -47,9 +47,9 @@
     }
   }
 
-  function handleDeleteClick(version: string) {
+  function handleDeleteClick(version: string | null) {
     if (deleteConfirmVersion === version) {
-      onDeleteVersion?.(library.name, version);
+      onDeleteVersion?.(library.library, version ?? "");
       deleteConfirmVersion = null;
     } else {
       deleteConfirmVersion = version;
@@ -57,9 +57,9 @@
     }
   }
 
-  function handleRescrapeClick(version: string) {
+  function handleRescrapeClick(version: string | null) {
     if (rescrapeConfirmVersion === version) {
-      onRescrape?.(library.name, version);
+      onRescrape?.(library.library, version ?? "");
       rescrapeConfirmVersion = null;
     } else {
       rescrapeConfirmVersion = version;
@@ -87,11 +87,11 @@
         />
       {:else}
         <a
-          href="/libraries/{library.name}"
+          href="/libraries/{library.library}"
           class="hover:underline cursor-pointer"
           ondblclick={startEdit}
         >
-          {library.name}
+          {library.library}
         </a>
       {/if}
     </CardTitle>
@@ -102,11 +102,11 @@
       {#each library.versions as version}
         <div class="flex items-center justify-between border-b pb-2 last:border-b-0">
           <div class="flex items-center gap-3">
-            <VersionBadge version={version.version} status={version.status} />
+            <VersionBadge version={version.ref.version} status={version.status} />
             <div class="text-sm text-stone-500">
-              <span>{version.documentCount} docs</span>
+              <span>{version.counts.documents} docs</span>
               <span class="mx-1">|</span>
-              <span>{version.uniqueUrlCount} URLs</span>
+              <span>{version.counts.uniqueUrls} URLs</span>
               <span class="mx-1">|</span>
               <span>{formatDate(version.indexedAt)}</span>
             </div>
@@ -116,9 +116,9 @@
             <Button
               variant="outline"
               size="sm"
-              onclick={() => handleRescrapeClick(version.version)}
+              onclick={() => handleRescrapeClick(version.ref.version)}
             >
-              {#if rescrapeConfirmVersion === version.version}
+              {#if rescrapeConfirmVersion === version.ref.version}
                 Confirm?
               {:else}
                 Rescrape
@@ -127,9 +127,9 @@
             <Button
               variant="destructive"
               size="sm"
-              onclick={() => handleDeleteClick(version.version)}
+              onclick={() => handleDeleteClick(version.ref.version)}
             >
-              {#if deleteConfirmVersion === version.version}
+              {#if deleteConfirmVersion === version.ref.version}
                 Confirm?
               {:else}
                 Delete

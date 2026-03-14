@@ -5,13 +5,13 @@ import LibraryItem from "$lib/components/libraries/LibraryItem.svelte";
 
 describe("LibraryItem", () => {
   const mockLibrary: Library = {
-    name: "react",
+    library: "react",
     versions: [
       {
-        version: "18.0.0",
+        id: 1,
+        ref: { library: "react", version: "18.0.0" },
         status: "completed",
-        documentCount: 100,
-        uniqueUrlCount: 50,
+        counts: { documents: 100, uniqueUrls: 50 },
         indexedAt: new Date().toISOString(),
         sourceUrl: "https://react.dev",
       },

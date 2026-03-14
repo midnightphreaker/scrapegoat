@@ -50,13 +50,13 @@ describe("LibraryList", () => {
   it("renders LibraryItem for each library", async () => {
     const mockLibraries: Library[] = [
       {
-        name: "react",
+        library: "react",
         versions: [
           {
-            version: "18.0.0",
+            id: 1,
+            ref: { library: "react", version: "18.0.0" },
             status: "completed",
-            documentCount: 100,
-            uniqueUrlCount: 50,
+            counts: { documents: 100, uniqueUrls: 50 },
             indexedAt: "2024-01-01T00:00:00Z",
             sourceUrl: "https://react.dev",
           },
@@ -75,39 +75,39 @@ describe("LibraryList", () => {
   it("sorts libraries alphabetically", async () => {
     const mockLibraries: Library[] = [
       {
-        name: "vue",
+        library: "vue",
         versions: [
           {
-            version: "3.0.0",
+            id: 1,
+            ref: { library: "vue", version: "3.0.0" },
             status: "completed",
-            documentCount: 50,
-            uniqueUrlCount: 25,
+            counts: { documents: 50, uniqueUrls: 25 },
             indexedAt: "2024-01-01T00:00:00Z",
             sourceUrl: "https://vuejs.org",
           },
         ],
       },
       {
-        name: "angular",
+        library: "angular",
         versions: [
           {
-            version: "16.0.0",
+            id: 2,
+            ref: { library: "angular", version: "16.0.0" },
             status: "completed",
-            documentCount: 80,
-            uniqueUrlCount: 40,
+            counts: { documents: 80, uniqueUrls: 40 },
             indexedAt: "2024-01-01T00:00:00Z",
             sourceUrl: "https://angular.dev",
           },
         ],
       },
       {
-        name: "react",
+        library: "react",
         versions: [
           {
-            version: "18.0.0",
+            id: 3,
+            ref: { library: "react", version: "18.0.0" },
             status: "completed",
-            documentCount: 100,
-            uniqueUrlCount: 50,
+            counts: { documents: 100, uniqueUrls: 50 },
             indexedAt: "2024-01-01T00:00:00Z",
             sourceUrl: "https://react.dev",
           },

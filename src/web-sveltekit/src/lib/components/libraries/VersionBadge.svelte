@@ -2,7 +2,7 @@
   import Badge from "$lib/components/ui/badge/badge.svelte";
 
   interface Props {
-    version: string;
+    version: string | null;
     status?: string;
   }
 

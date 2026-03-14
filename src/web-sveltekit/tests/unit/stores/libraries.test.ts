@@ -44,13 +44,13 @@ describe("librariesStore", () => {
   describe("fetch", () => {
     const mockLibraries: Library[] = [
       {
-        name: "react",
+        library: "react",
         versions: [
           {
-            version: "18.0.0",
+            id: 1,
+            ref: { library: "react", version: "18.0.0" },
             status: "completed",
-            documentCount: 100,
-            uniqueUrlCount: 50,
+            counts: { documents: 100, uniqueUrls: 50 },
             indexedAt: "2024-01-01T00:00:00Z",
             sourceUrl: "https://react.dev",
           },
@@ -133,21 +133,21 @@ describe("librariesStore", () => {
   describe("deleteVersion", () => {
     const mockLibraries: Library[] = [
       {
-        name: "react",
+        library: "react",
         versions: [
           {
-            version: "18.0.0",
+            id: 1,
+            ref: { library: "react", version: "18.0.0" },
             status: "completed",
-            documentCount: 100,
-            uniqueUrlCount: 50,
+            counts: { documents: 100, uniqueUrls: 50 },
             indexedAt: "2024-01-01T00:00:00Z",
             sourceUrl: "https://react.dev",
           },
           {
-            version: "17.0.0",
+            id: 2,
+            ref: { library: "react", version: "17.0.0" },
             status: "completed",
-            documentCount: 80,
-            uniqueUrlCount: 40,
+            counts: { documents: 80, uniqueUrls: 40 },
             indexedAt: "2024-01-01T00:00:00Z",
             sourceUrl: "https://react.dev",
           },
@@ -176,7 +176,7 @@ describe("librariesStore", () => {
       await librariesStore.deleteVersion("react", "17.0.0");
 
       expect(librariesStore.libraries[0].versions).toHaveLength(1);
-      expect(librariesStore.libraries[0].versions[0].version).toBe("18.0.0");
+      expect(librariesStore.libraries[0].versions[0].ref.version).toBe("18.0.0");
     });
 
     it("sets error on failure", async () => {
@@ -192,13 +192,13 @@ describe("librariesStore", () => {
       vi.mocked(trpc.removeVersion.mutate).mockResolvedValue({ ok: true });
       librariesStore.libraries = [
         {
-          name: "vue",
+          library: "vue",
           versions: [
             {
-              version: "3.0.0",
+              id: 3,
+              ref: { library: "vue", version: "3.0.0" },
               status: "completed",
-              documentCount: 50,
-              uniqueUrlCount: 25,
+              counts: { documents: 50, uniqueUrls: 25 },
               indexedAt: "2024-01-01T00:00:00Z",
               sourceUrl: "https://vuejs.org",
             },

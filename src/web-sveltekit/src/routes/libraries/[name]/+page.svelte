@@ -12,7 +12,7 @@
   let query = $state('');
   let searching = $state(false);
   let results = $state<{ url: string; content: string; score: number | null }[]>([]);
-  let selectedVersion = $state(data.library?.versions[0]?.version || '');
+  let selectedVersion = $state(data.library?.versions[0]?.ref.version || '');
 
   async function handleSearch() {
     if (!query.trim()) return;
@@ -49,18 +49,18 @@
       <div class="flex items-center gap-2 mt-2">
         {#each data.library.versions as v}
           <Badge
-            variant={v.version === selectedVersion ? 'default' : 'outline'}
+            variant={v.ref.version === selectedVersion ? 'default' : 'outline'}
             class="cursor-pointer"
-            onclick={() => selectedVersion = v.version}
+            onclick={() => selectedVersion = v.ref.version ?? ''}
           >
-            {v.version || 'Unversioned'}
+            {v.ref.version || 'Unversioned'}
           </Badge>
         {/each}
       </div>
       
       <div class="mt-4 text-sm text-stone-600 dark:text-stone-400">
-        <span class="mr-4">{data.library.versions[0]?.documentCount || 0} pages</span>
-        <span class="mr-4">{data.library.versions[0]?.uniqueUrlCount || 0} URLs</span>
+        <span class="mr-4">{data.library.versions[0]?.counts.documents || 0} pages</span>
+        <span class="mr-4">{data.library.versions[0]?.counts.uniqueUrls || 0} URLs</span>
         <span>Indexed: {data.library.versions[0]?.indexedAt ? new Date(data.library.versions[0].indexedAt).toLocaleDateString() : 'N/A'}</span>
       </div>
     {:else}

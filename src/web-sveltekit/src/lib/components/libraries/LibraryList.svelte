@@ -8,7 +8,7 @@
   });
 
   const sortedLibraries = $derived(
-    [...librariesStore.libraries].sort((a, b) => a.name.localeCompare(b.name)),
+    [...librariesStore.libraries].sort((a, b) => a.library.localeCompare(b.library)),
   );
 </script>
 
@@ -23,7 +23,7 @@
       <p class="text-sm mt-1">Submit a scrape job to create your first library</p>
     </div>
   {:else}
-    {#each sortedLibraries as library (library.name)}
+    {#each sortedLibraries as library (library.library)}
       <LibraryItem {library} />
     {/each}
   {/if}

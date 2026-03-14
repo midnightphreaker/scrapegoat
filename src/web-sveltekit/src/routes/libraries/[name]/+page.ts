@@ -7,7 +7,8 @@ export const load: PageLoad = async ({ params }) => {
   try {
     const libraries = await trpc.listLibraries.query();
     library =
-      libraries.find((l) => l.name.toLowerCase() === params.name.toLowerCase()) || null;
+      libraries.find((l) => l.library.toLowerCase() === params.name.toLowerCase()) ||
+      null;
   } catch {
     // API not available - return null, page will handle gracefully
   }

@@ -10,17 +10,18 @@ export interface Job {
 }
 
 export interface Library {
-  name: string;
+  library: string;
   versions: Version[];
 }
 
 export interface Version {
-  version: string;
+  id: number;
+  ref: { library: string; version: string | null };
   status: string;
-  documentCount: number;
-  uniqueUrlCount: number;
+  progress?: { pages: number; maxPages: number };
+  counts: { documents: number; uniqueUrls: number };
   indexedAt: string | null;
-  sourceUrl: string | null;
+  sourceUrl?: string | null;
 }
 
 export interface SearchResult {
