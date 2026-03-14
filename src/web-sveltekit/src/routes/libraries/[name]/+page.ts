@@ -5,7 +5,7 @@ export const load: PageLoad = async ({ params }) => {
   let library = null;
 
   try {
-    const libraries = await trpc.data.listLibraries.query();
+    const libraries = await trpc.listLibraries.query();
     library =
       libraries.find((l) => l.name.toLowerCase() === params.name.toLowerCase()) || null;
   } catch {

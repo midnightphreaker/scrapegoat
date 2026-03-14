@@ -103,6 +103,29 @@ export async function registerMcpService(
     },
   });
 
+  // GET handler for MCP endpoint discovery
+  server.route({
+    method: "GET",
+    url: "/mcp",
+    preHandler: authMiddleware ? [authMiddleware] : undefined,
+    handler: async (_request: FastifyRequest, reply: FastifyReply) => {
+      reply.code(200).send({
+        name: "scrapegoat-mcp",
+        version: "1.0.0",
+        description:
+          "MCP server for Scrapegoat - AI-powered web scraping and document management",
+        protocol: "MCP (Model Context Protocol)",
+        transport: "streamable-http",
+        instructions:
+          "Use POST requests for MCP protocol operations. This endpoint supports stateless MCP communication.",
+        endpoints: {
+          sse: "/sse",
+          mcp: "/mcp",
+        },
+      });
+    },
+  });
+
   // Streamable HTTP endpoint for stateless MCP requests
   server.route({
     method: "POST",
@@ -118,7 +141,6 @@ export async function registerMcpService(
         const requestTransport = new StreamableHTTPServerTransport({
           sessionIdGenerator: undefined,
         });
-
 
         reply.raw.on("close", () => {
           logger.debug("Streamable HTTP request closed");
