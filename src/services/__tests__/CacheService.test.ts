@@ -49,11 +49,64 @@ describe("CacheService", () => {
   });
 
   describe("LRU eviction", () => {
-    it("should evict oldest when max entries reached", () => {
-      const smallCache = new CacheService({ maxEntries: 2, defaultTTL: 60000 });
+    it("should evict least recently used when max entries reached", () => {
+      const smallCache = new CacheService({ maxEntries: 3, defaultTTL: 60000 });
       smallCache.set("a", 1);
       smallCache.set("b", 2);
       smallCache.set("c", 3);
+
+      smallCache.get("a");
+
+      smallCache.set("d", 4);
+
+      expect(smallCache.get("a")).not.toBeNull();
+      expect(smallCache.get("b")).toBeNull();
+      expect(smallCache.get("c")).not.toBeNull();
+      expect(smallCache.get("d")).not.toBeNull();
+    });
+  });
+
+  describe("input validation", () => {
+    it("should throw error for empty key", () => {
+      expect(() => cache.set("", { data: true })).toThrow("Cache key cannot be empty");
+    });
+
+    it("should throw error for whitespace-only key", () => {
+      expect(() => cache.set("   ", { data: true })).toThrow("Cache key cannot be empty");
+    });
+
+    it("should treat negative TTL as default TTL", () => {
+      cache.set("key", { data: true }, -100);
+      const entry = cache.get("key");
+      expect(entry).not.toBeNull();
+    });
+
+    it("should use minimum of 1 for zero maxEntries", () => {
+      const smallCache = new CacheService({ maxEntries: 0, defaultTTL: 60000 });
+      smallCache.set("a", 1);
+      expect(smallCache.get("a")).not.toBeNull();
+      smallCache.set("b", 2);
+      expect(smallCache.get("a")).toBeNull();
+      expect(smallCache.get("b")).not.toBeNull();
+    });
+
+    it("should use minimum of 1 for negative maxEntries", () => {
+      const smallCache = new CacheService({ maxEntries: -5, defaultTTL: 60000 });
+      smallCache.set("a", 1);
+      expect(smallCache.get("a")).not.toBeNull();
+    });
+  });
+
+  describe("memory cleanup", () => {
+    it("should cleanup expired entries on set()", async () => {
+      const smallCache = new CacheService({ maxEntries: 2, defaultTTL: 60000 });
+      smallCache.set("a", 1, 10);
+      smallCache.set("b", 2);
+
+      await new Promise((r) => setTimeout(r, 20));
+
+      smallCache.set("c", 3);
+
       expect(smallCache.get("a")).toBeNull();
       expect(smallCache.get("b")).not.toBeNull();
       expect(smallCache.get("c")).not.toBeNull();

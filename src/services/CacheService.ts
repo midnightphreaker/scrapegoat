@@ -18,7 +18,7 @@ export class CacheService {
   private defaultTTL: number;
 
   constructor(options: CacheOptions = {}) {
-    this.maxEntries = options.maxEntries ?? 100;
+    this.maxEntries = Math.max(1, options.maxEntries ?? 100);
     this.defaultTTL = options.defaultTTL ?? 300000;
   }
 
@@ -32,10 +32,19 @@ export class CacheService {
       return null;
     }
 
+    this.cache.delete(key);
+    this.cache.set(key, entry);
+
     return entry;
   }
 
   set<T>(key: string, data: T, ttl?: number): CacheEntry<T> {
+    if (!key || key.trim() === "") {
+      throw new Error("Cache key cannot be empty");
+    }
+
+    this.cleanupExpired();
+
     if (this.cache.size >= this.maxEntries) {
       const oldestKey = this.cache.keys().next().value;
       if (oldestKey) {
@@ -47,11 +56,20 @@ export class CacheService {
       etag: generateETag(data),
       data,
       timestamp: Date.now(),
-      ttl: ttl ?? this.defaultTTL,
+      ttl: ttl !== undefined && ttl >= 0 ? ttl : this.defaultTTL,
     };
 
     this.cache.set(key, entry);
     return entry;
+  }
+
+  private cleanupExpired(): void {
+    const now = Date.now();
+    for (const [key, entry] of this.cache.entries()) {
+      if (now - entry.timestamp > entry.ttl) {
+        this.cache.delete(key);
+      }
+    }
   }
 
   invalidate(pattern: string): void {
