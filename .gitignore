@@ -132,3 +132,4 @@ gitbot-token
 
 # Generated WebUI build output
 public/webui/
+*.LOG
