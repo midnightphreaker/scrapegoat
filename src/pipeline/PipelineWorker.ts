@@ -42,6 +42,7 @@ export class PipelineWorker {
     logger.debug(`[${jobId}] Worker starting job for ${library}@${version}`);
 
     const addedDocumentUrls = new Set<string>();
+    const scrapedUrls = new Set<string>();
 
     try {
       const rawScope = scraperOptions?.scope;
@@ -86,6 +87,8 @@ export class PipelineWorker {
           await callbacks.onJobProgress?.(job, progress);
 
           if (progress.document) {
+            scrapedUrls.add(progress.document.metadata.url);
+
             try {
               await this.store.addDocument(library, version, {
                 pageContent: progress.document.content,
@@ -117,9 +120,9 @@ export class PipelineWorker {
         throw new CancellationError("Job cancelled");
       }
 
-      await this.store.removeDocumentsNotInSet(library, version, addedDocumentUrls);
+      await this.store.removeDocumentsNotInSet(library, version, scrapedUrls);
       logger.info(
-        `💾 Cleared old documents for ${library}@${version || "[no version]"}, kept ${addedDocumentUrls.size} new documents.`,
+        `💾 Cleared old documents for ${library}@${version || "[no version]"}, kept ${scrapedUrls.size} scraped URLs (${addedDocumentUrls.size} stored successfully).`,
       );
 
       logger.debug(`[${jobId}] Worker finished job successfully.`);

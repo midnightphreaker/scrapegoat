@@ -1278,17 +1278,7 @@ export class DocumentStore {
       const normalizedVersion = normalizeVersionName(version);
 
       if (urlsToKeep.size === 0) {
-        const result = await this.pool.query(
-          `DELETE FROM pages
-           WHERE version_id IN (
-             SELECT v.id
-             FROM versions v
-             INNER JOIN libraries l ON v.library_id = l.id
-             WHERE LOWER(l.name) = LOWER($1) AND LOWER(v.name) = LOWER($2)
-           )`,
-          [library, normalizedVersion],
-        );
-        return result.rowCount || 0;
+        return 0;
       }
 
       const urlArray = Array.from(urlsToKeep);

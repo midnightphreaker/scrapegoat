@@ -6,7 +6,8 @@ type JobEventCallback = (event: { type: JobEventType; payload: Job }) => void;
 export class JobEventSource {
   private pollInterval: ReturnType<typeof setInterval> | null = null;
   private callback: JobEventCallback;
-  private polling = false;
+  private isPolling = false;
+  private abortController: AbortController | null = null;
 
   constructor(callback: JobEventCallback) {
     this.callback = callback;
@@ -17,18 +18,28 @@ export class JobEventSource {
   }
 
   private startPolling() {
-    if (this.polling) return;
-    this.polling = true;
+    if (this.pollInterval) return;
 
     const poll = async () => {
+      if (this.isPolling) return;
+      this.isPolling = true;
+      this.abortController = new AbortController();
+
       try {
-        const response = await fetch("/api/trpc/jobs.getJobs");
+        const response = await fetch("/api/trpc/jobs.getJobs", {
+          signal: this.abortController.signal,
+        });
         const data = await response.json();
         for (const job of data.result?.data?.jobs || []) {
           this.callback({ type: "job-status", payload: job });
         }
       } catch (e) {
+        if (e instanceof Error && e.name === "AbortError") {
+          return;
+        }
         console.error("Polling failed:", e);
+      } finally {
+        this.isPolling = false;
       }
     };
 
@@ -41,7 +52,9 @@ export class JobEventSource {
       clearInterval(this.pollInterval);
       this.pollInterval = null;
     }
-    this.polling = false;
+    this.abortController?.abort();
+    this.abortController = null;
+    this.isPolling = false;
   }
 }
 
