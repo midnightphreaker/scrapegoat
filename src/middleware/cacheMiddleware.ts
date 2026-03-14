@@ -35,13 +35,6 @@ export function createCachedResponse<T>(
 
 const middlewareMarker = Symbol("middlewareMarker");
 
-function wrapWithMeta<T>(data: T, cached: boolean, etag: string) {
-  if (typeof data === "object" && data !== null) {
-    return { ...data, _cacheMeta: { cached, etag } };
-  }
-  return { data, _cacheMeta: { cached, etag } };
-}
-
 // biome-ignore lint/suspicious/noExplicitAny: tRPC middleware types are complex and require any for interop
 export function cacheMiddleware(
   options: CacheMiddlewareOptions,
@@ -52,9 +45,10 @@ export function cacheMiddleware(
     try {
       const entry = cache.get(cacheKey);
       if (entry) {
+        // Return cached data AS-IS - do not modify response shape
         return {
           ok: true,
-          data: wrapWithMeta(entry.data, true, entry.etag),
+          data: entry.data,
           marker: middlewareMarker,
         };
       }
@@ -66,10 +60,11 @@ export function cacheMiddleware(
     if (!result.ok) return result;
 
     try {
-      const newEntry = cache.set(cacheKey, result.data, ttl);
+      cache.set(cacheKey, result.data, ttl);
+      // Return result AS-IS - do not modify response shape
       return {
         ok: true,
-        data: wrapWithMeta(result.data, false, newEntry.etag),
+        data: result.data,
         marker: middlewareMarker,
       };
     } catch (error) {
