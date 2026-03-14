@@ -384,11 +384,7 @@ export class DocumentManagementService {
     if (urlsToKeep.size === 0) {
       return 0;
     }
-    return await this.store.deleteDocumentsNotInUrls(
-      library,
-      normalizedVersion,
-      urlsToKeep,
-    );
+    return await this.store.deletePagesNotInUrls(library, normalizedVersion, urlsToKeep);
   }
 
   /**
