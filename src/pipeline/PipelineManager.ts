@@ -256,12 +256,15 @@ export class PipelineManager implements IPipeline {
       ...versionOptions
     } = options;
 
-    // Abort any existing QUEUED or RUNNING job for the same library+version
+    // Abort any existing QUEUED or RUNNING job for the same library+version+sourceUrl
+    // This allows multi-URL scraping for the same library+version
+    const normalizedSourceUrl = this.normalizeSourceUrl(url);
     const allJobs = await this.getJobs();
     const duplicateJobs = allJobs.filter(
       (job) =>
         job.library === library &&
-        (job.version ?? "") === normalizedVersion && // Normalize null to empty string for comparison
+        (job.version ?? "") === normalizedVersion &&
+        this.normalizeSourceUrl(job.sourceUrl ?? "") === normalizedSourceUrl &&
         ["queued", "running"].includes(job.status),
     );
     for (const job of duplicateJobs) {
@@ -517,6 +520,24 @@ export class PipelineManager implements IPipeline {
   }
 
   // --- Private Methods ---
+
+  /**
+   * Normalizes a source URL for consistent duplicate detection.
+   * - Strips trailing slashes
+   * - Normalizes http to https
+   * - Lowercases hostname
+   */
+  private normalizeSourceUrl(url: string): string {
+    if (!url) return "";
+    let normalized = url.trim().toLowerCase();
+    if (normalized.endsWith("/")) {
+      normalized = normalized.slice(0, -1);
+    }
+    if (normalized.startsWith("http://")) {
+      normalized = "https://" + normalized.slice(7);
+    }
+    return normalized;
+  }
 
   /**
    * Processes the job queue, starting new workers if capacity allows.

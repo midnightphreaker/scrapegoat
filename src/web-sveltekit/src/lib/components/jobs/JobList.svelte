@@ -11,8 +11,12 @@
 
   let { jobs: initialJobs }: Props = $props();
 
-  onMount(() => {
-    jobsStore.fetch();
+  onMount(async () => {
+    try {
+      await jobsStore.fetch();
+    } catch (e) {
+      console.error("Failed to fetch initial jobs:", e);
+    }
     const unsubscribe = subscribeToJobUpdates((event) => {
       jobsStore.updateJob(event.payload);
     });

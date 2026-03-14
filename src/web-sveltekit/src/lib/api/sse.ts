@@ -20,7 +20,7 @@ export class JobEventSource {
     if (this.polling) return;
     this.polling = true;
 
-    this.pollInterval = setInterval(async () => {
+    const poll = async () => {
       try {
         const response = await fetch("/api/trpc/jobs.getJobs");
         const data = await response.json();
@@ -30,7 +30,10 @@ export class JobEventSource {
       } catch (e) {
         console.error("Polling failed:", e);
       }
-    }, 5000);
+    };
+
+    poll();
+    this.pollInterval = setInterval(poll, 2000);
   }
 
   disconnect() {
