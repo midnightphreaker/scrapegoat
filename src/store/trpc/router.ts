@@ -15,6 +15,10 @@ import type {
 } from "../types";
 import type { IDocumentManagement } from "./interfaces";
 
+export function invalidateLibrariesCache(): void {
+  getCacheService().invalidate("libraries:*");
+}
+
 // Context carries the document management API
 export interface DataTrpcContext {
   docService: IDocumentManagement;
@@ -102,6 +106,7 @@ export function createDataRouter(trpc: unknown) {
           opts.input.library,
           opts.input.version ?? null,
         );
+        invalidateLibrariesCache();
         return { ok: true } as const;
       }),
 
@@ -112,6 +117,7 @@ export function createDataRouter(trpc: unknown) {
           opts.input.library,
           opts.input.version ?? null,
         );
+        invalidateLibrariesCache();
         return { ok: true } as const;
       }),
 
