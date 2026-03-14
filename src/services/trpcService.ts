@@ -10,7 +10,7 @@ import type { IPipeline } from "../pipeline/trpc/interfaces";
 import { createPipelineRouter, type PipelineTrpcContext } from "../pipeline/trpc/router";
 import type { IDocumentManagement } from "../store/trpc/interfaces";
 import { createDataRouter, type DataTrpcContext } from "../store/trpc/router";
-import { getCacheService } from "./CacheService.js";
+import { type CacheEntry, getCacheService } from "./CacheService.js";
 
 type UnifiedContext = PipelineTrpcContext & DataTrpcContext;
 
@@ -28,15 +28,24 @@ export const appRouter = t.mergeRouters(
 
 export type AppRouter = typeof appRouter;
 
+function isLibrariesListRequest(url: string): boolean {
+  return url.includes("/api/trpc/listLibraries") || url.includes("trpc/listLibraries?");
+}
+
 export async function registerTrpcService(
   server: FastifyInstance,
   pipeline: IPipeline,
   docService: IDocumentManagement,
 ): Promise<void> {
   server.addHook("preHandler", async (request, reply) => {
-    if (request.url.includes("listLibraries")) {
+    if (isLibrariesListRequest(request.url)) {
       const clientEtag = request.headers["if-none-match"];
-      const entry = getCacheService().get("libraries:list");
+      let entry: CacheEntry<unknown> | null | undefined;
+      try {
+        entry = getCacheService().get("libraries:list");
+      } catch {
+        // Cache error - proceed without ETag, don't fail the request
+      }
 
       if (entry && clientEtag === entry.etag) {
         reply.code(304).send("");
@@ -46,8 +55,14 @@ export async function registerTrpcService(
   });
 
   server.addHook("onSend", async (request, reply, payload) => {
-    if (request.url.includes("listLibraries")) {
-      const entry = getCacheService().get("libraries:list");
+    if (isLibrariesListRequest(request.url)) {
+      let entry: CacheEntry<unknown> | null | undefined;
+      try {
+        entry = getCacheService().get("libraries:list");
+      } catch {
+        // Cache error - proceed without ETag headers
+        return payload;
+      }
       if (entry) {
         reply.header("ETag", entry.etag);
         reply.header("Cache-Control", "public, max-age=300");
