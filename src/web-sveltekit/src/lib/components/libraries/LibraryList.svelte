@@ -10,6 +10,14 @@
   const sortedLibraries = $derived(
     [...librariesStore.libraries].sort((a, b) => a.library.localeCompare(b.library)),
   );
+
+  function handleDeleteVersion(library: string, version: string) {
+    librariesStore.deleteVersion(library, version);
+  }
+
+  function handleRescrape(versionId: number) {
+    librariesStore.rescrapeLibrary(versionId);
+  }
 </script>
 
 <div class="space-y-3">
@@ -24,7 +32,11 @@
     </div>
   {:else}
     {#each sortedLibraries as library (library.library)}
-      <LibraryItem {library} />
+      <LibraryItem
+        {library}
+        onDeleteVersion={handleDeleteVersion}
+        onRescrape={handleRescrape}
+      />
     {/each}
   {/if}
 </div>

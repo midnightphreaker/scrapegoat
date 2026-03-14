@@ -31,10 +31,12 @@ export interface SearchResult {
 }
 
 export interface EnqueueJobInput {
-  url: string;
   library: string;
   version?: string | null;
-  options?: {
+  options: {
+    url: string;
+    library: string;
+    version: string;
     maxPages?: number;
     maxDepth?: number;
     scope?: "subpages" | "hostname" | "domain";
@@ -43,5 +45,6 @@ export interface EnqueueJobInput {
     includePatterns?: string[];
     excludePatterns?: string[];
     headers?: Record<string, string>;
+    fetcher?: "auto" | "http" | "crawl4ai" | "file";
   };
 }

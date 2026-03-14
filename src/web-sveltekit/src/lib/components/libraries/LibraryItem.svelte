@@ -13,7 +13,7 @@
     library: Library;
     onDeleteVersion?: (library: string, version: string) => void;
     onRename?: (newName: string) => void;
-    onRescrape?: (library: string, version: string) => void;
+    onRescrape?: (versionId: number) => void;
   }
 
   let { library, onDeleteVersion, onRename, onRescrape }: Props = $props();
@@ -21,7 +21,7 @@
   let isEditing = $state(false);
   let editValue = $state("");
   let deleteConfirmVersion = $state<string | null>(null);
-  let rescrapeConfirmVersion = $state<string | null>(null);
+  let rescrapeConfirmVersionId = $state<number | null>(null);
 
   function startEdit() {
     editValue = library.library;
@@ -53,16 +53,16 @@
       deleteConfirmVersion = null;
     } else {
       deleteConfirmVersion = version;
-      rescrapeConfirmVersion = null;
+      rescrapeConfirmVersionId = null;
     }
   }
 
-  function handleRescrapeClick(version: string | null) {
-    if (rescrapeConfirmVersion === version) {
-      onRescrape?.(library.library, version ?? "");
-      rescrapeConfirmVersion = null;
+  function handleRescrapeClick(versionId: number) {
+    if (rescrapeConfirmVersionId === versionId) {
+      onRescrape?.(versionId);
+      rescrapeConfirmVersionId = null;
     } else {
-      rescrapeConfirmVersion = version;
+      rescrapeConfirmVersionId = versionId;
       deleteConfirmVersion = null;
     }
   }
@@ -116,9 +116,9 @@
             <Button
               variant="outline"
               size="sm"
-              onclick={() => handleRescrapeClick(version.ref.version)}
+              onclick={() => handleRescrapeClick(version.id)}
             >
-              {#if rescrapeConfirmVersion === version.ref.version}
+              {#if rescrapeConfirmVersionId === version.id}
                 Confirm?
               {:else}
                 Rescrape
