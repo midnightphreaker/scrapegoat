@@ -4,6 +4,8 @@
  */
 import { initTRPC } from "@trpc/server";
 import { z } from "zod";
+import { cacheMiddleware } from "../../middleware/cacheMiddleware.js";
+import { getCacheService } from "../../services/CacheService.js";
 import { analytics, TelemetryEvent } from "../../telemetry";
 import type {
   DbVersionWithLibrary,
@@ -33,8 +35,17 @@ const optionalVersion = z
 
 export function createDataRouter(trpc: unknown) {
   const tt = trpc as typeof t;
+  const cache = getCacheService();
+  const cachedProcedure = tt.procedure.use(
+    cacheMiddleware({
+      cache,
+      cacheKey: "libraries:list",
+      ttl: 300000,
+    }),
+  );
+
   return tt.router({
-    listLibraries: tt.procedure.query(async (opts) => {
+    listLibraries: cachedProcedure.query(async (opts) => {
       return await opts.ctx.docService.listLibraries();
     }),
 
