@@ -1,14 +1,28 @@
 import { xxh64 } from "@node-rs/xxhash";
 
-/**
- * Generate a stable ETag hash from any JSON-serializable data.
- * Uses sorted keys to ensure consistent hashing regardless of property order.
- * Returns quoted string per HTTP ETag specification.
- */
+const ETAG_HASH_SEED = BigInt(0);
+const ETAG_PREFIX = "xxh64";
+
 export function generateETag(data: unknown): string {
+  if (data === undefined) {
+    const hash = xxh64("undefined", ETAG_HASH_SEED);
+    return `"${ETAG_PREFIX}:${hash}"`;
+  }
+
+  if (data === null) {
+    const hash = xxh64("null", ETAG_HASH_SEED);
+    return `"${ETAG_PREFIX}:${hash}"`;
+  }
+
+  if (typeof data !== "object" || Array.isArray(data)) {
+    const serialized = JSON.stringify(data);
+    const hash = xxh64(serialized, ETAG_HASH_SEED);
+    return `"${ETAG_PREFIX}:${hash}"`;
+  }
+
   const obj = data as Record<string, unknown>;
   const sortedKeys = Object.keys(obj).sort();
   const serialized = JSON.stringify(data, sortedKeys);
-  const hash = xxh64(serialized, BigInt(0));
-  return `"xxh64:${hash}"`;
+  const hash = xxh64(serialized, ETAG_HASH_SEED);
+  return `"${ETAG_PREFIX}:${hash}"`;
 }
