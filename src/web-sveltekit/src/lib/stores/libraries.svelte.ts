@@ -46,7 +46,6 @@ class LibrariesStore {
         }
       }
       toast.success(`Version "${version || "default"}" deleted`);
-      window.location.reload();
     } catch (e) {
       const message = e instanceof Error ? e.message : "Failed to delete version";
       this.error = message;
@@ -73,7 +72,6 @@ class LibrariesStore {
       await this.fetch(true);
 
       toast.success(`Version renamed to "${newVersion}"`);
-      window.location.reload();
     } catch (e) {
       const message = e instanceof Error ? e.message : "Failed to rename version";
       this.error = message;
@@ -108,9 +106,6 @@ class LibrariesStore {
       });
 
       toast.success("Rescrape job enqueued");
-
-      await this.fetch(true);
-      window.location.reload();
     } catch (e) {
       const message = e instanceof Error ? e.message : "Failed to enqueue rescrape job";
       this.error = message;
