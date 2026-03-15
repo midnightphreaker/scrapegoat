@@ -1416,13 +1416,15 @@ export class DocumentStore {
       const normalizedOldVersion = normalizeVersionName(oldVersion);
       const normalizedNewVersion = normalizeVersionName(newVersion);
 
-      // Check if new version name already exists (case-insensitive check)
+      // Check if new version name already exists (excluding the version we're renaming)
       const duplicateCheck = await this.pool.query(
         `SELECT v.id
          FROM versions v
          INNER JOIN libraries l ON v.library_id = l.id
-         WHERE LOWER(l.name) = LOWER($1) AND LOWER(v.name) = LOWER($2)`,
-        [library, normalizedNewVersion],
+         WHERE LOWER(l.name) = LOWER($1) 
+           AND LOWER(v.name) = LOWER($2)
+           AND LOWER(v.name) != LOWER($3)`,
+        [library, normalizedNewVersion, normalizedOldVersion],
       );
 
       if (duplicateCheck.rows.length > 0) {

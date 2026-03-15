@@ -274,6 +274,18 @@ export class PipelineManager implements IPipeline {
       await this.cancelJob(job.id);
     }
 
+    // Check for existing version from same source URL (prevent accidental overwrites)
+    const existingVersions = await this.store.listVersions(library);
+    const duplicateVersion = existingVersions.find(
+      (v) => (v ?? "").toLowerCase() === normalizedVersion.toLowerCase(),
+    );
+
+    if (duplicateVersion) {
+      throw new Error(
+        `Version "${normalizedVersion}" already exists in library "${library}". Delete it first or use a different version name.`,
+      );
+    }
+
     const jobId = uuidv4();
     const abortController = new AbortController();
     let resolveCompletion!: () => void;
