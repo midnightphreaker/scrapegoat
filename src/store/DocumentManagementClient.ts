@@ -67,6 +67,19 @@ export class DocumentManagementClient implements IDocumentManagement {
     await this.client.removeVersion.mutate({ library, version });
   }
 
+  async renameVersion(
+    library: string,
+    oldVersion: string | null,
+    newVersion: string,
+  ): Promise<boolean> {
+    const result = await this.client.renameVersion.mutate({
+      library,
+      oldVersion,
+      newVersion,
+    });
+    return result.renamed;
+  }
+
   async removeAllDocuments(library: string, version?: string | null): Promise<void> {
     await this.client.removeAllDocuments.mutate({ library, version: version ?? null });
   }

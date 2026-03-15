@@ -18,6 +18,10 @@
   function handleRescrape(versionId: number) {
     librariesStore.rescrapeLibrary(versionId);
   }
+
+  async function handleRenameVersion(library: string, oldVersion: string, newVersion: string) {
+    await librariesStore.renameVersion(library, oldVersion, newVersion);
+  }
 </script>
 
 <div class="space-y-3">
@@ -35,6 +39,7 @@
       <LibraryItem
         {library}
         onDeleteVersion={handleDeleteVersion}
+        onRenameVersion={handleRenameVersion}
         onRescrape={handleRescrape}
       />
     {/each}

@@ -57,6 +57,29 @@ class LibrariesStore {
     throw new Error("Not implemented");
   }
 
+  async renameVersion(
+    library: string,
+    oldVersion: string,
+    newVersion: string,
+  ): Promise<void> {
+    try {
+      await trpc.renameVersion.mutate({
+        library,
+        oldVersion,
+        newVersion,
+      });
+
+      await this.fetch(true);
+
+      toast.success(`Version renamed to "${newVersion}"`);
+    } catch (e) {
+      const message = e instanceof Error ? e.message : "Failed to rename version";
+      this.error = message;
+      toast.error(message);
+      throw e;
+    }
+  }
+
   async rescrapeLibrary(versionId: number): Promise<void> {
     try {
       const versionInfo = this.findVersionById(versionId);

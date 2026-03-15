@@ -13,10 +13,11 @@
     library: Library;
     onDeleteVersion?: (library: string, version: string) => void;
     onRename?: (newName: string) => void;
+    onRenameVersion?: (library: string, oldVersion: string, newVersion: string) => void;
     onRescrape?: (versionId: number) => void;
   }
 
-  let { library, onDeleteVersion, onRename, onRescrape }: Props = $props();
+  let { library, onDeleteVersion, onRename, onRenameVersion, onRescrape }: Props = $props();
 
   let isEditing = $state(false);
   let editValue = $state("");
@@ -102,7 +103,12 @@
       {#each library.versions as version}
         <div class="flex items-center justify-between border-b pb-2 last:border-b-0">
           <div class="flex items-center gap-3">
-            <VersionBadge version={version.ref.version} status={version.status} />
+            <VersionBadge
+              version={version.ref.version}
+              status={version.status}
+              library={library.library}
+              onRename={(newVersion) => onRenameVersion?.(library.library, version.ref.version ?? "", newVersion)}
+            />
             <div class="text-sm text-stone-500">
               <span>{version.counts.documents} docs</span>
               <span class="mx-1">|</span>
