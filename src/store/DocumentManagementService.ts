@@ -415,6 +415,33 @@ export class DocumentManagementService {
   }
 
   /**
+   * Renames a version within a library.
+   * @param library - Library name
+   * @param oldVersion - Current version name
+   * @param newVersion - New version name (can be mixed-case)
+   * @returns true if renamed, false if not found
+   * @throws Error if new version name already exists
+   */
+  async renameVersion(
+    library: string,
+    oldVersion: string | null,
+    newVersion: string,
+  ): Promise<boolean> {
+    const normalizedOld = this.normalizeVersion(oldVersion);
+    const normalizedNew = newVersion ?? "";
+
+    logger.info(`📝 Renaming version: ${library}@${normalizedOld} → ${normalizedNew}`);
+
+    const result = await this.store.renameVersion(library, normalizedOld, normalizedNew);
+
+    if (result) {
+      logger.info(`✅ Version renamed successfully`);
+    }
+
+    return result;
+  }
+
+  /**
    * Adds a document to the store, splitting it into smaller chunks for better search results.
    * Uses SemanticMarkdownSplitter to maintain markdown structure and content types during splitting.
    * Preserves hierarchical structure of documents and distinguishes between text and code segments.

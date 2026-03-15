@@ -1387,6 +1387,72 @@ export class DocumentStore {
   }
 
   /**
+   * Renames a version within a library.
+   * The version ID stays the same, so all documents remain linked via foreign key.
+   *
+   * @param {string} library - The library name (case-insensitive)
+   * @param {string} oldVersion - The current version name (will be normalized)
+   * @param {string} newVersion - The new version name (will be normalized)
+   * @returns {Promise<boolean>} True if renamed, false if version not found
+   * @throws {StoreError} If new version name already exists (UNIQUE constraint violation)
+   *
+   * @example
+   * ```typescript
+   * const renamed = await store.renameVersion("react", "18.0.0", "18.2.0");
+   * if (renamed) {
+   *   console.log("Version renamed successfully");
+   * } else {
+   *   console.log("Version not found");
+   * }
+   * ```
+   */
+  async renameVersion(
+    library: string,
+    oldVersion: string,
+    newVersion: string,
+  ): Promise<boolean> {
+    try {
+      // Preserve case for new version name (mixed-case support)
+      const normalizedOldVersion = normalizeVersionName(oldVersion);
+      const normalizedNewVersion = normalizeVersionName(newVersion);
+
+      // Check if new version name already exists (case-insensitive check)
+      const duplicateCheck = await this.pool.query(
+        `SELECT v.id
+         FROM versions v
+         INNER JOIN libraries l ON v.library_id = l.id
+         WHERE LOWER(l.name) = LOWER($1) AND LOWER(v.name) = LOWER($2)`,
+        [library, normalizedNewVersion],
+      );
+
+      if (duplicateCheck.rows.length > 0) {
+        throw new StoreError(
+          `Cannot rename version: version "${newVersion}" already exists in library "${library}"`,
+        );
+      }
+
+      // Update version name (case-insensitive match for old version to handle existing lowercase data)
+      const result = await this.pool.query(
+        `UPDATE versions
+         SET name = $1, updated_at = CURRENT_TIMESTAMP
+         WHERE library_id = (SELECT id FROM libraries WHERE LOWER(name) = LOWER($2))
+         AND LOWER(name) = LOWER($3)`,
+        [normalizedNewVersion, library, normalizedOldVersion],
+      );
+
+      return (result.rowCount || 0) > 0;
+    } catch (error) {
+      if (error instanceof StoreError) {
+        throw error;
+      }
+      throw new StoreError(
+        `Failed to rename version from ${oldVersion} to ${newVersion} in library ${library}`,
+        error,
+      );
+    }
+  }
+
+  /**
    * Retrieves a single document by its database ID.
    * Returns the document with all metadata including URL, title, and content type.
    *

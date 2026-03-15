@@ -160,6 +160,21 @@ export interface IDocumentManagement {
   removeVersion(library: string, version?: string | null): Promise<void>;
 
   /**
+   * Renames a version within a library.
+   *
+   * @param library - The library name
+   * @param oldVersion - Current version name
+   * @param newVersion - New version name
+   * @returns true if renamed, false if not found
+   * @throws Error if new version name already exists
+   */
+  renameVersion(
+    library: string,
+    oldVersion: string | null,
+    newVersion: string,
+  ): Promise<boolean>;
+
+  /**
    * Gets versions filtered by status.
    *
    * @remarks
