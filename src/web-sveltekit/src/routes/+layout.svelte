@@ -2,6 +2,7 @@
 	import favicon from '$lib/assets/favicon.svg';
 	import '../app.css';
 	import Header from '$lib/components/layout/Header.svelte';
+	import { Toaster } from 'svelte-sonner';
 
 	let { children } = $props();
 </script>
@@ -16,3 +17,4 @@
 		{@render children()}
 	</main>
 </div>
+<Toaster position="bottom-right" />

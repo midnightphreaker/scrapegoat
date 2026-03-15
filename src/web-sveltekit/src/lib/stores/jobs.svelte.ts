@@ -1,5 +1,6 @@
 import { trpc } from "$lib/api/trpc";
 import type { Job } from "$lib/api/types";
+import { librariesStore } from "./libraries.svelte";
 
 class JobsStore {
   jobs = $state<Job[]>([]);
@@ -46,6 +47,10 @@ class JobsStore {
       this.jobs[index] = updatedJob;
     } else {
       this.jobs.unshift(updatedJob);
+    }
+
+    if (updatedJob.status === "completed" || updatedJob.status === "failed") {
+      librariesStore.fetch(true).catch(console.error);
     }
   }
 }
