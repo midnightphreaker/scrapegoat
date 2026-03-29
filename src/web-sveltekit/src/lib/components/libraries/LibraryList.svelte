@@ -22,6 +22,10 @@
   async function handleRenameVersion(library: string, oldVersion: string, newVersion: string) {
     await librariesStore.renameVersion(library, oldVersion, newVersion);
   }
+
+  async function handleRename(oldName: string, newName: string) {
+    await librariesStore.rename(oldName, newName);
+  }
 </script>
 
 <div class="space-y-3">
@@ -39,6 +43,7 @@
       <LibraryItem
         {library}
         onDeleteVersion={handleDeleteVersion}
+        onRename={handleRename}
         onRenameVersion={handleRenameVersion}
         onRescrape={handleRescrape}
       />

@@ -175,6 +175,16 @@ export interface IDocumentManagement {
   ): Promise<boolean>;
 
   /**
+   * Renames a library.
+   *
+   * @param library - Current library name
+   * @param newName - New library name
+   * @returns true if renamed, false if not found
+   * @throws Error if new name already exists
+   */
+  renameLibrary(library: string, newName: string): Promise<boolean>;
+
+  /**
    * Gets versions filtered by status.
    *
    * @remarks
