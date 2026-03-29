@@ -128,6 +128,22 @@ export function createDataRouter(trpc: unknown) {
         return { ok: true, renamed: result } as const;
       }),
 
+    renameLibrary: tt.procedure
+      .input(
+        z.object({
+          library: nonEmpty,
+          newName: nonEmpty,
+        }),
+      )
+      .mutation(async (opts) => {
+        const result = await opts.ctx.docService.renameLibrary(
+          opts.input.library,
+          opts.input.newName,
+        );
+        invalidateLibrariesCache();
+        return { ok: true, renamed: result } as const;
+      }),
+
     removeAllDocuments: tt.procedure
       .input(z.object({ library: nonEmpty, version: optionalVersion }))
       .mutation(async (opts) => {

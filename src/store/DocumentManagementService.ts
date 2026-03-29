@@ -442,6 +442,28 @@ export class DocumentManagementService {
   }
 
   /**
+   * Renames a library.
+   * @param library - Current library name
+   * @param newName - New library name
+   * @returns true if renamed, false if not found
+   * @throws Error if new name already exists
+   */
+  async renameLibrary(library: string, newName: string): Promise<boolean> {
+    const normalizedOld = library.trim().toLowerCase();
+    const normalizedNew = newName.trim().toLowerCase();
+
+    logger.info(`📝 Renaming library: ${normalizedOld} → ${normalizedNew}`);
+
+    const result = await this.store.renameLibrary(normalizedOld, normalizedNew);
+
+    if (result) {
+      logger.info(`✅ Library renamed successfully`);
+    }
+
+    return result;
+  }
+
+  /**
    * Adds a document to the store, splitting it into smaller chunks for better search results.
    * Uses SemanticMarkdownSplitter to maintain markdown structure and content types during splitting.
    * Preserves hierarchical structure of documents and distinguishes between text and code segments.
