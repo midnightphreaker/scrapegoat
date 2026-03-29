@@ -87,12 +87,19 @@
           autofocus
         />
       {:else}
-        <a
-          href="/libraries/{library.library}"
-          class="hover:underline cursor-pointer"
-          ondblclick={startEdit}
+        <span
+          class="cursor-pointer hover:underline"
+          onclick={startEdit}
+          title="Click to rename"
         >
           {library.library}
+        </span>
+        <a
+          href="/libraries/{library.library}"
+          target="_blank"
+          rel="noopener noreferrer"
+        >
+          <Button variant="ghost" size="sm">View</Button>
         </a>
       {/if}
     </CardTitle>
