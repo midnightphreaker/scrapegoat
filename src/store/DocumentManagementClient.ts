@@ -80,6 +80,14 @@ export class DocumentManagementClient implements IDocumentManagement {
     return result.renamed;
   }
 
+  async renameLibrary(library: string, newName: string): Promise<boolean> {
+    const result = await this.client.renameLibrary.mutate({
+      library,
+      newName,
+    });
+    return result.renamed;
+  }
+
   async removeAllDocuments(library: string, version?: string | null): Promise<void> {
     await this.client.removeAllDocuments.mutate({ library, version: version ?? null });
   }

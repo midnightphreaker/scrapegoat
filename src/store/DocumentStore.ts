@@ -1455,6 +1455,54 @@ export class DocumentStore {
   }
 
   /**
+   * Renames a library in the store.
+   * The library ID stays the same, so all versions and documents remain linked via foreign key.
+   *
+   * @param {string} library - The library name (case-insensitive)
+   * @param {string} newName - The new library name
+   * @returns {Promise<boolean>} True if renamed, false if library not found
+   * @throws {StoreError} If new library name already exists or database operation fails
+   *
+   * @example
+   * ```typescript
+   * const renamed = await store.renameLibrary("react", "react-dom");
+   * if (renamed) {
+   *   console.log("Library renamed successfully");
+   * } else {
+   *   console.log("Library not found");
+   * }
+   * ```
+   */
+  async renameLibrary(library: string, newName: string): Promise<boolean> {
+    try {
+      const existing = await this.pool.query(
+        "SELECT id FROM libraries WHERE LOWER(name) = LOWER($1)",
+        [newName],
+      );
+      if (existing.rows.length > 0) {
+        throw new StoreError(
+          `Cannot rename library: library "${newName}" already exists`,
+        );
+      }
+
+      const result = await this.pool.query(
+        "UPDATE libraries SET name = $1, updated_at = CURRENT_TIMESTAMP WHERE LOWER(name) = LOWER($2) RETURNING id",
+        [newName, library],
+      );
+
+      return (result.rowCount || 0) > 0;
+    } catch (error) {
+      if (error instanceof StoreError) {
+        throw error;
+      }
+      throw new StoreError(
+        `Failed to rename library from ${library} to ${newName}`,
+        error,
+      );
+    }
+  }
+
+  /**
    * Retrieves a single document by its database ID.
    * Returns the document with all metadata including URL, title, and content type.
    *

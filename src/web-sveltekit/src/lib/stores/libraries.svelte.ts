@@ -53,8 +53,22 @@ class LibrariesStore {
     }
   }
 
-  async rename(_library: string, _newTitle: string): Promise<void> {
-    throw new Error("Not implemented");
+  async rename(library: string, newTitle: string): Promise<void> {
+    try {
+      await trpc.renameLibrary.mutate({
+        library,
+        newName: newTitle,
+      });
+
+      await this.fetch(true);
+
+      toast.success(`Library renamed to "${newTitle}"`);
+    } catch (e) {
+      const message = e instanceof Error ? e.message : "Failed to rename library";
+      this.error = message;
+      toast.error(message);
+      throw e;
+    }
   }
 
   async renameVersion(
