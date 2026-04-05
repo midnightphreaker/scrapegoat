@@ -1581,6 +1581,8 @@ export class DocumentStore {
   ): Promise<Document[]> {
     try {
       const normalizedVersion = normalizeVersionName(version);
+      const isUnversioned = normalizedVersion === "";
+
       // Use plain query text - plainto_tsquery() will handle escaping
 
       // Generate query embedding if vector search is enabled
@@ -1597,40 +1599,67 @@ export class DocumentStore {
       // Vector search
       if (queryEmbedding) {
         const vecResult = await this.pool.query(
-          `SELECT d.id, d.content, d.metadata, d.sort_order,
-                  p.url, p.title, p.content_type,
-                  1 - (d.embedding <=> $1::vector) as vec_score
-           FROM documents d
-           INNER JOIN pages p ON d.page_id = p.id
-           INNER JOIN versions v ON p.version_id = v.id
-           INNER JOIN libraries l ON v.library_id = l.id
-           WHERE LOWER(l.name) = LOWER($2) AND LOWER(v.name) = LOWER($3) AND d.embedding IS NOT NULL
-           ORDER BY d.embedding <=> $1::vector
-           LIMIT $4`,
-          [
-            `[${queryEmbedding.join(",")}]`,
-            library,
-            normalizedVersion,
-            limit * VECTOR_SEARCH_MULTIPLIER,
-          ],
+          isUnversioned
+            ? `SELECT d.id, d.content, d.metadata, d.sort_order,
+                      p.url, p.title, p.content_type,
+                      1 - (d.embedding <=> $1::vector) as vec_score
+               FROM documents d
+               INNER JOIN pages p ON d.page_id = p.id
+               INNER JOIN versions v ON p.version_id = v.id
+               INNER JOIN libraries l ON v.library_id = l.id
+               WHERE LOWER(l.name) = LOWER($2) AND d.embedding IS NOT NULL
+               ORDER BY d.embedding <=> $1::vector
+               LIMIT $3`
+            : `SELECT d.id, d.content, d.metadata, d.sort_order,
+                      p.url, p.title, p.content_type,
+                      1 - (d.embedding <=> $1::vector) as vec_score
+               FROM documents d
+               INNER JOIN pages p ON d.page_id = p.id
+               INNER JOIN versions v ON p.version_id = v.id
+               INNER JOIN libraries l ON v.library_id = l.id
+               WHERE LOWER(l.name) = LOWER($2) AND LOWER(v.name) = LOWER($3) AND d.embedding IS NOT NULL
+               ORDER BY d.embedding <=> $1::vector
+               LIMIT $4`,
+          isUnversioned
+            ? [`[${queryEmbedding.join(",")}]`, library, limit * VECTOR_SEARCH_MULTIPLIER]
+            : [
+                `[${queryEmbedding.join(",")}]`,
+                library,
+                normalizedVersion,
+                limit * VECTOR_SEARCH_MULTIPLIER,
+              ],
         );
         vectorResults.push(...vecResult.rows);
       }
 
       // Full-text search using plainto_tsquery for safe plain text queries
       const ftsResult = await this.pool.query(
-        `SELECT d.id, d.content, d.metadata, d.sort_order,
-                p.url, p.title, p.content_type,
-                ts_rank(to_tsvector('english', d.content), plainto_tsquery('english', $1)) as fts_score
-         FROM documents d
-         INNER JOIN pages p ON d.page_id = p.id
-         INNER JOIN versions v ON p.version_id = v.id
-         INNER JOIN libraries l ON v.library_id = l.id
-         WHERE LOWER(l.name) = LOWER($2) AND LOWER(v.name) = LOWER($3)
-           AND to_tsvector('english', d.content) @@ plainto_tsquery('english', $1)
-         ORDER BY fts_score DESC
-         LIMIT $4`,
-        [query, library, normalizedVersion, limit * SEARCH_OVERFETCH_FACTOR],
+        isUnversioned
+          ? `SELECT d.id, d.content, d.metadata, d.sort_order,
+                    p.url, p.title, p.content_type,
+                    ts_rank(to_tsvector('english', d.content), plainto_tsquery('english', $1)) as fts_score
+             FROM documents d
+             INNER JOIN pages p ON d.page_id = p.id
+             INNER JOIN versions v ON p.version_id = v.id
+             INNER JOIN libraries l ON v.library_id = l.id
+             WHERE LOWER(l.name) = LOWER($2)
+               AND to_tsvector('english', d.content) @@ plainto_tsquery('english', $1)
+             ORDER BY fts_score DESC
+             LIMIT $3`
+          : `SELECT d.id, d.content, d.metadata, d.sort_order,
+                    p.url, p.title, p.content_type,
+                    ts_rank(to_tsvector('english', d.content), plainto_tsquery('english', $1)) as fts_score
+             FROM documents d
+             INNER JOIN pages p ON d.page_id = p.id
+             INNER JOIN versions v ON p.version_id = v.id
+             INNER JOIN libraries l ON v.library_id = l.id
+             WHERE LOWER(l.name) = LOWER($2) AND LOWER(v.name) = LOWER($3)
+               AND to_tsvector('english', d.content) @@ plainto_tsquery('english', $1)
+             ORDER BY fts_score DESC
+             LIMIT $4`,
+        isUnversioned
+          ? [query, library, limit * SEARCH_OVERFETCH_FACTOR]
+          : [query, library, normalizedVersion, limit * SEARCH_OVERFETCH_FACTOR],
       );
       ftsResults.push(...ftsResult.rows);
 
@@ -1718,6 +1747,7 @@ export class DocumentStore {
 
     try {
       const normalizedVersion = normalizeVersionName(version);
+      const isUnversioned = normalizedVersion === "";
 
       // Generate embedding for query image
       const queryResult = await imageEmbeddingService.embedSingleImage(imagePath);
@@ -1730,15 +1760,24 @@ export class DocumentStore {
 
       // Fetch all documents with image embeddings
       const result = await this.pool.query(
-        `SELECT d.id, d.content, d.metadata, d.sort_order,
-                p.url, p.title, p.content_type, p.screenshot_path
-         FROM documents d
-         INNER JOIN pages p ON d.page_id = p.id
-         INNER JOIN versions v ON p.version_id = v.id
-         INNER JOIN libraries l ON v.library_id = l.id
-         WHERE LOWER(l.name) = LOWER($1) AND LOWER(v.name) = LOWER($2)
-           AND d.metadata::text LIKE '%imageEmbeddings%'`,
-        [library, normalizedVersion],
+        isUnversioned
+          ? `SELECT d.id, d.content, d.metadata, d.sort_order,
+                     p.url, p.title, p.content_type, p.screenshot_path
+              FROM documents d
+              INNER JOIN pages p ON d.page_id = p.id
+              INNER JOIN versions v ON p.version_id = v.id
+              INNER JOIN libraries l ON v.library_id = l.id
+              WHERE LOWER(l.name) = LOWER($1)
+                AND d.metadata::text LIKE '%imageEmbeddings%'`
+          : `SELECT d.id, d.content, d.metadata, d.sort_order,
+                     p.url, p.title, p.content_type, p.screenshot_path
+              FROM documents d
+              INNER JOIN pages p ON d.page_id = p.id
+              INNER JOIN versions v ON p.version_id = v.id
+              INNER JOIN libraries l ON v.library_id = l.id
+              WHERE LOWER(l.name) = LOWER($1) AND LOWER(v.name) = LOWER($2)
+                AND d.metadata::text LIKE '%imageEmbeddings%'`,
+        isUnversioned ? [library] : [library, normalizedVersion],
       );
 
       // Calculate cosine similarity for each document's image embeddings
