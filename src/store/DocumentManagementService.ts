@@ -40,7 +40,7 @@ import { VersionStatus } from "./types";
  */
 export class DocumentManagementService {
   private readonly store: DocumentStore;
-  private readonly documentRetriever: DocumentRetrieverService;
+  private documentRetriever: DocumentRetrieverService;
   private readonly pipelines: ContentPipeline[];
   private readonly rerankerService?: RerankerService;
 
@@ -99,6 +99,12 @@ export class DocumentManagementService {
    */
   async initialize(): Promise<void> {
     await this.store.initialize();
+
+    await this.rerankerService?.initialize();
+    this.documentRetriever = new DocumentRetrieverService(
+      this.store,
+      this.rerankerService?.isReady() ? this.rerankerService : undefined,
+    );
   }
 
   /**
