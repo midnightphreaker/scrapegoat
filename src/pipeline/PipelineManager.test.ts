@@ -65,6 +65,7 @@ describe("PipelineManager", () => {
     startedAt: null,
     finishedAt: null,
     progress: null,
+    scraperProgress: null,
     error: null,
     sourceUrl: "https://example.com",
     scraperOptions: null,
@@ -231,7 +232,7 @@ describe("PipelineManager", () => {
     await manager.waitForJobCompletion(jobId).catch(() => {}); // Handle expected rejection
     const jobAfter = await manager.getJob(jobId);
     expect(jobAfter?.status).toBe(PipelineJobStatus.FAILED);
-    expect(jobAfter?.error?.message).toBe("fail");
+    expect(jobAfter?.error).toBe("fail");
   });
 
   it("should cancel a job via cancelJob API", async () => {
@@ -302,7 +303,8 @@ describe("PipelineManager", () => {
       await manager.updateJobProgress(job, progress);
 
       // Verify in-memory updates
-      expect(job.progress).toEqual(progress);
+      expect(job.progress).toEqual({ pages: 50, totalPages: 0 });
+      expect(job.scraperProgress).toEqual(progress);
       expect(job.progressPages).toBe(50);
       expect(job.progressMaxPages).toBe(300);
       expect(job.updatedAt).toBeInstanceOf(Date);
@@ -321,7 +323,8 @@ describe("PipelineManager", () => {
       await expect(manager.updateJobProgress(job, progress)).resolves.not.toThrow();
 
       // In-memory updates should still work
-      expect(job.progress).toEqual(progress);
+      expect(job.progress).toEqual({ pages: 30, totalPages: 0 });
+      expect(job.scraperProgress).toEqual(progress);
       expect(job.progressPages).toBe(30);
       expect(job.progressMaxPages).toBe(150);
     });

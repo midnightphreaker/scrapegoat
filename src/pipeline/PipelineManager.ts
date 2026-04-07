@@ -87,10 +87,15 @@ export class PipelineManager implements IPipeline {
     return {
       id: job.id,
       library: job.library,
-      version: job.version || null, // Convert empty string to null for public API
+      version: job.version || null,
       status: job.status,
-      progress: job.progress,
-      error: job.error ? { message: job.error.message } : null,
+      progress: job.scraperProgress
+        ? {
+            pages: job.scraperProgress.pagesScraped,
+            totalPages: job.scraperProgress.totalDiscovered,
+          }
+        : null,
+      error: job.error?.message ?? job.errorMessage ?? null,
       createdAt: job.createdAt,
       startedAt: job.startedAt,
       finishedAt: job.finishedAt,
@@ -182,6 +187,7 @@ export class PipelineManager implements IPipeline {
           version: version.name || "",
           status: "queued",
           progress: null,
+          scraperProgress: null,
           error: null,
           createdAt: new Date(version.created_at),
           // For recovered QUEUED jobs, startedAt must be null to reflect queued state.
@@ -292,6 +298,7 @@ export class PipelineManager implements IPipeline {
       version: normalizedVersion,
       status: "queued",
       progress: null,
+      scraperProgress: null,
       error: null,
       createdAt: new Date(),
       startedAt: null,
@@ -754,8 +761,8 @@ export class PipelineManager implements IPipeline {
     job: InternalPipelineJob,
     progress: ScraperProgress,
   ): Promise<void> {
-    // Update in-memory progress
-    job.progress = progress;
+    job.scraperProgress = progress;
+    job.progress = { pages: progress.pagesScraped, totalPages: progress.totalDiscovered };
     job.progressPages = progress.pagesScraped;
     job.progressMaxPages = progress.totalPages;
     job.updatedAt = new Date();

@@ -171,13 +171,13 @@ export class GetJobInfoTool {
       createdAt: job.createdAt.toISOString(),
       startedAt: job.startedAt?.toISOString() ?? null,
       finishedAt: job.finishedAt?.toISOString() ?? null,
-      error: job.error?.message ?? null,
+      error: job.error ?? null,
       progress:
         job.progressMaxPages && job.progressMaxPages > 0
           ? {
               pages: job.progressPages || 0,
               totalPages: job.progressMaxPages,
-              totalDiscovered: job.progress?.totalDiscovered || job.progressMaxPages,
+              totalDiscovered: job.progress?.totalPages || job.progressMaxPages,
             }
           : undefined,
       updatedAt: job.updatedAt?.toISOString(),
