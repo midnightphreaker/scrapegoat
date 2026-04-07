@@ -19,7 +19,7 @@
     
     searching = true;
     try {
-      const result = await trpc.data.search.query({
+      const result = await trpc.search.query({
         library: data.name,
         version: selectedVersion || undefined,
         query: query.trim(),
