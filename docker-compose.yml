@@ -18,9 +18,9 @@ services:
       - POSTGRES_USER=${POSTGRES_USER:-scrapegoat}
       - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-scrapegoat}
       - POSTGRES_DB=${POSTGRES_DB:-scrapegoat}
-      - SCRAPEGOAT_PORT=${SCRAPEGOAT_PORT:-8080}
+      - SCRAPEGOAT_PORT=${SCRAPEGOAT_PORT:-80}
       - DATABASE_URL=${DATABASE_URL:-postgresql://scrapegoat:scrapegoat@localhost:5432/scrapegoat}
-      - CRAWL4AI_SERVICE_URL=${CRAWL4AI_SERVICE_URL:-http://localhost:8001}
+      - CRAWL4AI_SERVICE_URL=${CRAWL4AI_SERVICE_URL:-http://127.0.0.1:8001}
       - OPENAI_API_BASE=${OPENAI_API_BASE:-https://api.openai.com/v1}
       - OPENAI_API_KEY=${OPENAI_API_KEY:-sk-your-openai-api-key-here}
       - DOCS_MCP_EMBEDDING_MODEL=${DOCS_MCP_EMBEDDING_MODEL:-openai:text-embedding-3-small}
