@@ -43,7 +43,7 @@
       <LibraryItem
         {library}
         onDeleteVersion={handleDeleteVersion}
-        onRename={handleRename}
+        onRename={(newName) => handleRename(library.library, newName)}
         onRenameVersion={handleRenameVersion}
         onRescrape={handleRescrape}
       />
