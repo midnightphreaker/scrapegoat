@@ -1486,7 +1486,7 @@ export class DocumentStore {
       }
 
       const result = await this.pool.query(
-        "UPDATE libraries SET name = $1, updated_at = CURRENT_TIMESTAMP WHERE LOWER(name) = LOWER($2) RETURNING id",
+        "UPDATE libraries SET name = $1 WHERE LOWER(name) = LOWER($2) RETURNING id",
         [newName, library],
       );
 
