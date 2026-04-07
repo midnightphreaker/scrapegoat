@@ -293,6 +293,8 @@ export const EnvVar = {
   EMBEDDING_MODEL: "EMBEDDING_MODEL",
   /** Log level */
   LOG_LEVEL: "LOG_LEVEL",
+  /** Scrapegoat port (canonical, highest priority) */
+  SCRAPEGOAT_PORT: "SCRAPEGOAT_PORT",
   /** MCP port */
   MCP_PORT: "MCP_PORT",
   /** Web server port */

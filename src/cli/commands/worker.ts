@@ -26,6 +26,7 @@ export function createWorkerCommand(program: Command): Command {
     .description("Start external pipeline worker (HTTP API)")
     .addOption(
       new Option("--port <number>", "Port for worker API")
+        .env("SCRAPEGOAT_PORT")
         .env("DOCS_MCP_PORT")
         .env("PORT")
         .default("8181")

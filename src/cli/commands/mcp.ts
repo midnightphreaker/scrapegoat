@@ -44,6 +44,7 @@ export function createMcpCommand(program: Command): Command {
       )
       .addOption(
         new Option("--port <number>", "Port for the MCP server")
+          .env("SCRAPEGOAT_PORT")
           .env("DOCS_MCP_PORT")
           .env("PORT")
           .default(DEFAULT_HTTP_PORT.toString())

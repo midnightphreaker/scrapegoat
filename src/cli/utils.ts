@@ -12,6 +12,7 @@ import {
   EmbeddingConfig,
   type EmbeddingModelConfig,
 } from "../store/embeddings/EmbeddingConfig";
+import { DEFAULT_HTTP_PORT } from "../utils/config";
 import { ConfigurationError, ValidationError } from "../utils/errors";
 import { LogLevel, logger, setLogLevel } from "../utils/logger";
 import type { GlobalOptions } from "./types";
@@ -318,7 +319,7 @@ export function warnHttpUsage(authConfig: AuthConfig | undefined, port: number):
   // Check if we're likely running in production (not localhost)
   const isLocalhost =
     process.env.NODE_ENV !== "production" ||
-    port === 8080 || // default dev port
+    port === DEFAULT_HTTP_PORT || // default dev port
     process.env.HOSTNAME?.includes("localhost");
 
   if (!isLocalhost) {

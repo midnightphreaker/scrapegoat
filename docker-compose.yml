@@ -18,7 +18,7 @@ services:
       - POSTGRES_USER=${POSTGRES_USER:-scrapegoat}
       - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-scrapegoat}
       - POSTGRES_DB=${POSTGRES_DB:-scrapegoat}
-      - SCRAPEGOAT_PORT=${SCRAPEGOAT_PORT:-80}
+      - PORT=${SCRAPEGOAT_PORT:-8080}
       - DATABASE_URL=${DATABASE_URL:-postgresql://scrapegoat:scrapegoat@localhost:5432/scrapegoat}
       - CRAWL4AI_SERVICE_URL=${CRAWL4AI_SERVICE_URL:-http://127.0.0.1:8001}
       - OPENAI_API_BASE=${OPENAI_API_BASE:-https://api.openai.com/v1}
@@ -39,7 +39,7 @@ services:
     restart: unless-stopped
     healthcheck:
 #                   Change this port if you change SCRAPEGOAT_PORT
-      test: ["CMD-SHELL", "node -e \"require('http').get('http://localhost:8080/', (r) => process.exit(r.statusCode === 200 ? 0 : 1))\""]
+      test: ["CMD-SHELL", "node -e \"require('http').get('http://localhost:' + (process.env.PORT || '8080') + '/', (r) => process.exit(r.statusCode === 200 ? 0 : 1))\""]
       interval: 30s
       timeout: 10s
       retries: 3

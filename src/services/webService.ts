@@ -25,9 +25,11 @@ export async function registerWebService(
   server.get("/api/health/mcp", async (_request, reply) => {
     try {
       // Read MCP configuration from environment variables
-      const mcpPort = process.env.MCP_PORT
-        ? Number.parseInt(process.env.MCP_PORT, 10)
-        : DEFAULT_HTTP_PORT;
+      const mcpPort = process.env.SCRAPEGOAT_PORT
+        ? Number.parseInt(process.env.SCRAPEGOAT_PORT, 10)
+        : process.env.MCP_PORT
+          ? Number.parseInt(process.env.MCP_PORT, 10)
+          : DEFAULT_HTTP_PORT;
       const mcpHost = process.env.MCP_HOST || "localhost";
       const mcpUrl = `http://${mcpHost}:${mcpPort}`;
 
@@ -75,9 +77,11 @@ export async function registerWebService(
       const validation = validateConfig(appConfig);
 
       // Read MCP configuration from environment variables
-      const mcpPort = process.env.MCP_PORT
-        ? Number.parseInt(process.env.MCP_PORT, 10)
-        : DEFAULT_HTTP_PORT;
+      const mcpPort = process.env.SCRAPEGOAT_PORT
+        ? Number.parseInt(process.env.SCRAPEGOAT_PORT, 10)
+        : process.env.MCP_PORT
+          ? Number.parseInt(process.env.MCP_PORT, 10)
+          : DEFAULT_HTTP_PORT;
       const mcpHost = process.env.MCP_HOST || "localhost";
       const mcpUrl = `http://${mcpHost}:${mcpPort}`;
 

@@ -37,6 +37,7 @@ export function createDefaultAction(program: Command): Command {
       )
       .addOption(
         new Option("--port <number>", "Port for the server")
+          .env("SCRAPEGOAT_PORT")
           .env("DOCS_MCP_PORT")
           .env("PORT")
           .default(DEFAULT_HTTP_PORT.toString())

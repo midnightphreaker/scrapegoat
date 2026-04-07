@@ -28,6 +28,7 @@ export function createWebCommand(program: Command): Command {
     .description("Start web interface only")
     .addOption(
       new Option("--port <number>", "Port for the web interface")
+        .env("SCRAPEGOAT_PORT")
         .env("DOCS_MCP_WEB_PORT")
         .env("DOCS_MCP_PORT")
         .env("PORT")
