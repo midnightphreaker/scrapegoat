@@ -11,6 +11,9 @@ vi.mock("$lib/api/trpc", () => ({
     removeVersion: {
       mutate: vi.fn(),
     },
+    renameLibrary: {
+      mutate: vi.fn(),
+    },
   },
 }));
 
@@ -212,11 +215,54 @@ describe("librariesStore", () => {
     });
   });
 
-  describe("rename (placeholder)", () => {
-    it("is a placeholder that throws not implemented", async () => {
-      await expect(librariesStore.rename("react", "new-name")).rejects.toThrow(
-        "Not implemented",
+  describe("rename", () => {
+    const mockLibraries: Library[] = [
+      {
+        library: "new-react",
+        versions: [
+          {
+            id: 1,
+            ref: { library: "new-react", version: "18.0.0" },
+            status: "completed",
+            counts: { documents: 100, uniqueUrls: 50 },
+            indexedAt: "2024-01-01T00:00:00Z",
+            sourceUrl: "https://react.dev",
+          },
+        ],
+      },
+    ];
+
+    it("calls renameLibrary tRPC mutation with correct args", async () => {
+      vi.mocked(trpc.renameLibrary.mutate).mockResolvedValue(undefined);
+      vi.mocked(trpc.listLibraries.query).mockResolvedValue(mockLibraries);
+
+      await librariesStore.rename("react", "new-react");
+
+      expect(trpc.renameLibrary.mutate).toHaveBeenCalledWith({
+        library: "react",
+        newName: "new-react",
+      });
+    });
+
+    it("refreshes the library list after successful rename", async () => {
+      vi.mocked(trpc.renameLibrary.mutate).mockResolvedValue(undefined);
+      vi.mocked(trpc.listLibraries.query).mockResolvedValue(mockLibraries);
+
+      await librariesStore.rename("react", "new-react");
+
+      expect(trpc.listLibraries.query).toHaveBeenCalled();
+      expect(librariesStore.libraries).toEqual(mockLibraries);
+    });
+
+    it("throws and sets error when mutation fails", async () => {
+      const error = new Error("Rename failed");
+      vi.mocked(trpc.renameLibrary.mutate).mockRejectedValue(error);
+      vi.mocked(trpc.listLibraries.query).mockResolvedValue([]);
+
+      await expect(librariesStore.rename("react", "new-react")).rejects.toThrow(
+        "Rename failed",
       );
+      expect(librariesStore.error).toBe("Rename failed");
     });
   });
 

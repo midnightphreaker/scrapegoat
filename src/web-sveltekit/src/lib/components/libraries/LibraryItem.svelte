@@ -29,9 +29,9 @@
     isEditing = true;
   }
 
-  function commitEdit() {
+  async function commitEdit() {
     if (editValue.trim() && editValue !== library.library) {
-      onRename?.(editValue.trim());
+      await onRename?.(editValue.trim());
     }
     isEditing = false;
   }
