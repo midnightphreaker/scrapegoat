@@ -21,6 +21,15 @@ export type PipelineJobStatus =
   (typeof PipelineJobStatus)[keyof typeof PipelineJobStatus];
 
 /**
+ * Simple progress shape consumed by the frontend and API consumers.
+ * Maps from the richer ScraperProgress during serialization.
+ */
+export interface JobProgress {
+  pages: number;
+  totalPages: number;
+}
+
+/**
  * Public interface for pipeline jobs exposed through API boundaries.
  * Contains only serializable fields suitable for JSON transport.
  */
@@ -33,10 +42,10 @@ export interface PipelineJob {
   version: string | null;
   /** Current pipeline status of the job. */
   status: PipelineJobStatus;
-  /** Detailed progress information. */
-  progress: ScraperProgress | null;
-  /** Error information if the job failed. */
-  error: { message: string } | null;
+  /** Simplified progress information for frontend/API consumers. */
+  progress: JobProgress | null;
+  /** Error message string if the job failed. */
+  error: string | null;
   /** Timestamp when the job was created. */
   createdAt: Date;
   /** Timestamp when the job started running. */
@@ -70,6 +79,8 @@ export interface InternalPipelineJob extends Omit<PipelineJob, "version" | "erro
   version: string;
   /** Error object if the job failed. */
   error: Error | null;
+  /** Raw scraper progress for internal use (richer than the public JobProgress). */
+  scraperProgress: ScraperProgress | null;
   /** AbortController to signal cancellation. */
   abortController: AbortController;
   /** Promise that resolves/rejects when the job finishes. */

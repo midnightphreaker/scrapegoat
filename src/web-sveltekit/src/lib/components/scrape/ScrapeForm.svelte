@@ -9,6 +9,7 @@
 	import Button from "$lib/components/ui/button/button.svelte";
 	import URLInput from "./URLInput.svelte";
 	import AdvancedOptions from "./AdvancedOptions.svelte";
+	import { jobsStore } from "$lib/stores/jobs.svelte";
 	import { Plus } from "@lucide/svelte";
 
 	const MAX_URLS = 10;
@@ -101,8 +102,9 @@
 							headers: Object.keys(advancedOptions.headers).length > 0 ? advancedOptions.headers : undefined,
 						},
 					};
-					await trpc.enqueueJob.mutate(input);
-				}
+				await trpc.enqueueJob.mutate(input);
+			}
+			jobsStore.fetch().catch(console.error);
 			}
 
 			// Reset form on success

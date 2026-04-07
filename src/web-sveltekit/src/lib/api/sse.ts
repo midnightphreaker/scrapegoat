@@ -29,6 +29,7 @@ export class JobEventSource {
         const response = await fetch("/api/trpc/jobs.getJobs", {
           signal: this.abortController.signal,
         });
+        if (!response.ok) return;
         const data = await response.json();
         for (const job of data.result?.data?.jobs || []) {
           this.callback({ type: "job-status", payload: job });
