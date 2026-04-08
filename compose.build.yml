@@ -1,0 +1,8 @@
+services:
+  scrapegoat:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: git.phrk.org/pub/scrapegoat:latest
+    container_name: scrapegoat
+    network_mode: host
