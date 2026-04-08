@@ -215,9 +215,9 @@ describe("Database Migrations", () => {
     await applyMigrations(connection);
     await expect(applyMigrations(connection)).resolves.not.toThrow();
 
-    // Verify migrations table still has exactly 4 entries
+    // Verify migrations table still has exactly 5 entries (000-004)
     const result = await pool.query("SELECT COUNT(*) as count FROM _schema_migrations");
-    expect(Number(result.rows[0].count)).toBe(4);
+    expect(Number(result.rows[0].count)).toBe(5);
   });
 
   it("should support basic CRUD operations on the schema", async () => {
