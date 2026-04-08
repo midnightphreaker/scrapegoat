@@ -1,4 +1,4 @@
-import type { DocumentMetadata } from "../types";
+import type { ScrapeMode } from "../scraper/types";
 
 /**
  * Database page record type matching the pages table schema
@@ -10,22 +10,35 @@ export interface DbPage {
   title: string | null;
   etag: string | null;
   last_modified: string | null;
+  source_content_type: string | null;
   content_type: string | null;
-  screenshot_path: string | null; // Path to screenshot file (Phase 3B)
-  fetcher_type: string | null; // Which fetcher was used: 'auto', 'http', 'crawl4ai', 'file' (Phase 3B)
-  metadata: string | null; // JSON metadata including media/links from Crawl4AI (Phase 3B)
+  depth: number | null;
   created_at: string;
   updated_at: string;
 }
 
 /**
+ * Chunk-level metadata stored with each document chunk.
+ * Contains hierarchical information about the chunk's position within the page.
+ */
+export interface DbChunkMetadata {
+  level?: number; // Hierarchical level in document
+  path?: string[]; // Hierarchical path in document
+  // TODO: Check if `types` is properly used
+  types?: string[]; // Types of content in this chunk (e.g., "text", "code", "table")
+  // TODO: Enable additional metadata fields again once we have a clear schema for what metadata we want to store with each chunk.
+  // Allow for additional chunk-specific metadata
+  // [key: string]: unknown;
+}
+
+/**
  * Database document record type matching the documents table schema
  */
-export interface DbDocument {
+export interface DbChunk {
   id: string;
   page_id: number; // Foreign key to pages table
   content: string;
-  metadata: string; // JSON string of chunk-specific metadata (level, path, etc.)
+  metadata: DbChunkMetadata; // Chunk-specific metadata (level, path, etc.)
   sort_order: number;
   embedding: Buffer | null; // Binary blob for embeddings
   created_at: string;
@@ -36,36 +49,27 @@ export interface DbDocument {
  * Represents the result of a JOIN between the documents and pages tables.
  * It includes all fields from a document chunk plus the relevant page-level metadata.
  */
-export interface DbJoinedDocument extends DbDocument {
+export interface DbPageChunk extends DbChunk {
   url: string;
-  title: string | null;
-  content_type: string | null;
+  title?: string | null;
+  source_content_type?: string | null;
+  content_type?: string | null;
 }
 
 /**
- * Utility type for handling PostgreSQL query results that may be undefined
+ * Represents the ranking information for a search result, including both
+ * vector and full-text search ranks.
+ */
+export interface DbChunkRank {
+  score: number;
+  vec_rank?: number;
+  fts_rank?: number;
+}
+
+/**
+ * Utility type for handling SQLite query results that may be undefined
  */
 export type DbQueryResult<T> = T | undefined;
-
-/**
- * Maps raw database document with joined page data to the Document type used by the application.
- * Now uses the explicit DbJoinedDocument type for improved type safety.
- */
-export function mapDbDocumentToDocument(doc: DbJoinedDocument) {
-  const chunkMetadata = JSON.parse(doc.metadata) as DocumentMetadata;
-
-  return {
-    id: doc.id,
-    pageContent: doc.content,
-    metadata: {
-      ...chunkMetadata,
-      // Page-level fields are always available from joined queries
-      url: doc.url,
-      title: doc.title || "", // Convert null to empty string for consistency
-      ...(doc.content_type && { contentType: doc.content_type }),
-    } as DocumentMetadata,
-  };
-}
 
 /**
  * Search result type returned by the DocumentRetrieverService
@@ -74,7 +78,8 @@ export interface StoreSearchResult {
   url: string;
   content: string;
   score: number | null;
-  mimeType?: string;
+  mimeType?: string | null;
+  sourceMimeType?: string | null;
 }
 
 /**
@@ -110,30 +115,8 @@ export interface VersionScraperOptions {
   excludePatterns?: string[];
 
   // Processing options
+  scrapeMode?: ScrapeMode;
   headers?: Record<string, string>;
-
-  /**
-   * Explicit fetcher selection: 'auto', 'http', 'crawl4ai', or 'file'.
-   * Stored for reproducibility and audit trail.
-   */
-  fetcher?: "auto" | "http" | "crawl4ai" | "file";
-
-  /**
-   * @deprecated Use fetcher: 'crawl4ai' instead.
-   * Whether Crawl4AI was used for content fetching.
-   * Stored for reproducibility and audit trail.
-   */
-  useCrawl4AI?: boolean;
-
-  /**
-   * Crawl4AI-specific options
-   */
-  crawl4ai?: {
-    enableScreenshot?: boolean;
-    screenshotMode?: "viewport" | "full";
-    enableMedia?: boolean;
-    enableLinks?: boolean;
-  };
 }
 
 /**
@@ -255,36 +238,6 @@ export interface FindVersionResult {
 }
 
 /**
- * Validates if a status transition is allowed.
- * Prevents invalid state changes and ensures data consistency.
- */
-export function isValidStatusTransition(
-  currentStatus: VersionStatus,
-  newStatus: VersionStatus,
-): boolean {
-  // Define valid transitions for each status
-  const validTransitions: Record<VersionStatus, VersionStatus[]> = {
-    [VersionStatus.NOT_INDEXED]: [VersionStatus.QUEUED],
-    [VersionStatus.QUEUED]: [VersionStatus.RUNNING, VersionStatus.CANCELLED],
-    [VersionStatus.RUNNING]: [
-      VersionStatus.COMPLETED,
-      VersionStatus.FAILED,
-      VersionStatus.CANCELLED,
-    ],
-    [VersionStatus.COMPLETED]: [VersionStatus.UPDATING],
-    [VersionStatus.UPDATING]: [VersionStatus.RUNNING, VersionStatus.CANCELLED],
-    [VersionStatus.FAILED]: [
-      VersionStatus.QUEUED, // Allow retry
-    ],
-    [VersionStatus.CANCELLED]: [
-      VersionStatus.QUEUED, // Allow retry
-    ],
-  };
-
-  return validTransitions[currentStatus]?.includes(newStatus) ?? false;
-}
-
-/**
  * Gets a human-readable description of a version status.
  */
 export function getStatusDescription(status: VersionStatus): string {
@@ -305,24 +258,35 @@ export function getStatusDescription(status: VersionStatus): string {
  * Checks if a status represents a final state (job completed).
  */
 export function isFinalStatus(status: VersionStatus): boolean {
-  return (
-    [
-      VersionStatus.COMPLETED,
-      VersionStatus.FAILED,
-      VersionStatus.CANCELLED,
-    ] as VersionStatus[]
-  ).includes(status);
+  return [
+    VersionStatus.COMPLETED,
+    VersionStatus.FAILED,
+    VersionStatus.CANCELLED,
+  ].includes(status);
 }
 
 /**
  * Checks if a status represents an active state (job in progress).
  */
 export function isActiveStatus(status: VersionStatus): boolean {
-  return (
-    [
-      VersionStatus.QUEUED,
-      VersionStatus.RUNNING,
-      VersionStatus.UPDATING,
-    ] as VersionStatus[]
-  ).includes(status);
+  return [VersionStatus.QUEUED, VersionStatus.RUNNING, VersionStatus.UPDATING].includes(
+    status,
+  );
+}
+
+/**
+ * Library version row returned by queryLibraryVersions.
+ * Aggregates version metadata with document counts and indexing status.
+ */
+export interface DbLibraryVersion {
+  library: string;
+  version: string;
+  versionId: number;
+  status: VersionStatus;
+  progressPages: number;
+  progressMaxPages: number;
+  sourceUrl: string | null;
+  documentCount: number;
+  uniqueUrlCount: number;
+  indexedAt: string | null;
 }

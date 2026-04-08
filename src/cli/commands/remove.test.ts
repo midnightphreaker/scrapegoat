@@ -1,7 +1,10 @@
 /** Unit test for removeAction */
 
-import { Command } from "commander";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import yargs from "yargs";
+import { createRemoveCommand } from "./remove";
+
+const stdoutWriteMock = vi.fn();
 
 const removeFn = vi.fn(async () => {});
 vi.mock("../../store", () => ({
@@ -10,19 +13,47 @@ vi.mock("../../store", () => ({
     removeAllDocuments: removeFn,
   })),
 }));
-
-import { removeAction } from "./remove";
-
-function _cmd() {
-  return new Command();
-}
-beforeEach(() => {
-  vi.clearAllMocks();
+vi.mock("../utils", () => ({
+  getGlobalOptions: vi.fn(() => ({ storePath: undefined })),
+  getEventBus: vi.fn(() => ({
+    on: vi.fn(),
+    emit: vi.fn(),
+  })),
+  CliContext: {},
+  setupLogging: vi.fn(),
+}));
+vi.mock("../../utils/config", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("../../utils/config")>();
+  return {
+    ...actual,
+    loadConfig: vi.fn(() => ({
+      app: { storePath: "/mock/store" },
+    })),
+  };
 });
 
-describe("removeAction", () => {
+describe("remove command", () => {
+  let stdoutWriteSpy: { mockRestore: () => void };
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    stdoutWriteMock.mockReset();
+    stdoutWriteSpy = vi
+      .spyOn(process.stdout, "write")
+      .mockImplementation(stdoutWriteMock as any);
+  });
+
+  afterEach(() => {
+    stdoutWriteSpy.mockRestore();
+  });
+
   it("calls removeAllDocuments", async () => {
-    await removeAction("react", { version: "18.0.0", serverUrl: undefined });
+    const parser = yargs().scriptName("test");
+    createRemoveCommand(parser);
+
+    await parser.parse("remove react --version 18.0.0");
+
     expect(removeFn).toHaveBeenCalledWith("react", "18.0.0");
+    expect(stdoutWriteMock).toHaveBeenCalledWith("Successfully removed react@18.0.0.\n");
   });
 });

@@ -18,6 +18,7 @@ export interface HtmlSanitizerOptions {
 export class HtmlSanitizerMiddleware implements ContentProcessorMiddleware {
   // Default selectors to remove
   private readonly defaultSelectorsToRemove = [
+    "aside",
     "nav",
     "footer",
     "script",
@@ -40,18 +41,27 @@ export class HtmlSanitizerMiddleware implements ContentProcessorMiddleware {
     ".cookie-consent",
     ".hidden",
     ".hide",
+    ".mobile-menu",
+    ".mobile-nav",
     ".modal",
     ".nav-bar",
     ".overlay",
     ".popup",
     ".promo",
     ".mw-editsection",
+    ".search-bar",
+    ".search-form",
     ".side-bar",
+    ".sidebar",
     ".social-share",
     ".sticky",
+    ".table-of-contents",
+    ".toc",
     "#ads",
     "#banner",
     "#cookieBanner",
+    "#mobile-menu",
+    "#mobile-nav",
     "#modal",
     "#nav",
     "#overlay",
@@ -70,8 +80,11 @@ export class HtmlSanitizerMiddleware implements ContentProcessorMiddleware {
     ".pagination",
     // '[role="alert"]', // Keep commented
     '[role="banner"]',
+    '[role="complementary"]',
     '[role="dialog"]',
     '[role="alertdialog"]',
+    '[role="navigation"]',
+    '[role="search"]',
     '[role="region"][aria-label*="skip" i]',
     '[aria-modal="true"]',
     ".noprint",
@@ -89,6 +102,10 @@ export class HtmlSanitizerMiddleware implements ContentProcessorMiddleware {
     }
 
     try {
+      // Capture the body content before sanitization for safety net
+      const bodyBeforeSanitization = $("body").html() || "";
+      const textLengthBefore = $("body").text().trim().length;
+
       // Remove unwanted elements using Cheerio
       const selectorsToRemove = [
         ...(context.options.excludeSelectors || []), // Use options from the context
@@ -101,9 +118,14 @@ export class HtmlSanitizerMiddleware implements ContentProcessorMiddleware {
       for (const selector of selectorsToRemove) {
         try {
           const elements = $(selector); // Use Cheerio selector
-          const count = elements.length;
+          // Filter out html and body tags to prevent removing them or their entire content
+          const filteredElements = elements.filter(function () {
+            const tagName = $(this).prop("tagName")?.toLowerCase();
+            return tagName !== "html" && tagName !== "body";
+          });
+          const count = filteredElements.length;
           if (count > 0) {
-            elements.remove(); // Use Cheerio remove
+            filteredElements.remove(); // Use Cheerio remove
             removedCount += count;
           }
         } catch (selectorError) {
@@ -118,6 +140,16 @@ export class HtmlSanitizerMiddleware implements ContentProcessorMiddleware {
         }
       }
       logger.debug(`Removed ${removedCount} elements for ${context.source}`);
+
+      // Safety net: Check if sanitization removed all content
+      const textLengthAfter = $("body").text().trim().length;
+      if (textLengthBefore > 0 && textLengthAfter === 0) {
+        logger.warn(
+          `⚠️  Sanitization removed all content from ${context.source}. Reverting to pre-sanitization state.`,
+        );
+        // Restore the body content
+        $("body").html(bodyBeforeSanitization);
+      }
 
       // The context.dom object ($) has been modified in place.
     } catch (error) {

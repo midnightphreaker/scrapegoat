@@ -1,24 +1,28 @@
-import { Document } from "@langchain/core/documents";
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import type { AppConfig } from "../utils/config";
+import { loadConfig } from "../utils/config";
 import { DocumentRetrieverService } from "./DocumentRetrieverService";
 import { DocumentStore } from "./DocumentStore";
+import type { DbChunkRank, DbPageChunk } from "./types";
 
 vi.mock("./DocumentStore");
-vi.mock("../utils/logger");
 
-describe("DocumentRetrieverService (consolidated logic)", () => {
-  let retrieverService: DocumentRetrieverService;
-  let mockDocumentStore: DocumentStore;
+describe("DocumentRetrieverService", () => {
+  let store: DocumentStore;
+  let service: DocumentRetrieverService;
+  let config: AppConfig;
 
-  beforeEach(() => {
+  beforeEach(async () => {
     vi.clearAllMocks();
-    mockDocumentStore = new DocumentStore("mock_connection_string");
-    retrieverService = new DocumentRetrieverService(mockDocumentStore);
+    config = loadConfig();
+    store = new DocumentStore({} as any, config);
+    await store.initialize();
+    service = new DocumentRetrieverService(store, config);
   });
 
   it("should return an empty array when no documents are found", async () => {
-    vi.spyOn(mockDocumentStore, "findByContent").mockResolvedValue([]);
-    const results = await retrieverService.search("lib", "1.0.0", "query");
+    vi.spyOn(store, "findByContent").mockResolvedValue([]);
+    const results = await service.search("lib", "1.0.0", "query");
     expect(results).toEqual([]);
   });
 
@@ -27,45 +31,47 @@ describe("DocumentRetrieverService (consolidated logic)", () => {
     const version = "1.0.0";
     const query = "test";
     // Two initial hits from the same URL, with overlapping context
-    const initialResult1 = new Document({
+    const initialResult1 = {
       id: "doc1",
-      pageContent: "Chunk A",
-      metadata: { url: "url", score: 0.9 },
-    });
-    const initialResult2 = new Document({
+      content: "Chunk A",
+      url: "url",
+      score: 0.9,
+      sort_order: 1,
+      metadata: {},
+    } as DbPageChunk & DbChunkRank;
+    const initialResult2 = {
       id: "doc3",
-      pageContent: "Chunk C",
-      metadata: { url: "url", score: 0.8 },
-    });
-    const doc2 = new Document({
+      content: "Chunk C",
+      url: "url",
+      score: 0.8,
+      sort_order: 3,
+      metadata: {},
+    } as DbPageChunk & DbChunkRank;
+    const doc2 = {
       id: "doc2",
-      pageContent: "Chunk B",
-      metadata: { url: "url" },
-    });
+      content: "Chunk B",
+      url: "url",
+      sort_order: 2,
+      metadata: {},
+    } as DbPageChunk & DbChunkRank;
 
-    vi.spyOn(mockDocumentStore, "findByContent").mockResolvedValue([
-      initialResult1,
-      initialResult2,
+    vi.spyOn(store, "findByContent").mockResolvedValue([initialResult1, initialResult2]);
+
+    vi.spyOn(store, "findParentChunk").mockImplementation(async () => null);
+    vi.spyOn(store, "findPrecedingSiblingChunks").mockImplementation(async () => []);
+    vi.spyOn(store, "findChildChunks").mockImplementation(async (_lib, _ver, id) =>
+      id === "doc1" ? [doc2] : [],
+    );
+    vi.spyOn(store, "findSubsequentSiblingChunks").mockImplementation(
+      async (_lib, _ver, id) => (id === "doc1" ? [doc2] : []),
+    );
+    const findChunksByIdsSpy = vi.spyOn(store, "findChunksByIds").mockResolvedValue([
+      initialResult1, // doc1 (Chunk A)
+      doc2, // doc2 (Chunk B)
+      initialResult2, // doc3 (Chunk C)
     ]);
-    vi.spyOn(mockDocumentStore, "findParentChunk").mockImplementation(async () => null);
-    vi.spyOn(mockDocumentStore, "findPrecedingSiblingChunks").mockImplementation(
-      async () => [],
-    );
-    vi.spyOn(mockDocumentStore, "findChildChunks").mockImplementation(
-      async (_lib, _ver, id) => (id === "doc1" ? [doc2] : []),
-    );
-    vi.spyOn(mockDocumentStore, "findSubsequentSiblingChunks").mockImplementation(
-      async (_lib, _ver, id) => (id === "doc1" ? [doc2] : []),
-    );
-    const findChunksByIdsSpy = vi
-      .spyOn(mockDocumentStore, "findChunksByIds")
-      .mockResolvedValue([
-        initialResult1, // doc1 (Chunk A)
-        doc2, // doc2 (Chunk B)
-        initialResult2, // doc3 (Chunk C)
-      ]);
 
-    const results = await retrieverService.search(library, version, query);
+    const results = await service.search(library, version, query);
 
     expect(findChunksByIdsSpy).toHaveBeenCalledWith(
       library,
@@ -85,32 +91,36 @@ describe("DocumentRetrieverService (consolidated logic)", () => {
     const library = "lib";
     const version = "1.0.0";
     const query = "test";
-    const initialResult = new Document({
+    const initialResult = {
       id: "doc1",
-      pageContent: "Main chunk",
-      metadata: { url: "url", score: 0.7 },
-    });
-    const parent = new Document({
+      content: "Main chunk",
+      score: 0.7,
+      url: "url",
+      metadata: {},
+    } as DbPageChunk & DbChunkRank;
+    const parent = {
       id: "parent1",
-      pageContent: "Parent",
-      metadata: { url: "url" },
-    });
-    const child = new Document({
+      content: "Parent",
+      url: "url",
+      metadata: {},
+    } as DbPageChunk & DbChunkRank;
+    const child = {
       id: "child1",
-      pageContent: "Child",
-      metadata: { url: "url" },
-    });
+      content: "Child",
+      url: "url",
+      metadata: {},
+    } as DbPageChunk & DbChunkRank;
 
-    vi.spyOn(mockDocumentStore, "findByContent").mockResolvedValue([initialResult]);
-    vi.spyOn(mockDocumentStore, "findParentChunk").mockResolvedValue(parent);
-    vi.spyOn(mockDocumentStore, "findPrecedingSiblingChunks").mockResolvedValue([]);
-    vi.spyOn(mockDocumentStore, "findChildChunks").mockResolvedValue([child]);
-    vi.spyOn(mockDocumentStore, "findSubsequentSiblingChunks").mockResolvedValue([]);
+    vi.spyOn(store, "findByContent").mockResolvedValue([initialResult]);
+    vi.spyOn(store, "findParentChunk").mockResolvedValue(parent);
+    vi.spyOn(store, "findPrecedingSiblingChunks").mockResolvedValue([]);
+    vi.spyOn(store, "findChildChunks").mockResolvedValue([child]);
+    vi.spyOn(store, "findSubsequentSiblingChunks").mockResolvedValue([]);
     const findChunksByIdsSpy = vi
-      .spyOn(mockDocumentStore, "findChunksByIds")
+      .spyOn(store, "findChunksByIds")
       .mockResolvedValue([parent, initialResult, child]);
 
-    const results = await retrieverService.search(library, version, query);
+    const results = await service.search(library, version, query);
 
     expect(findChunksByIdsSpy).toHaveBeenCalledWith(
       library,
@@ -130,42 +140,44 @@ describe("DocumentRetrieverService (consolidated logic)", () => {
     const library = "lib";
     const version = "1.0.0";
     const query = "test";
-    const docA = new Document({
+    const docA = {
       id: "a1",
-      pageContent: "A1",
-      metadata: { url: "urlA", score: 0.8 },
-    });
-    const docB = new Document({
+      content: "A1",
+      url: "urlA",
+      score: 0.8,
+      metadata: {},
+    } as DbPageChunk & DbChunkRank;
+    const docB = {
       id: "b1",
-      pageContent: "B1",
-      metadata: { url: "urlB", score: 0.9 },
+      content: "B1",
+      url: "urlB",
+      score: 0.9,
+      metadata: {},
+    } as DbPageChunk & DbChunkRank;
+
+    vi.spyOn(store, "findByContent").mockResolvedValue([docA, docB]);
+    vi.spyOn(store, "findParentChunk").mockResolvedValue(null);
+    vi.spyOn(store, "findPrecedingSiblingChunks").mockResolvedValue([]);
+    vi.spyOn(store, "findChildChunks").mockResolvedValue([]);
+    vi.spyOn(store, "findSubsequentSiblingChunks").mockResolvedValue([]);
+    vi.spyOn(store, "findChunksByIds").mockImplementation(async (_lib, _ver, ids) => {
+      if (ids.includes("a1")) return [docA];
+      if (ids.includes("b1")) return [docB];
+      return [];
     });
 
-    vi.spyOn(mockDocumentStore, "findByContent").mockResolvedValue([docA, docB]);
-    vi.spyOn(mockDocumentStore, "findParentChunk").mockResolvedValue(null);
-    vi.spyOn(mockDocumentStore, "findPrecedingSiblingChunks").mockResolvedValue([]);
-    vi.spyOn(mockDocumentStore, "findChildChunks").mockResolvedValue([]);
-    vi.spyOn(mockDocumentStore, "findSubsequentSiblingChunks").mockResolvedValue([]);
-    vi.spyOn(mockDocumentStore, "findChunksByIds").mockImplementation(
-      async (_lib, _ver, ids) => {
-        if (ids.includes("a1")) return [docA];
-        if (ids.includes("b1")) return [docB];
-        return [];
-      },
-    );
-
-    const results = await retrieverService.search(library, version, query);
+    const results = await service.search(library, version, query);
 
     expect(results).toEqual([
-      {
-        content: "A1",
-        url: "urlA",
-        score: 0.8,
-      },
       {
         content: "B1",
         url: "urlB",
         score: 0.9,
+      },
+      {
+        content: "A1",
+        url: "urlA",
+        score: 0.8,
       },
     ]);
   });
@@ -174,22 +186,24 @@ describe("DocumentRetrieverService (consolidated logic)", () => {
     const library = "lib";
     const version = "1.0.0";
     const query = "test";
-    const initialResult = new Document({
+    const initialResult = {
       id: "doc1",
-      pageContent: "Main chunk",
-      metadata: { url: "url", score: 0.5 },
-    });
+      content: "Main chunk",
+      url: "url",
+      score: 0.5,
+      metadata: {},
+    } as DbPageChunk & DbChunkRank;
 
-    vi.spyOn(mockDocumentStore, "findByContent").mockResolvedValue([initialResult]);
-    vi.spyOn(mockDocumentStore, "findParentChunk").mockResolvedValue(null);
-    vi.spyOn(mockDocumentStore, "findPrecedingSiblingChunks").mockResolvedValue([]);
-    vi.spyOn(mockDocumentStore, "findChildChunks").mockResolvedValue([]);
-    vi.spyOn(mockDocumentStore, "findSubsequentSiblingChunks").mockResolvedValue([]);
+    vi.spyOn(store, "findByContent").mockResolvedValue([initialResult]);
+    vi.spyOn(store, "findParentChunk").mockResolvedValue(null);
+    vi.spyOn(store, "findPrecedingSiblingChunks").mockResolvedValue([]);
+    vi.spyOn(store, "findChildChunks").mockResolvedValue([]);
+    vi.spyOn(store, "findSubsequentSiblingChunks").mockResolvedValue([]);
     const findChunksByIdsSpy = vi
-      .spyOn(mockDocumentStore, "findChunksByIds")
+      .spyOn(store, "findChunksByIds")
       .mockResolvedValue([initialResult]);
 
-    const results = await retrieverService.search(library, version, query);
+    const results = await service.search(library, version, query);
 
     expect(findChunksByIdsSpy).toHaveBeenCalledWith(
       library,
@@ -210,27 +224,24 @@ describe("DocumentRetrieverService (consolidated logic)", () => {
     const version = "1.0.0";
     const query = "test";
     const limit = 3;
-    const initialResult = new Document({
+    const initialResult = {
       id: "doc1",
-      pageContent: "Main chunk",
-      metadata: { url: "url", score: 0.5 },
-    });
+      content: "Main chunk",
+      url: "url",
+      score: 0.5,
+      metadata: {},
+    } as DbPageChunk & DbChunkRank;
 
-    vi.spyOn(mockDocumentStore, "findByContent").mockResolvedValue([initialResult]);
-    vi.spyOn(mockDocumentStore, "findParentChunk").mockResolvedValue(null);
-    vi.spyOn(mockDocumentStore, "findPrecedingSiblingChunks").mockResolvedValue([]);
-    vi.spyOn(mockDocumentStore, "findChildChunks").mockResolvedValue([]);
-    vi.spyOn(mockDocumentStore, "findSubsequentSiblingChunks").mockResolvedValue([]);
-    vi.spyOn(mockDocumentStore, "findChunksByIds").mockResolvedValue([initialResult]);
+    vi.spyOn(store, "findByContent").mockResolvedValue([initialResult]);
+    vi.spyOn(store, "findParentChunk").mockResolvedValue(null);
+    vi.spyOn(store, "findPrecedingSiblingChunks").mockResolvedValue([]);
+    vi.spyOn(store, "findChildChunks").mockResolvedValue([]);
+    vi.spyOn(store, "findSubsequentSiblingChunks").mockResolvedValue([]);
+    vi.spyOn(store, "findChunksByIds").mockResolvedValue([initialResult]);
 
-    const results = await retrieverService.search(library, version, query, limit);
+    const results = await service.search(library, version, query, limit);
 
-    expect(mockDocumentStore.findByContent).toHaveBeenCalledWith(
-      library,
-      version,
-      query,
-      limit,
-    );
+    expect(store.findByContent).toHaveBeenCalledWith(library, version, query, limit);
     expect(results).toEqual([
       {
         content: "Main chunk",
@@ -247,20 +258,24 @@ describe("DocumentRetrieverService (consolidated logic)", () => {
     const mimeType = "text/html";
 
     // Create a document with mimeType in metadata
-    const initialResult = new Document({
+    const initialResult = {
       id: "doc1",
-      pageContent: "HTML content",
-      metadata: { url: "https://example.com", score: 0.9, mimeType },
-    });
+      content: "HTML content",
+      url: "https://example.com",
+      score: 0.9,
+      source_content_type: mimeType,
+      content_type: mimeType,
+      metadata: {},
+    } as DbPageChunk & DbChunkRank;
 
-    vi.spyOn(mockDocumentStore, "findByContent").mockResolvedValue([initialResult]);
-    vi.spyOn(mockDocumentStore, "findParentChunk").mockResolvedValue(null);
-    vi.spyOn(mockDocumentStore, "findPrecedingSiblingChunks").mockResolvedValue([]);
-    vi.spyOn(mockDocumentStore, "findSubsequentSiblingChunks").mockResolvedValue([]);
-    vi.spyOn(mockDocumentStore, "findChildChunks").mockResolvedValue([]);
-    vi.spyOn(mockDocumentStore, "findChunksByIds").mockResolvedValue([initialResult]);
+    vi.spyOn(store, "findByContent").mockResolvedValue([initialResult]);
+    vi.spyOn(store, "findParentChunk").mockResolvedValue(null);
+    vi.spyOn(store, "findPrecedingSiblingChunks").mockResolvedValue([]);
+    vi.spyOn(store, "findSubsequentSiblingChunks").mockResolvedValue([]);
+    vi.spyOn(store, "findChildChunks").mockResolvedValue([]);
+    vi.spyOn(store, "findChunksByIds").mockResolvedValue([initialResult]);
 
-    const results = await retrieverService.search(library, version, query);
+    const results = await service.search(library, version, query);
 
     expect(results).toHaveLength(1);
     expect(results[0]).toEqual({
@@ -268,6 +283,7 @@ describe("DocumentRetrieverService (consolidated logic)", () => {
       content: "HTML content",
       score: 0.9,
       mimeType: "text/html",
+      sourceMimeType: "text/html",
     });
   });
 
@@ -277,20 +293,22 @@ describe("DocumentRetrieverService (consolidated logic)", () => {
     const query = "test";
 
     // Create a document without mimeType in metadata
-    const initialResult = new Document({
+    const initialResult = {
       id: "doc1",
-      pageContent: "Plain content",
-      metadata: { url: "https://example.com", score: 0.9 },
-    });
+      content: "Plain content",
+      url: "https://example.com",
+      score: 0.9,
+      metadata: {},
+    } as DbPageChunk & DbChunkRank;
 
-    vi.spyOn(mockDocumentStore, "findByContent").mockResolvedValue([initialResult]);
-    vi.spyOn(mockDocumentStore, "findParentChunk").mockResolvedValue(null);
-    vi.spyOn(mockDocumentStore, "findPrecedingSiblingChunks").mockResolvedValue([]);
-    vi.spyOn(mockDocumentStore, "findSubsequentSiblingChunks").mockResolvedValue([]);
-    vi.spyOn(mockDocumentStore, "findChildChunks").mockResolvedValue([]);
-    vi.spyOn(mockDocumentStore, "findChunksByIds").mockResolvedValue([initialResult]);
+    vi.spyOn(store, "findByContent").mockResolvedValue([initialResult]);
+    vi.spyOn(store, "findParentChunk").mockResolvedValue(null);
+    vi.spyOn(store, "findPrecedingSiblingChunks").mockResolvedValue([]);
+    vi.spyOn(store, "findSubsequentSiblingChunks").mockResolvedValue([]);
+    vi.spyOn(store, "findChildChunks").mockResolvedValue([]);
+    vi.spyOn(store, "findChunksByIds").mockResolvedValue([initialResult]);
 
-    const results = await retrieverService.search(library, version, query);
+    const results = await service.search(library, version, query);
 
     expect(results).toHaveLength(1);
     expect(results[0]).toEqual({
@@ -298,6 +316,7 @@ describe("DocumentRetrieverService (consolidated logic)", () => {
       content: "Plain content",
       score: 0.9,
       mimeType: undefined,
+      sourceMimeType: undefined,
     });
   });
 
@@ -308,45 +327,38 @@ describe("DocumentRetrieverService (consolidated logic)", () => {
       const query = "test";
 
       // Child chunk with path ["Chapter 1", "Section 1.1"]
-      const childResult = new Document({
+      const childResult = {
         id: "child1",
-        pageContent: "Child content",
+        content: "Child content",
+        url: "https://example.com",
+        score: 0.8,
         metadata: {
-          url: "https://example.com",
-          score: 0.8,
           path: ["Chapter 1", "Section 1.1"],
           level: 2,
         },
-      });
+      } as DbPageChunk & DbChunkRank;
 
       // Parent chunk with path ["Chapter 1"]
-      const parentChunk = new Document({
+      const parentChunk = {
         id: "parent1",
-        pageContent: "Parent content",
+        content: "Parent content",
+        url: "https://example.com",
         metadata: {
-          url: "https://example.com",
           path: ["Chapter 1"],
           level: 1,
         },
-      });
+      } as DbPageChunk & DbChunkRank;
 
-      vi.spyOn(mockDocumentStore, "findByContent").mockResolvedValue([childResult]);
-      vi.spyOn(mockDocumentStore, "findParentChunk").mockResolvedValue(parentChunk);
-      vi.spyOn(mockDocumentStore, "findPrecedingSiblingChunks").mockResolvedValue([]);
-      vi.spyOn(mockDocumentStore, "findSubsequentSiblingChunks").mockResolvedValue([]);
-      vi.spyOn(mockDocumentStore, "findChildChunks").mockResolvedValue([]);
-      vi.spyOn(mockDocumentStore, "findChunksByIds").mockResolvedValue([
-        parentChunk,
-        childResult,
-      ]);
+      vi.spyOn(store, "findByContent").mockResolvedValue([childResult]);
+      vi.spyOn(store, "findParentChunk").mockResolvedValue(parentChunk);
+      vi.spyOn(store, "findPrecedingSiblingChunks").mockResolvedValue([]);
+      vi.spyOn(store, "findSubsequentSiblingChunks").mockResolvedValue([]);
+      vi.spyOn(store, "findChildChunks").mockResolvedValue([]);
+      vi.spyOn(store, "findChunksByIds").mockResolvedValue([parentChunk, childResult]);
 
-      const results = await retrieverService.search(library, version, query);
+      const results = await service.search(library, version, query);
 
-      expect(mockDocumentStore.findParentChunk).toHaveBeenCalledWith(
-        library,
-        version,
-        "child1",
-      );
+      expect(store.findParentChunk).toHaveBeenCalledWith(library, version, "child1");
       expect(results).toEqual([
         {
           url: "https://example.com",
@@ -363,63 +375,61 @@ describe("DocumentRetrieverService (consolidated logic)", () => {
       const query = "test";
 
       // Main result chunk
-      const mainResult = new Document({
+      const mainResult = {
         id: "main1",
-        pageContent: "Main content",
+        content: "Main content",
+        url: "https://example.com",
+        score: 0.9,
         metadata: {
-          url: "https://example.com",
-          score: 0.9,
           path: ["Chapter 1", "Section 1.2"],
           level: 2,
         },
-      });
+      } as DbPageChunk & DbChunkRank;
 
       // Preceding sibling with same path level
-      const precedingSibling = new Document({
+      const precedingSibling = {
         id: "preceding1",
-        pageContent: "Preceding content",
+        content: "Preceding content",
+        url: "https://example.com",
         metadata: {
-          url: "https://example.com",
           path: ["Chapter 1", "Section 1.1"],
           level: 2,
         },
-      });
+      } as DbPageChunk & DbChunkRank;
 
       // Subsequent sibling with same path level
-      const subsequentSibling = new Document({
+      const subsequentSibling = {
         id: "subsequent1",
-        pageContent: "Subsequent content",
+        content: "Subsequent content",
+        url: "https://example.com",
         metadata: {
-          url: "https://example.com",
           path: ["Chapter 1", "Section 1.3"],
           level: 2,
         },
-      });
+      } as DbPageChunk & DbChunkRank;
 
-      vi.spyOn(mockDocumentStore, "findByContent").mockResolvedValue([mainResult]);
-      vi.spyOn(mockDocumentStore, "findParentChunk").mockResolvedValue(null);
-      vi.spyOn(mockDocumentStore, "findPrecedingSiblingChunks").mockResolvedValue([
-        precedingSibling,
-      ]);
-      vi.spyOn(mockDocumentStore, "findSubsequentSiblingChunks").mockResolvedValue([
+      vi.spyOn(store, "findByContent").mockResolvedValue([mainResult]);
+      vi.spyOn(store, "findParentChunk").mockResolvedValue(null);
+      vi.spyOn(store, "findPrecedingSiblingChunks").mockResolvedValue([precedingSibling]);
+      vi.spyOn(store, "findSubsequentSiblingChunks").mockResolvedValue([
         subsequentSibling,
       ]);
-      vi.spyOn(mockDocumentStore, "findChildChunks").mockResolvedValue([]);
-      vi.spyOn(mockDocumentStore, "findChunksByIds").mockResolvedValue([
+      vi.spyOn(store, "findChildChunks").mockResolvedValue([]);
+      vi.spyOn(store, "findChunksByIds").mockResolvedValue([
         precedingSibling,
         mainResult,
         subsequentSibling,
       ]);
 
-      const results = await retrieverService.search(library, version, query);
+      const results = await service.search(library, version, query);
 
-      expect(mockDocumentStore.findPrecedingSiblingChunks).toHaveBeenCalledWith(
+      expect(store.findPrecedingSiblingChunks).toHaveBeenCalledWith(
         library,
         version,
         "main1",
         1,
       );
-      expect(mockDocumentStore.findSubsequentSiblingChunks).toHaveBeenCalledWith(
+      expect(store.findSubsequentSiblingChunks).toHaveBeenCalledWith(
         library,
         version,
         "main1",
@@ -441,57 +451,52 @@ describe("DocumentRetrieverService (consolidated logic)", () => {
       const query = "test";
 
       // Parent result chunk
-      const parentResult = new Document({
+      const parentResult = {
         id: "parent1",
-        pageContent: "Parent section",
+        content: "Parent section",
+        url: "https://example.com",
+        score: 0.7,
         metadata: {
-          url: "https://example.com",
-          score: 0.7,
           path: ["Chapter 1"],
           level: 1,
         },
-      });
+      } as DbPageChunk & DbChunkRank;
 
       // Child chunks at deeper level
-      const child1 = new Document({
+      const child1 = {
         id: "child1",
-        pageContent: "First subsection",
+        content: "First subsection",
+        url: "https://example.com",
         metadata: {
-          url: "https://example.com",
           path: ["Chapter 1", "Section 1.1"],
           level: 2,
         },
-      });
+      } as DbPageChunk & DbChunkRank;
 
-      const child2 = new Document({
+      const child2 = {
         id: "child2",
-        pageContent: "Second subsection",
+        content: "Second subsection",
+        url: "https://example.com",
         metadata: {
-          url: "https://example.com",
           path: ["Chapter 1", "Section 1.2"],
           level: 2,
         },
-      });
+      } as DbPageChunk & DbChunkRank;
 
-      vi.spyOn(mockDocumentStore, "findByContent").mockResolvedValue([parentResult]);
-      vi.spyOn(mockDocumentStore, "findParentChunk").mockResolvedValue(null);
-      vi.spyOn(mockDocumentStore, "findPrecedingSiblingChunks").mockResolvedValue([]);
-      vi.spyOn(mockDocumentStore, "findSubsequentSiblingChunks").mockResolvedValue([]);
-      vi.spyOn(mockDocumentStore, "findChildChunks").mockResolvedValue([child1, child2]);
-      vi.spyOn(mockDocumentStore, "findChunksByIds").mockResolvedValue([
+      vi.spyOn(store, "findByContent").mockResolvedValue([parentResult]);
+      vi.spyOn(store, "findParentChunk").mockResolvedValue(null);
+      vi.spyOn(store, "findPrecedingSiblingChunks").mockResolvedValue([]);
+      vi.spyOn(store, "findSubsequentSiblingChunks").mockResolvedValue([]);
+      vi.spyOn(store, "findChildChunks").mockResolvedValue([child1, child2]);
+      vi.spyOn(store, "findChunksByIds").mockResolvedValue([
         parentResult,
         child1,
         child2,
       ]);
 
-      const results = await retrieverService.search(library, version, query);
+      const results = await service.search(library, version, query);
 
-      expect(mockDocumentStore.findChildChunks).toHaveBeenCalledWith(
-        library,
-        version,
-        "parent1",
-        3,
-      );
+      expect(store.findChildChunks).toHaveBeenCalledWith(library, version, "parent1", 3);
       expect(results).toEqual([
         {
           url: "https://example.com",
@@ -508,38 +513,40 @@ describe("DocumentRetrieverService (consolidated logic)", () => {
       const query = "test";
 
       // Multiple chunks from same document/URL, returned out of sort_order
-      const chunk3 = new Document({
+      const chunk3 = {
         id: "chunk3",
-        pageContent: "Third chunk",
+        content: "Third chunk",
+        url: "https://example.com",
+        score: 0.6,
+        sort_order: 3,
         metadata: {
-          url: "https://example.com",
-          score: 0.6,
           path: ["Section C"],
           level: 1,
         },
-      });
+      } as DbPageChunk & DbChunkRank;
 
-      const chunk1 = new Document({
+      const chunk1 = {
         id: "chunk1",
-        pageContent: "First chunk",
+        content: "First chunk",
+        url: "https://example.com",
+        score: 0.8,
+        sort_order: 1,
         metadata: {
-          url: "https://example.com",
-          score: 0.8,
           path: ["Section A"],
           level: 1,
         },
-      });
+      } as DbPageChunk & DbChunkRank;
 
-      vi.spyOn(mockDocumentStore, "findByContent").mockResolvedValue([chunk3, chunk1]);
-      vi.spyOn(mockDocumentStore, "findParentChunk").mockResolvedValue(null);
-      vi.spyOn(mockDocumentStore, "findPrecedingSiblingChunks").mockResolvedValue([]);
-      vi.spyOn(mockDocumentStore, "findSubsequentSiblingChunks").mockResolvedValue([]);
-      vi.spyOn(mockDocumentStore, "findChildChunks").mockResolvedValue([]);
+      vi.spyOn(store, "findByContent").mockResolvedValue([chunk3, chunk1]);
+      vi.spyOn(store, "findParentChunk").mockResolvedValue(null);
+      vi.spyOn(store, "findPrecedingSiblingChunks").mockResolvedValue([]);
+      vi.spyOn(store, "findSubsequentSiblingChunks").mockResolvedValue([]);
+      vi.spyOn(store, "findChildChunks").mockResolvedValue([]);
 
       // findChunksByIds returns chunks in sort_order (simulating database ORDER BY)
-      vi.spyOn(mockDocumentStore, "findChunksByIds").mockResolvedValue([chunk1, chunk3]);
+      vi.spyOn(store, "findChunksByIds").mockResolvedValue([chunk1, chunk3]);
 
-      const results = await retrieverService.search(library, version, query);
+      const results = await service.search(library, version, query);
 
       // Should be reassembled in sort_order, not in initial search result order
       expect(results).toEqual([
@@ -558,73 +565,71 @@ describe("DocumentRetrieverService (consolidated logic)", () => {
       const query = "test";
 
       // Main search result - a subsection
-      const mainResult = new Document({
+      const mainResult = {
         id: "main1",
-        pageContent: "Key subsection content",
+        content: "Key subsection content",
+        url: "https://example.com",
+        score: 0.9,
         metadata: {
-          url: "https://example.com",
-          score: 0.9,
           path: ["Guide", "Installation", "Setup"],
           level: 3,
         },
-      });
+      } as DbPageChunk & DbChunkRank;
 
       // Parent at level 2
-      const parent = new Document({
+      const parent = {
         id: "parent1",
-        pageContent: "Installation overview",
+        content: "Installation overview",
+        url: "https://example.com",
         metadata: {
-          url: "https://example.com",
           path: ["Guide", "Installation"],
           level: 2,
         },
-      });
+      } as DbPageChunk & DbChunkRank;
 
       // Preceding sibling at same level
-      const precedingSibling = new Document({
+      const precedingSibling = {
         id: "preceding1",
-        pageContent: "Prerequisites section",
+        content: "Prerequisites section",
+        url: "https://example.com",
         metadata: {
-          url: "https://example.com",
           path: ["Guide", "Installation", "Prerequisites"],
           level: 3,
         },
-      });
+      } as DbPageChunk & DbChunkRank;
 
       // Child at deeper level
-      const child = new Document({
+      const child = {
         id: "child1",
-        pageContent: "Detailed setup steps",
+        content: "Detailed setup steps",
+        url: "https://example.com",
         metadata: {
-          url: "https://example.com",
           path: ["Guide", "Installation", "Setup", "Steps"],
           level: 4,
         },
-      });
+      } as DbPageChunk & DbChunkRank;
 
       // Subsequent sibling
-      const subsequentSibling = new Document({
+      const subsequentSibling = {
         id: "subsequent1",
-        pageContent: "Configuration section",
+        content: "Configuration section",
+        url: "https://example.com",
         metadata: {
-          url: "https://example.com",
           path: ["Guide", "Installation", "Configuration"],
           level: 3,
         },
-      });
+      } as DbPageChunk & DbChunkRank;
 
-      vi.spyOn(mockDocumentStore, "findByContent").mockResolvedValue([mainResult]);
-      vi.spyOn(mockDocumentStore, "findParentChunk").mockResolvedValue(parent);
-      vi.spyOn(mockDocumentStore, "findPrecedingSiblingChunks").mockResolvedValue([
-        precedingSibling,
-      ]);
-      vi.spyOn(mockDocumentStore, "findSubsequentSiblingChunks").mockResolvedValue([
+      vi.spyOn(store, "findByContent").mockResolvedValue([mainResult]);
+      vi.spyOn(store, "findParentChunk").mockResolvedValue(parent);
+      vi.spyOn(store, "findPrecedingSiblingChunks").mockResolvedValue([precedingSibling]);
+      vi.spyOn(store, "findSubsequentSiblingChunks").mockResolvedValue([
         subsequentSibling,
       ]);
-      vi.spyOn(mockDocumentStore, "findChildChunks").mockResolvedValue([child]);
+      vi.spyOn(store, "findChildChunks").mockResolvedValue([child]);
 
       // Database returns in sort_order
-      vi.spyOn(mockDocumentStore, "findChunksByIds").mockResolvedValue([
+      vi.spyOn(store, "findChunksByIds").mockResolvedValue([
         parent,
         precedingSibling,
         mainResult,
@@ -632,7 +637,7 @@ describe("DocumentRetrieverService (consolidated logic)", () => {
         subsequentSibling,
       ]);
 
-      const results = await retrieverService.search(library, version, query);
+      const results = await service.search(library, version, query);
 
       expect(results).toEqual([
         {
@@ -652,24 +657,24 @@ describe("DocumentRetrieverService (consolidated logic)", () => {
       const version = "1.0.0";
       const query = "test";
 
-      const markdownChunk = new Document({
+      const markdownChunk = {
         id: "md1",
-        pageContent: "# Heading\n\nSome content",
-        metadata: {
-          url: "https://example.com/doc.md",
-          score: 0.9,
-          mimeType: "text/markdown",
-        },
-      });
+        content: "# Heading\n\nSome content",
+        url: "https://example.com/doc.md",
+        score: 0.9,
+        source_content_type: "text/markdown",
+        content_type: "text/markdown",
+        metadata: {},
+      } as DbPageChunk & DbChunkRank;
 
-      vi.spyOn(mockDocumentStore, "findByContent").mockResolvedValue([markdownChunk]);
-      vi.spyOn(mockDocumentStore, "findParentChunk").mockResolvedValue(null);
-      vi.spyOn(mockDocumentStore, "findPrecedingSiblingChunks").mockResolvedValue([]);
-      vi.spyOn(mockDocumentStore, "findChildChunks").mockResolvedValue([]);
-      vi.spyOn(mockDocumentStore, "findSubsequentSiblingChunks").mockResolvedValue([]);
-      vi.spyOn(mockDocumentStore, "findChunksByIds").mockResolvedValue([markdownChunk]);
+      vi.spyOn(store, "findByContent").mockResolvedValue([markdownChunk]);
+      vi.spyOn(store, "findParentChunk").mockResolvedValue(null);
+      vi.spyOn(store, "findPrecedingSiblingChunks").mockResolvedValue([]);
+      vi.spyOn(store, "findChildChunks").mockResolvedValue([]);
+      vi.spyOn(store, "findSubsequentSiblingChunks").mockResolvedValue([]);
+      vi.spyOn(store, "findChunksByIds").mockResolvedValue([markdownChunk]);
 
-      const results = await retrieverService.search(library, version, query);
+      const results = await service.search(library, version, query);
 
       expect(results).toHaveLength(1);
       expect(results[0]).toEqual({
@@ -677,6 +682,7 @@ describe("DocumentRetrieverService (consolidated logic)", () => {
         content: "# Heading\n\nSome content", // Should use "\n\n" joining for markdown
         score: 0.9,
         mimeType: "text/markdown",
+        sourceMimeType: "text/markdown",
       });
     });
 
@@ -685,23 +691,23 @@ describe("DocumentRetrieverService (consolidated logic)", () => {
       const version = "1.0.0";
       const query = "test";
 
-      const codeChunk = new Document({
+      const codeChunk = {
         id: "ts1",
-        pageContent: "function test() {\n  return 'hello';\n}",
-        metadata: {
-          url: "https://example.com/code.ts",
-          score: 0.9,
-          mimeType: "text/x-typescript",
-        },
-      });
+        content: "function test() {\n  return 'hello';\n}",
+        url: "https://example.com/code.ts",
+        score: 0.9,
+        source_content_type: "text/x-typescript",
+        content_type: "text/x-typescript",
+        metadata: {},
+      } as DbPageChunk & DbChunkRank;
 
-      vi.spyOn(mockDocumentStore, "findByContent").mockResolvedValue([codeChunk]);
+      vi.spyOn(store, "findByContent").mockResolvedValue([codeChunk]);
       // Mock the hierarchical strategy's fallback behavior since we don't have full hierarchy implementation
-      vi.spyOn(mockDocumentStore, "findParentChunk").mockResolvedValue(null);
-      vi.spyOn(mockDocumentStore, "findChildChunks").mockResolvedValue([]);
-      vi.spyOn(mockDocumentStore, "findChunksByIds").mockResolvedValue([codeChunk]);
+      vi.spyOn(store, "findParentChunk").mockResolvedValue(null);
+      vi.spyOn(store, "findChildChunks").mockResolvedValue([]);
+      vi.spyOn(store, "findChunksByIds").mockResolvedValue([codeChunk]);
 
-      const results = await retrieverService.search(library, version, query);
+      const results = await service.search(library, version, query);
 
       expect(results).toHaveLength(1);
       expect(results[0]).toEqual({
@@ -709,6 +715,7 @@ describe("DocumentRetrieverService (consolidated logic)", () => {
         content: "function test() {\n  return 'hello';\n}", // Should use simple concatenation for code
         score: 0.9,
         mimeType: "text/x-typescript",
+        sourceMimeType: "text/x-typescript",
       });
     });
 
@@ -717,22 +724,22 @@ describe("DocumentRetrieverService (consolidated logic)", () => {
       const version = "1.0.0";
       const query = "test";
 
-      const jsonChunk = new Document({
+      const jsonChunk = {
         id: "json1",
-        pageContent: '{"key": "value"}',
-        metadata: {
-          url: "https://example.com/config.json",
-          score: 0.9,
-          mimeType: "application/json",
-        },
-      });
+        content: '{"key": "value"}',
+        url: "https://example.com/config.json",
+        score: 0.9,
+        source_content_type: "application/json",
+        content_type: "application/json",
+        metadata: {},
+      } as DbPageChunk & DbChunkRank;
 
-      vi.spyOn(mockDocumentStore, "findByContent").mockResolvedValue([jsonChunk]);
-      vi.spyOn(mockDocumentStore, "findParentChunk").mockResolvedValue(null);
-      vi.spyOn(mockDocumentStore, "findChildChunks").mockResolvedValue([]);
-      vi.spyOn(mockDocumentStore, "findChunksByIds").mockResolvedValue([jsonChunk]);
+      vi.spyOn(store, "findByContent").mockResolvedValue([jsonChunk]);
+      vi.spyOn(store, "findParentChunk").mockResolvedValue(null);
+      vi.spyOn(store, "findChildChunks").mockResolvedValue([]);
+      vi.spyOn(store, "findChunksByIds").mockResolvedValue([jsonChunk]);
 
-      const results = await retrieverService.search(library, version, query);
+      const results = await service.search(library, version, query);
 
       expect(results).toHaveLength(1);
       expect(results[0]).toEqual({
@@ -740,6 +747,7 @@ describe("DocumentRetrieverService (consolidated logic)", () => {
         content: '{"key": "value"}', // Should use simple concatenation for JSON
         score: 0.9,
         mimeType: "application/json",
+        sourceMimeType: "application/json",
       });
     });
 
@@ -748,24 +756,23 @@ describe("DocumentRetrieverService (consolidated logic)", () => {
       const version = "1.0.0";
       const query = "test";
 
-      const unknownChunk = new Document({
+      const unknownChunk = {
         id: "unknown1",
-        pageContent: "Some content",
-        metadata: {
-          url: "https://example.com/unknown",
-          score: 0.9,
-          // No mimeType specified
-        },
-      });
+        content: "Some content",
+        url: "https://example.com/unknown",
+        score: 0.9,
+        // No mimeType specified
+        metadata: {},
+      } as DbPageChunk & DbChunkRank;
 
-      vi.spyOn(mockDocumentStore, "findByContent").mockResolvedValue([unknownChunk]);
-      vi.spyOn(mockDocumentStore, "findParentChunk").mockResolvedValue(null);
-      vi.spyOn(mockDocumentStore, "findPrecedingSiblingChunks").mockResolvedValue([]);
-      vi.spyOn(mockDocumentStore, "findChildChunks").mockResolvedValue([]);
-      vi.spyOn(mockDocumentStore, "findSubsequentSiblingChunks").mockResolvedValue([]);
-      vi.spyOn(mockDocumentStore, "findChunksByIds").mockResolvedValue([unknownChunk]);
+      vi.spyOn(store, "findByContent").mockResolvedValue([unknownChunk]);
+      vi.spyOn(store, "findParentChunk").mockResolvedValue(null);
+      vi.spyOn(store, "findPrecedingSiblingChunks").mockResolvedValue([]);
+      vi.spyOn(store, "findChildChunks").mockResolvedValue([]);
+      vi.spyOn(store, "findSubsequentSiblingChunks").mockResolvedValue([]);
+      vi.spyOn(store, "findChunksByIds").mockResolvedValue([unknownChunk]);
 
-      const results = await retrieverService.search(library, version, query);
+      const results = await service.search(library, version, query);
 
       expect(results).toHaveLength(1);
       expect(results[0]).toEqual({
@@ -777,123 +784,158 @@ describe("DocumentRetrieverService (consolidated logic)", () => {
     });
   });
 
-  describe("Reranker Integration", () => {
-    it("should retrieve 3x docs when reranker is ready", async () => {
-      const doc1 = new Document({
-        id: "doc1",
-        pageContent: "First document",
-        metadata: { url: "url1", score: 0.9 },
-      });
-      const doc2 = new Document({
-        id: "doc2",
-        pageContent: "Second document",
-        metadata: { url: "url2", score: 0.8 },
+  describe("Smart Chunking (Distance-based Clustering)", () => {
+    it("should split distant chunks from the same URL into separate results", async () => {
+      const library = "lib";
+      const version = "1.0.0";
+      const query = "test";
+
+      // Two chunks from same URL but far apart
+      const chunk1 = {
+        id: "chunk1",
+        content: "First chunk",
+        url: "https://example.com/doc",
+        score: 0.9,
+        sort_order: 10,
+        metadata: {},
+      } as DbPageChunk & DbChunkRank;
+
+      const chunk2 = {
+        id: "chunk2",
+        content: "Second chunk",
+        url: "https://example.com/doc",
+        score: 0.8,
+        sort_order: 100, // Distance = 90 > maxChunkDistance (3)
+        metadata: {},
+      } as DbPageChunk & DbChunkRank;
+
+      vi.spyOn(store, "findByContent").mockResolvedValue([chunk1, chunk2]);
+      vi.spyOn(store, "findParentChunk").mockResolvedValue(null);
+      vi.spyOn(store, "findPrecedingSiblingChunks").mockResolvedValue([]);
+      vi.spyOn(store, "findSubsequentSiblingChunks").mockResolvedValue([]);
+      vi.spyOn(store, "findChildChunks").mockResolvedValue([]);
+
+      // Mock findChunksByIds to return the specific chunk requested
+      vi.spyOn(store, "findChunksByIds").mockImplementation(async (_lib, _ver, ids) => {
+        if (ids.includes("chunk1")) return [chunk1];
+        if (ids.includes("chunk2")) return [chunk2];
+        return [];
       });
 
-      vi.spyOn(mockDocumentStore, "findByContent").mockResolvedValue([
-        doc1,
-        doc2,
-        doc1,
-        doc2,
-        doc1,
-        doc2,
-        doc1,
-        doc2,
-        doc1,
-        doc2,
-        doc1,
-      ]);
-      vi.spyOn(mockDocumentStore, "findParentChunk").mockResolvedValue(null);
-      vi.spyOn(mockDocumentStore, "findPrecedingSiblingChunks").mockResolvedValue([]);
-      vi.spyOn(mockDocumentStore, "findChildChunks").mockResolvedValue([]);
-      vi.spyOn(mockDocumentStore, "findSubsequentSiblingChunks").mockResolvedValue([]);
-      vi.spyOn(mockDocumentStore, "findChunksByIds").mockResolvedValue([doc1, doc2]);
+      const results = await service.search(library, version, query);
 
-      const mockReranker = {
-        isReady: () => true,
-        initialize: async () => {},
-        rerank: vi.fn().mockResolvedValue([
-          { index: 0, relevanceScore: 0.95, document: { text: "First document" } },
-          { index: 2, relevanceScore: 0.85, document: { text: "Third document" } },
+      expect(results).toHaveLength(2);
+      // Results should be separate
+      expect(results).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({ content: "First chunk", score: 0.9 }),
+          expect.objectContaining({ content: "Second chunk", score: 0.8 }),
         ]),
-      };
-
-      const service = new DocumentRetrieverService(
-        mockDocumentStore,
-        mockReranker as any,
-      );
-      const results = await service.search("lib", "1.0.0", "test query", 10);
-
-      expect(mockDocumentStore.findByContent).toHaveBeenCalledWith(
-        "lib",
-        "1.0.0",
-        "test query",
-        30,
-      );
-      expect(mockReranker.rerank).toHaveBeenCalled();
-    });
-
-    it("should retrieve limit docs when reranker is disabled", async () => {
-      const doc1 = new Document({
-        id: "doc1",
-        pageContent: "First document",
-        metadata: { url: "url1", score: 0.9 },
-      });
-
-      vi.spyOn(mockDocumentStore, "findByContent").mockResolvedValue([doc1]);
-      vi.spyOn(mockDocumentStore, "findParentChunk").mockResolvedValue(null);
-      vi.spyOn(mockDocumentStore, "findPrecedingSiblingChunks").mockResolvedValue([]);
-      vi.spyOn(mockDocumentStore, "findChildChunks").mockResolvedValue([]);
-      vi.spyOn(mockDocumentStore, "findSubsequentSiblingChunks").mockResolvedValue([]);
-      vi.spyOn(mockDocumentStore, "findChunksByIds").mockResolvedValue([doc1]);
-
-      const mockReranker = { isReady: () => false, initialize: async () => {} };
-      const service = new DocumentRetrieverService(
-        mockDocumentStore,
-        mockReranker as any,
-      );
-      const results = await service.search("lib", "1.0.0", "test query", 10);
-
-      expect(mockDocumentStore.findByContent).toHaveBeenCalledWith(
-        "lib",
-        "1.0.0",
-        "test query",
-        10,
       );
     });
 
-    it("should fallback gracefully when reranker fails", async () => {
-      const initialResult = new Document({
-        id: "doc1",
-        pageContent: "Main chunk",
-        metadata: { url: "url", score: 0.5 },
+    it("should merge close chunks from the same URL", async () => {
+      const library = "lib";
+      const version = "1.0.0";
+      const query = "test";
+
+      // Two chunks from same URL and close together
+      const chunk1 = {
+        id: "chunk1",
+        content: "First chunk",
+        url: "https://example.com/doc",
+        score: 0.9,
+        sort_order: 10,
+        metadata: {},
+      } as DbPageChunk & DbChunkRank;
+
+      const chunk2 = {
+        id: "chunk2",
+        content: "Second chunk",
+        url: "https://example.com/doc",
+        score: 0.8,
+        sort_order: 12, // Distance = 2 <= maxChunkDistance (3)
+        metadata: {},
+      } as DbPageChunk & DbChunkRank;
+
+      vi.spyOn(store, "findByContent").mockResolvedValue([chunk1, chunk2]);
+      vi.spyOn(store, "findParentChunk").mockResolvedValue(null);
+      vi.spyOn(store, "findPrecedingSiblingChunks").mockResolvedValue([]);
+      vi.spyOn(store, "findSubsequentSiblingChunks").mockResolvedValue([]);
+      vi.spyOn(store, "findChildChunks").mockResolvedValue([]);
+
+      // When merged, findChunksByIds is called with both IDs.
+      // It should return them sorted by sort_order.
+      vi.spyOn(store, "findChunksByIds").mockResolvedValue([chunk1, chunk2]);
+
+      const results = await service.search(library, version, query);
+
+      expect(results).toHaveLength(1);
+      expect(results[0]).toEqual(
+        expect.objectContaining({
+          content: "First chunk\n\nSecond chunk",
+          score: 0.9, // Should take the max score
+        }),
+      );
+    });
+
+    it("should sort final results by score", async () => {
+      const library = "lib";
+      const version = "1.0.0";
+      const query = "test";
+
+      // Three chunks:
+      // A: score 0.5 (low)
+      // B: score 0.9 (high) - separate from A
+      // C: score 0.7 (medium) - different URL
+
+      const chunkA = {
+        id: "chunkA",
+        content: "Chunk A",
+        url: "https://example.com/doc1",
+        score: 0.5,
+        sort_order: 10,
+        metadata: {},
+      } as DbPageChunk & DbChunkRank;
+
+      const chunkB = {
+        id: "chunkB",
+        content: "Chunk B",
+        url: "https://example.com/doc1",
+        score: 0.9,
+        sort_order: 100, // Far from A
+        metadata: {},
+      } as DbPageChunk & DbChunkRank;
+
+      const chunkC = {
+        id: "chunkC",
+        content: "Chunk C",
+        url: "https://example.com/doc2",
+        score: 0.7,
+        sort_order: 5,
+        metadata: {},
+      } as DbPageChunk & DbChunkRank;
+
+      vi.spyOn(store, "findByContent").mockResolvedValue([chunkA, chunkB, chunkC]);
+      vi.spyOn(store, "findParentChunk").mockResolvedValue(null);
+      vi.spyOn(store, "findPrecedingSiblingChunks").mockResolvedValue([]);
+      vi.spyOn(store, "findSubsequentSiblingChunks").mockResolvedValue([]);
+      vi.spyOn(store, "findChildChunks").mockResolvedValue([]);
+
+      vi.spyOn(store, "findChunksByIds").mockImplementation(async (_lib, _ver, ids) => {
+        if (ids.includes("chunkA")) return [chunkA];
+        if (ids.includes("chunkB")) return [chunkB];
+        if (ids.includes("chunkC")) return [chunkC];
+        return [];
       });
 
-      vi.spyOn(mockDocumentStore, "findByContent").mockResolvedValue([
-        initialResult,
-        initialResult,
-        initialResult,
-      ]);
-      vi.spyOn(mockDocumentStore, "findParentChunk").mockResolvedValue(null);
-      vi.spyOn(mockDocumentStore, "findPrecedingSiblingChunks").mockResolvedValue([]);
-      vi.spyOn(mockDocumentStore, "findChildChunks").mockResolvedValue([]);
-      vi.spyOn(mockDocumentStore, "findSubsequentSiblingChunks").mockResolvedValue([]);
-      vi.spyOn(mockDocumentStore, "findChunksByIds").mockResolvedValue([initialResult]);
+      const results = await service.search(library, version, query);
 
-      const mockReranker = {
-        isReady: () => true,
-        initialize: async () => {},
-        rerank: vi.fn().mockRejectedValue(new Error("API error")),
-      };
-
-      const service = new DocumentRetrieverService(
-        mockDocumentStore,
-        mockReranker as any,
-      );
-      const results = await service.search("lib", "1.0.0", "test query", 10);
-
-      expect(results).toBeDefined();
-      expect(results.length).toBeGreaterThan(0);
+      expect(results).toHaveLength(3);
+      // Order should be B (0.9), then C (0.7), then A (0.5)
+      expect(results[0].content).toBe("Chunk B");
+      expect(results[1].content).toBe("Chunk C");
+      expect(results[2].content).toBe("Chunk A");
     });
   });
 });

@@ -1,22 +1,15 @@
-import { beforeEach, describe, expect, it, vi } from "vitest";
-import type { RawContent } from "../fetcher/types";
+import { beforeEach, describe, expect, it } from "vitest";
+import { loadConfig } from "../../utils/config";
+import { FetchStatus, type RawContent } from "../fetcher/types";
+import { ScrapeMode } from "../types";
 import { HtmlPipeline } from "./HtmlPipeline";
 
-// Mock logger
-vi.mock("../../utils/logger", () => ({
-  logger: {
-    debug: vi.fn(),
-    info: vi.fn(),
-    warn: vi.fn(),
-    error: vi.fn(),
-  },
-}));
-
 describe("HtmlPipeline charset integration", () => {
+  const appConfig = loadConfig();
   let pipeline: HtmlPipeline;
 
   beforeEach(() => {
-    pipeline = new HtmlPipeline();
+    pipeline = new HtmlPipeline(appConfig);
   });
 
   it("should use meta charset when it differs from HTTP header charset", async () => {
@@ -40,6 +33,7 @@ describe("HtmlPipeline charset integration", () => {
       mimeType: "text/html",
       charset: "utf-8", // Wrong charset from HTTP header
       source: "https://example.com/test.html",
+      status: FetchStatus.SUCCESS,
     };
 
     const result = await pipeline.process(rawContent, {
@@ -52,7 +46,7 @@ describe("HtmlPipeline charset integration", () => {
       scope: "subpages",
       followRedirects: true,
       ignoreErrors: false,
-      fetcher: "http",
+      scrapeMode: ScrapeMode.Fetch,
     });
 
     // Should correctly decode the content using meta charset, not HTTP charset
@@ -81,6 +75,7 @@ describe("HtmlPipeline charset integration", () => {
       mimeType: "text/html",
       charset: "iso-8859-1", // Correct charset from HTTP header
       source: "https://example.com/test.html",
+      status: FetchStatus.SUCCESS,
     };
 
     const result = await pipeline.process(rawContent, {
@@ -93,7 +88,7 @@ describe("HtmlPipeline charset integration", () => {
       scope: "subpages",
       followRedirects: true,
       ignoreErrors: false,
-      fetcher: "http",
+      scrapeMode: ScrapeMode.Fetch,
     });
 
     // Should correctly decode using HTTP charset
@@ -120,6 +115,7 @@ describe("HtmlPipeline charset integration", () => {
       mimeType: "text/html",
       // No charset information
       source: "https://example.com/test.html",
+      status: FetchStatus.SUCCESS,
     };
 
     const result = await pipeline.process(rawContent, {
@@ -132,7 +128,7 @@ describe("HtmlPipeline charset integration", () => {
       scope: "subpages",
       followRedirects: true,
       ignoreErrors: false,
-      fetcher: "http",
+      scrapeMode: ScrapeMode.Fetch,
     });
 
     expect(result.textContent).toContain("Simple ASCII content only");

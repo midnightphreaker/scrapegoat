@@ -1,28 +1,24 @@
-import type { Document } from "@langchain/core/documents";
 import Fuse from "fuse.js";
 import semver from "semver";
-import {
-  type PipelineConfiguration,
-  PipelineFactory,
-} from "../scraper/pipelines/PipelineFactory";
+import type { EventBusService } from "../events";
+import { EventType } from "../events";
+import { PipelineFactory } from "../scraper/pipelines/PipelineFactory";
 import type { ContentPipeline } from "../scraper/pipelines/types";
-import type { ScraperOptions } from "../scraper/types";
-import type { ContentChunk } from "../splitter/types";
-import { analytics, extractHostname, TelemetryEvent } from "../telemetry";
-import type { DocumentMetadata } from "../types";
-import { appConfig } from "../utils/config";
+import type { ScrapeResult, ScraperOptions } from "../scraper/types";
+import type { Chunk } from "../splitter/types";
+import { telemetry } from "../telemetry";
+import type { AppConfig } from "../utils/config";
 import { logger } from "../utils/logger";
+import { sortVersionsDescending } from "../utils/version";
 import { DocumentRetrieverService } from "./DocumentRetrieverService";
 import { DocumentStore } from "./DocumentStore";
 import type { EmbeddingModelConfig } from "./embeddings/EmbeddingConfig";
 import {
-  DocumentValidationError,
   LibraryNotFoundInStoreError,
-  MAX_DOCUMENT_CONTENT_LENGTH,
   StoreError,
   VersionNotFoundInStoreError,
 } from "./errors";
-import { RerankerService } from "./RerankerService";
+import { PostgresConnection } from "./PostgresConnection";
 import type {
   DbVersionWithLibrary,
   FindVersionResult,
@@ -30,19 +26,47 @@ import type {
   ScraperConfig,
   StoreSearchResult,
   VersionRef,
+  VersionStatus,
   VersionSummary,
 } from "./types";
-import { VersionStatus } from "./types";
 
 /**
  * Provides semantic search capabilities across different versions of library documentation.
  * Uses content-type-specific pipelines for processing and splitting content.
  */
 export class DocumentManagementService {
+  private readonly appConfig: AppConfig;
   private readonly store: DocumentStore;
-  private documentRetriever: DocumentRetrieverService;
+  private readonly documentRetriever: DocumentRetrieverService;
   private readonly pipelines: ContentPipeline[];
-  private readonly rerankerService?: RerankerService;
+  private readonly eventBus: EventBusService;
+
+  constructor(eventBus: EventBusService, appConfig: AppConfig) {
+    this.appConfig = appConfig;
+    this.eventBus = eventBus;
+
+    if (!this.appConfig.database.url) {
+      throw new Error("database.url is required when not using a remote server");
+    }
+
+    const connection = new PostgresConnection(
+      this.appConfig.database.url,
+      this.appConfig.database.pool,
+    );
+    this.store = new DocumentStore(connection, this.appConfig);
+    this.documentRetriever = new DocumentRetrieverService(this.store, this.appConfig);
+
+    // Initialize content pipelines for different content types including universal TextPipeline fallback
+    this.pipelines = PipelineFactory.createStandardPipelines(this.appConfig);
+  }
+
+  /**
+   * Returns the active embedding configuration if vector search is enabled,
+   * or null if embeddings are disabled.
+   */
+  getActiveEmbeddingConfig(): EmbeddingModelConfig | null {
+    return this.store.getActiveEmbeddingConfig();
+  }
 
   /**
    * Normalizes a version string, converting null or undefined to an empty string
@@ -52,59 +76,19 @@ export class DocumentManagementService {
     return (version ?? "").toLowerCase();
   }
 
-  constructor(
-    storePathOrConnectionString: string,
-    embeddingConfig?: EmbeddingModelConfig | null,
-    pipelineConfig?: PipelineConfiguration,
-  ) {
-    // Detect if parameter is a PostgreSQL connection string or legacy file path
-    const isPostgresUrl =
-      storePathOrConnectionString.startsWith("postgresql://") ||
-      storePathOrConnectionString.startsWith("postgres://");
-
-    // If it's a Postgres URL, use it directly. Otherwise, use default PostgreSQL URL.
-    const connectionString = isPostgresUrl
-      ? storePathOrConnectionString
-      : process.env.DATABASE_URL || "postgresql://localhost:5432/scrapegoat";
-
-    logger.debug(
-      `Using PostgreSQL connection: ${connectionString.replace(/:[^:@]+@/, ":***@")}`,
-    );
-    // Initialize RerankerService if enabled
-    if (appConfig.reranker.enabled) {
-      try {
-        this.rerankerService = new RerankerService(appConfig.reranker);
-        logger.info("RerankerService initialized successfully");
-      } catch (error) {
-        logger.error("Failed to initialize RerankerService:", error);
-        this.rerankerService = undefined;
-      }
-    } else {
-      logger.info("RerankerService is disabled in configuration");
-      this.rerankerService = undefined;
-    }
-
-    this.store = new DocumentStore(connectionString, embeddingConfig);
-    this.documentRetriever = new DocumentRetrieverService(
-      this.store,
-      this.rerankerService?.isReady() ? this.rerankerService : undefined,
-    );
-
-    // Initialize content pipelines for different content types including universal TextPipeline fallback
-    this.pipelines = PipelineFactory.createStandardPipelines(pipelineConfig);
-  }
-
   /**
    * Initializes the underlying document store.
    */
   async initialize(): Promise<void> {
     await this.store.initialize();
+  }
 
-    await this.rerankerService?.initialize();
-    this.documentRetriever = new DocumentRetrieverService(
-      this.store,
-      this.rerankerService?.isReady() ? this.rerankerService : undefined,
-    );
+  /**
+   * Resolves a confirmed embedding model change by invalidating all vectors
+   * and completing the initialization that was interrupted by EmbeddingModelChangedError.
+   */
+  async resolveModelChange(): Promise<void> {
+    await this.store.resolveModelChange();
   }
 
   /**
@@ -196,7 +180,7 @@ export class DocumentManagementService {
             status: v.status as VersionStatus,
             // Include progress only while indexing is active; set undefined for COMPLETED
             progress:
-              v.status === VersionStatus.COMPLETED
+              v.status === "completed"
                 ? undefined
                 : { pages: v.progressPages, maxPages: v.progressMaxPages },
             counts: { documents: v.documentCount, uniqueUrls: v.uniqueUrlCount },
@@ -217,20 +201,19 @@ export class DocumentManagementService {
   }
 
   /**
-   * Validates if a library exists in the store (either versioned or unversioned).
+   * Validates if a library exists in the store.
+   * Checks if the library record exists in the database, regardless of whether it has versions or documents.
    * Throws LibraryNotFoundInStoreError with suggestions if the library is not found.
    * @param library The name of the library to validate.
    * @throws {LibraryNotFoundInStoreError} If the library does not exist.
    */
   async validateLibraryExists(library: string): Promise<void> {
     logger.info(`🔎 Validating existence of library: ${library}`);
-    const normalizedLibrary = library.toLowerCase(); // Ensure consistent casing
 
-    // Check for both versioned and unversioned documents
-    const versions = await this.listVersions(normalizedLibrary);
-    const hasUnversioned = await this.exists(normalizedLibrary, ""); // Check explicitly for unversioned
+    // Check if the library exists in the libraries table
+    const libraryRecord = await this.store.getLibrary(library);
 
-    if (versions.length === 0 && !hasUnversioned) {
+    if (!libraryRecord) {
       logger.warn(`⚠️  Library '${library}' not found.`);
 
       // Library doesn't exist, fetch all libraries to provide suggestions
@@ -240,12 +223,9 @@ export class DocumentManagementService {
       let suggestions: string[] = [];
       if (libraryNames.length > 0) {
         const fuse = new Fuse(libraryNames, {
-          // Configure fuse.js options if needed (e.g., threshold)
-          // isCaseSensitive: false, // Handled by normalizing library names
-          // includeScore: true,
           threshold: 0.7, // Adjust threshold for desired fuzziness (0=exact, 1=match anything)
         });
-        const results = fuse.search(normalizedLibrary);
+        const results = fuse.search(library.toLowerCase());
         // Take top 3 suggestions
         suggestions = results.slice(0, 3).map((result) => result.item);
         logger.info(`🔍 Found suggestions: ${suggestions.join(", ")}`);
@@ -259,10 +239,12 @@ export class DocumentManagementService {
 
   /**
    * Returns a list of all available semantic versions for a library.
+   * Sorted in descending order (latest first).
    */
   async listVersions(library: string): Promise<string[]> {
     const versions = await this.store.queryUniqueVersions(library);
-    return versions.filter((v) => semver.valid(v));
+    const validVersions = versions.filter((v) => semver.valid(v));
+    return sortVersionsDescending(validVersions);
   }
 
   /**
@@ -366,236 +348,132 @@ export class DocumentManagementService {
   async removeAllDocuments(library: string, version?: string | null): Promise<void> {
     const normalizedVersion = this.normalizeVersion(version);
     logger.info(
-      `🗑️ Removing all documents from ${library}@${normalizedVersion || "[no version]"} store`,
+      `🗑️ Removing all documents from ${library}@${normalizedVersion || "latest"} store`,
     );
-    const count = await this.store.deleteDocuments(library, normalizedVersion);
+    const count = await this.store.deletePages(library, normalizedVersion);
     logger.info(`🗑️ Deleted ${count} documents`);
+
+    // Emit library change event
+    this.eventBus.emit(EventType.LIBRARY_CHANGE, undefined);
   }
 
   /**
-   * Removes documents whose URLs are NOT in the provided set for atomic replace.
-   * Used during rescrapes to keep only the documents that were just scraped.
-   *
-   * @param library - The library name (case-insensitive)
-   * @param version - The version string (will be normalized)
-   * @param urlsToKeep - Set of URLs that should be preserved (not deleted)
-   * @returns Number of documents deleted
+   * Deletes a page and all its associated document chunks.
+   * This is used during refresh operations when a page returns 404 Not Found.
    */
-  async removeDocumentsNotInSet(
-    library: string,
-    version: string | null,
-    urlsToKeep: Set<string>,
-  ): Promise<number> {
-    const normalizedVersion = this.normalizeVersion(version);
-    if (urlsToKeep.size === 0) {
-      return 0;
-    }
-    return await this.store.deletePagesNotInUrls(library, normalizedVersion, urlsToKeep);
+  async deletePage(pageId: number): Promise<void> {
+    logger.debug(`Deleting page ID: ${pageId}`);
+    await this.store.deletePage(pageId);
+
+    // Emit library change event
+    this.eventBus.emit(EventType.LIBRARY_CHANGE, undefined);
+  }
+
+  /**
+   * Retrieves all pages for a specific version ID with their metadata.
+   * Used for refresh operations to get existing pages with their ETags and depths.
+   */
+  async getPagesByVersionId(
+    versionId: number,
+  ): Promise<
+    Array<{ id: number; url: string; etag: string | null; depth: number | null }>
+  > {
+    return this.store.getPagesByVersionId(versionId);
   }
 
   /**
    * Completely removes a library version and all associated documents.
    * Also removes the library if no other versions remain.
+   * If the specified version doesn't exist but the library exists with no versions, removes the library.
    * @param library Library name
    * @param version Version string (null/undefined for unversioned)
    */
   async removeVersion(library: string, version?: string | null): Promise<void> {
     const normalizedVersion = this.normalizeVersion(version);
-    logger.info(`🗑️ Removing version: ${library}@${normalizedVersion || "[no version]"}`);
+    logger.debug(`Removing version: ${library}@${normalizedVersion || "latest"}`);
 
     const result = await this.store.removeVersion(library, normalizedVersion, true);
 
-    logger.info(
-      `🗑️ Removed ${result.documentsDeleted} documents, version: ${result.versionDeleted}, library: ${result.libraryDeleted}`,
-    );
+    logger.info(`🗑️ Removed ${result.documentsDeleted} documents`);
 
     if (result.versionDeleted && result.libraryDeleted) {
-      logger.info(`✅ Completely removed library ${library} (was last version)`);
+      logger.info(`🗑️ Completely removed library ${library} (was last version)`);
     } else if (result.versionDeleted) {
-      logger.info(`✅ Removed version ${library}@${normalizedVersion || "[no version]"}`);
+      logger.info(`🗑️ Removed version ${library}@${normalizedVersion || "latest"}`);
     } else {
-      logger.warn(
-        `⚠️ Version ${library}@${normalizedVersion || "[no version]"} not found`,
-      );
+      // Version not found - check if library exists but is empty (has no versions)
+      logger.warn(`⚠️  Version ${library}@${normalizedVersion || "latest"} not found`);
+
+      const libraryRecord = await this.store.getLibrary(library);
+      if (libraryRecord) {
+        // Library exists - check if it has any versions
+        const versions = await this.store.queryUniqueVersions(library);
+        if (versions.length === 0) {
+          // Library exists but has no versions - delete the library itself
+          logger.info(`🗑️ Library ${library} has no versions, removing library record`);
+          await this.store.deleteLibrary(libraryRecord.id);
+          logger.info(`🗑️ Completely removed library ${library} (had no versions)`);
+        }
+      }
     }
+
+    // Emit library change event
+    this.eventBus.emit(EventType.LIBRARY_CHANGE, undefined);
   }
 
   /**
-   * Renames a version within a library.
-   * @param library - Library name
-   * @param oldVersion - Current version name
-   * @param newVersion - New version name (can be mixed-case)
-   * @returns true if renamed, false if not found
-   * @throws Error if new version name already exists
+   * Adds pre-processed content directly to the store.
+   * This method is used when content has already been processed by a pipeline,
+   * avoiding redundant processing. Used primarily by the scraping pipeline.
+   *
+   * @param library Library name
+   * @param version Version string (null/undefined for unversioned)
+   * @param processed Pre-processed content with chunks already created
+   * @param pageId Optional page ID for refresh operations
    */
-  async renameVersion(
-    library: string,
-    oldVersion: string | null,
-    newVersion: string,
-  ): Promise<boolean> {
-    const normalizedOld = this.normalizeVersion(oldVersion);
-    const normalizedNew = newVersion ?? "";
-
-    logger.info(`📝 Renaming version: ${library}@${normalizedOld} → ${normalizedNew}`);
-
-    const result = await this.store.renameVersion(library, normalizedOld, normalizedNew);
-
-    if (result) {
-      logger.info(`✅ Version renamed successfully`);
-    }
-
-    return result;
-  }
-
-  /**
-   * Renames a library.
-   * @param library - Current library name
-   * @param newName - New library name
-   * @returns true if renamed, false if not found
-   * @throws Error if new name already exists
-   */
-  async renameLibrary(library: string, newName: string): Promise<boolean> {
-    const normalizedOld = library.trim().toLowerCase();
-    const normalizedNew = newName.trim().toLowerCase();
-
-    logger.info(`📝 Renaming library: ${normalizedOld} → ${normalizedNew}`);
-
-    const result = await this.store.renameLibrary(normalizedOld, normalizedNew);
-
-    if (result) {
-      logger.info(`✅ Library renamed successfully`);
-    }
-
-    return result;
-  }
-
-  /**
-   * Adds a document to the store, splitting it into smaller chunks for better search results.
-   * Uses SemanticMarkdownSplitter to maintain markdown structure and content types during splitting.
-   * Preserves hierarchical structure of documents and distinguishes between text and code segments.
-   * If version is omitted, the document is added without a specific version.
-   */
-  async addDocument(
+  async addScrapeResult(
     library: string,
     version: string | null | undefined,
-    document: Document,
+    depth: number,
+    result: ScrapeResult,
   ): Promise<void> {
     const processingStart = performance.now();
     const normalizedVersion = this.normalizeVersion(version);
-    const url = document.metadata.url as string;
-
-    if (!url || typeof url !== "string" || !url.trim()) {
-      throw new StoreError("Document metadata must include a valid URL");
+    const { url, title, chunks, contentType } = result;
+    if (!url) {
+      throw new StoreError("Processed content metadata must include a valid URL");
     }
 
-    logger.info(`📚 Adding document: ${document.metadata.title}`);
+    logger.info(`📚 Adding processed content: ${title || url}`);
 
-    if (!document.pageContent.trim()) {
-      throw new Error("Document content cannot be empty");
+    if (chunks.length === 0) {
+      logger.warn(`⚠️  No chunks in processed content for ${url}. Skipping.`);
+      return;
     }
-
-    // Validate document content length before expensive processing
-    const contentLength = document.pageContent.length;
-    if (contentLength > MAX_DOCUMENT_CONTENT_LENGTH) {
-      throw new DocumentValidationError(
-        "Document content exceeds maximum allowed size",
-        contentLength,
-        MAX_DOCUMENT_CONTENT_LENGTH,
-        url,
-      );
-    }
-
-    const contentType = document.metadata.mimeType as string | undefined;
 
     try {
-      // Create a mock RawContent for pipeline selection
-      const rawContent = {
-        source: url,
-        content: document.pageContent,
-        mimeType: contentType || "text/plain",
-      };
-
-      // Find appropriate pipeline for content type
-      const pipeline = this.pipelines.find((p) => p.canProcess(rawContent));
-
-      if (!pipeline) {
-        logger.warn(
-          `⚠️  Unsupported content type "${rawContent.mimeType}" for document ${url}. Skipping processing.`,
-        );
-        return;
-      }
-
-      // Debug logging for pipeline selection
-      logger.debug(
-        `Selected ${pipeline.constructor.name} for content type "${rawContent.mimeType}" (${url})`,
-      );
-
-      // Use content-type-specific pipeline for processing and splitting
-      // Create minimal scraper options for processing
-      const scraperOptions = {
-        url: url,
-        library: library,
-        version: normalizedVersion,
-        ignoreErrors: false,
-        maxConcurrency: 1,
-      };
-
-      const processed = await pipeline.process(rawContent, scraperOptions);
-      const chunks = processed.chunks;
-
-      // Convert semantic chunks to documents
-      const splitDocs = chunks.map((chunk: ContentChunk) => ({
-        pageContent: chunk.content,
-        metadata: {
-          ...document.metadata,
-          level: chunk.section.level,
-          path: chunk.section.path,
-        },
-      }));
-      logger.info(`✂️  Split document into ${splitDocs.length} chunks`);
+      logger.info(`✂️  Storing ${chunks.length} pre-split chunks`);
 
       // Add split documents to store
-      await this.store.addDocuments(library, normalizedVersion, splitDocs);
+      await this.store.addDocuments(library, normalizedVersion, depth, result);
 
-      // Track successful document processing
-      const processingTime = performance.now() - processingStart;
-      analytics.track(TelemetryEvent.DOCUMENT_PROCESSED, {
-        // Content characteristics (privacy-safe)
-        mimeType: contentType || "unknown",
-        contentSizeBytes: document.pageContent.length,
-
-        // Processing metrics
-        processingTimeMs: Math.round(processingTime),
-        chunksCreated: splitDocs.length,
-
-        // Document characteristics
-        hasTitle: !!document.metadata.title,
-        hasDescription: !!document.metadata.description,
-        urlDomain: extractHostname(url),
-        depth: document.metadata.depth,
-
-        // Library context
-        library,
-        libraryVersion: normalizedVersion || null,
-
-        // Processing efficiency
-        avgChunkSizeBytes: Math.round(document.pageContent.length / splitDocs.length),
-        processingSpeedKbPerSec: Math.round(
-          document.pageContent.length / 1024 / (processingTime / 1000),
-        ),
-      });
+      // Emit library change event after adding documents
+      this.eventBus.emit(EventType.LIBRARY_CHANGE, undefined);
     } catch (error) {
       // Track processing failures with native error tracking
       const processingTime = performance.now() - processingStart;
 
       if (error instanceof Error) {
-        analytics.captureException(error, {
-          mimeType: contentType || "unknown",
-          contentSizeBytes: document.pageContent.length,
+        telemetry.captureException(error, {
+          mimeType: contentType,
+          contentSizeBytes: chunks.reduce(
+            (sum: number, chunk: Chunk) => sum + chunk.content.length,
+            0,
+          ),
           processingTimeMs: Math.round(processingTime),
           library,
           libraryVersion: normalizedVersion || null,
-          context: "document_processing",
+          context: "processed_content_storage",
           component: DocumentManagementService.constructor.name,
         });
       }
@@ -619,38 +497,6 @@ export class DocumentManagementService {
     return this.documentRetriever.search(library, normalizedVersion, query, limit);
   }
 
-  /**
-   * Searches for documentation content using image similarity.
-   * Finds documents that have visually similar screenshots/images to the query image.
-   *
-   * @param library - Library name
-   * @param version - Version name (null for unversioned)
-   * @param imagePath - Path or URL to the query image
-   * @param limit - Maximum number of results to return
-   * @returns Array of search results with similarity scores
-   */
-  async searchByImage(
-    library: string,
-    version: string | null | undefined,
-    imagePath: string,
-    limit = 5,
-  ): Promise<StoreSearchResult[]> {
-    const normalizedVersion = this.normalizeVersion(version);
-    const results = await this.store.findByImage(
-      library,
-      normalizedVersion,
-      imagePath,
-      limit,
-    );
-
-    return results.map((doc) => ({
-      url: (doc.metadata as DocumentMetadata).url || "",
-      content: doc.pageContent,
-      score: null,
-      mimeType: (doc.metadata as DocumentMetadata).contentType as string | undefined,
-    }));
-  }
-
   // Deprecated simple listing removed: enriched listLibraries() is canonical
 
   /**
@@ -672,29 +518,16 @@ export class DocumentManagementService {
   }
 
   /**
-   * Get the screenshot path for a specific page.
-   * Used by the web server to serve screenshots.
-   *
-   * @param pageId - The page ID to query
-   * @returns The screenshot path or null if not found
+   * Retrieves a version by its ID from the database.
    */
-  async getScreenshotPath(pageId: number): Promise<string | null> {
-    return this.store.getScreenshotPath(pageId);
+  async getVersionById(versionId: number) {
+    return this.store.getVersionById(versionId);
   }
 
   /**
-   * Get page metadata including fetcher type and screenshot info.
-   * Used by the web server to display page details.
-   *
-   * @param pageId - The page ID to query
-   * @returns Page metadata or null if not found
+   * Retrieves a library by its ID from the database.
    */
-  async getPageMetadata(pageId: number): Promise<{
-    metadata: Record<string, unknown>;
-    fetcherType: string | null;
-    hasScreenshot: boolean;
-    screenshotPath: string | null;
-  } | null> {
-    return this.store.getPageMetadata(pageId);
+  async getLibraryById(libraryId: number) {
+    return this.store.getLibraryById(libraryId);
   }
 }

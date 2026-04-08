@@ -41,7 +41,7 @@ describe("paths utilities", () => {
     vol.fromJSON({
       // Create the main project structure
       [`${projectRoot}/package.json`]: JSON.stringify({
-        name: "@denmaster/scrapegoat",
+        name: "@arabold/docs-mcp-server",
         version: "1.25.2",
       }),
       [`${projectRoot}/src/utils/paths.ts`]: "// paths utility file",
@@ -51,11 +51,11 @@ describe("paths utilities", () => {
 
     // Setup default env-paths mock
     mockEnvPaths.mockReturnValue({
-      data: "/home/user/.local/share/scrapegoat",
-      config: "/home/user/.config/scrapegoat",
-      cache: "/home/user/.cache/scrapegoat",
-      log: "/home/user/.local/share/scrapegoat/logs",
-      temp: "/tmp/scrapegoat",
+      data: "/home/user/.local/share/docs-mcp-server",
+      config: "/home/user/.config/docs-mcp-server",
+      cache: "/home/user/.cache/docs-mcp-server",
+      log: "/home/user/.local/share/docs-mcp-server/logs",
+      temp: "/tmp/docs-mcp-server",
     });
   });
 
@@ -127,8 +127,8 @@ describe("paths utilities", () => {
       const result = resolveStorePath();
 
       // Should use env-paths result
-      expect(result).toBe("/home/user/.local/share/scrapegoat");
-      expect(mockEnvPaths).toHaveBeenCalledWith("scrapegoat", { suffix: "" });
+      expect(result).toBe("/home/user/.local/share/docs-mcp-server");
+      expect(mockEnvPaths).toHaveBeenCalledWith("docs-mcp-server", { suffix: "" });
     });
 
     it("should check for documents.db file specifically, not just .store directory", () => {
@@ -140,7 +140,7 @@ describe("paths utilities", () => {
       const result = resolveStorePath();
 
       // Should not use .store directory since documents.db doesn't exist
-      expect(result).toBe("/home/user/.local/share/scrapegoat");
+      expect(result).toBe("/home/user/.local/share/docs-mcp-server");
     });
 
     it("should create directories that don't exist", () => {
@@ -168,16 +168,16 @@ describe("paths utilities", () => {
     it("should work with different env-paths configurations", () => {
       // Test with different env-paths return value
       mockEnvPaths.mockReturnValue({
-        data: "/Users/testuser/Library/Application Support/scrapegoat",
-        config: "/Users/testuser/Library/Preferences/scrapegoat",
-        cache: "/Users/testuser/Library/Caches/scrapegoat",
-        log: "/Users/testuser/Library/Logs/scrapegoat",
-        temp: "/var/folders/tmp/scrapegoat",
+        data: "/Users/testuser/Library/Application Support/docs-mcp-server",
+        config: "/Users/testuser/Library/Preferences/docs-mcp-server",
+        cache: "/Users/testuser/Library/Caches/docs-mcp-server",
+        log: "/Users/testuser/Library/Logs/docs-mcp-server",
+        temp: "/var/folders/tmp/docs-mcp-server",
       });
 
       // No legacy store in default setup
       const result = resolveStorePath();
-      expect(result).toBe("/Users/testuser/Library/Application Support/scrapegoat");
+      expect(result).toBe("/Users/testuser/Library/Application Support/docs-mcp-server");
     });
 
     it("should prioritize storePath over legacy store", () => {
@@ -253,7 +253,7 @@ describe("paths utilities", () => {
 
       // Test resolveStorePath falls back to system path
       const storePath = resolveStorePath();
-      expect(storePath).toBe("/home/user/.local/share/scrapegoat");
+      expect(storePath).toBe("/home/user/.local/share/docs-mcp-server");
     });
 
     it("should handle scenario where project root exists but no legacy store", () => {
@@ -263,12 +263,12 @@ describe("paths utilities", () => {
       expect(foundProjectRoot).toBe(projectRoot);
 
       const storePath = resolveStorePath();
-      expect(storePath).toBe("/home/user/.local/share/scrapegoat");
-      expect(mockEnvPaths).toHaveBeenCalledWith("scrapegoat", { suffix: "" });
+      expect(storePath).toBe("/home/user/.local/share/docs-mcp-server");
+      expect(mockEnvPaths).toHaveBeenCalledWith("docs-mcp-server", { suffix: "" });
     });
 
     it("should create system storage directory when it doesn't exist", () => {
-      const systemPath = "/home/user/.local/share/scrapegoat";
+      const systemPath = "/home/user/.local/share/docs-mcp-server";
 
       // Ensure the system path doesn't exist initially
       expect(vol.existsSync(systemPath)).toBe(false);

@@ -1,13 +1,15 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { AutoDetectFetcher } from "../scraper/fetcher";
+import { ScrapeMode } from "../scraper/types";
+import { loadConfig } from "../utils/config";
 import { ScraperError } from "../utils/errors";
 import { ToolError, ValidationError } from "./errors";
 import { FetchUrlTool, type FetchUrlToolOptions } from "./FetchUrlTool";
 
 // Mock dependencies
-vi.mock("../utils/logger");
 
 describe("FetchUrlTool", () => {
+  const appConfig = loadConfig();
   let mockAutoDetectFetcher: Partial<AutoDetectFetcher>;
   let fetchUrlTool: FetchUrlTool;
 
@@ -22,14 +24,17 @@ describe("FetchUrlTool", () => {
     };
 
     // Create instance of the tool with mock dependencies
-    fetchUrlTool = new FetchUrlTool(mockAutoDetectFetcher as AutoDetectFetcher);
+    fetchUrlTool = new FetchUrlTool(
+      mockAutoDetectFetcher as AutoDetectFetcher,
+      appConfig,
+    );
   });
 
   it("should convert HTML to markdown", async () => {
     const url = "https://example.com/docs";
     const options: FetchUrlToolOptions = {
       url,
-      fetcher: "http", // Use HTTP fetcher
+      scrapeMode: ScrapeMode.Fetch, // Use fetch mode to avoid Playwright browser operations
     };
     const htmlContent = "<h1>Hello World</h1><p>This is a test</p>";
 
@@ -55,7 +60,7 @@ describe("FetchUrlTool", () => {
     const url = "file:///path/to/document.html";
     const options: FetchUrlToolOptions = {
       url,
-      fetcher: "http", // Use HTTP fetcher
+      scrapeMode: ScrapeMode.Fetch, // Use fetch mode to avoid Playwright browser operations
     };
     const htmlContent =
       "<h2>Local File Content</h2><ul><li>Item 1</li><li>Item 2</li></ul>";
@@ -100,7 +105,7 @@ describe("FetchUrlTool", () => {
     const options: FetchUrlToolOptions = {
       url,
       followRedirects: false,
-      fetcher: "http", // Use HTTP fetcher
+      scrapeMode: ScrapeMode.Fetch, // Use fetch mode to avoid Playwright browser operations
     };
 
     mockAutoDetectFetcher.canFetch = vi.fn().mockReturnValue(true);
@@ -188,7 +193,7 @@ describe("FetchUrlTool", () => {
   describe("fetcher selection", () => {
     it("should use AutoDetectFetcher for HTTP URLs", async () => {
       const url = "https://example.com/docs";
-      const options: FetchUrlToolOptions = { url, fetcher: "http" };
+      const options: FetchUrlToolOptions = { url, scrapeMode: ScrapeMode.Fetch };
 
       mockAutoDetectFetcher.canFetch = vi.fn().mockReturnValue(true);
       mockAutoDetectFetcher.fetch = vi.fn().mockResolvedValue({
@@ -210,7 +215,7 @@ describe("FetchUrlTool", () => {
 
     it("should use AutoDetectFetcher for file URLs", async () => {
       const url = "file:///path/to/file.html";
-      const options: FetchUrlToolOptions = { url, fetcher: "http" };
+      const options: FetchUrlToolOptions = { url, scrapeMode: ScrapeMode.Fetch };
 
       mockAutoDetectFetcher.canFetch = vi.fn().mockReturnValue(true);
       mockAutoDetectFetcher.fetch = vi.fn().mockResolvedValue({
@@ -232,7 +237,7 @@ describe("FetchUrlTool", () => {
 
     it("should handle all URL types with AutoDetectFetcher", async () => {
       const url = "https://example.com/docs";
-      const options: FetchUrlToolOptions = { url, fetcher: "http" };
+      const options: FetchUrlToolOptions = { url, scrapeMode: ScrapeMode.Fetch };
 
       mockAutoDetectFetcher.canFetch = vi.fn().mockReturnValue(true);
       mockAutoDetectFetcher.fetch = vi.fn().mockResolvedValue({
@@ -256,7 +261,7 @@ describe("FetchUrlTool", () => {
       const customHeaders = { Authorization: "Bearer token123", "User-Agent": "MyAgent" };
       const options: FetchUrlToolOptions = {
         url,
-        fetcher: "http",
+        scrapeMode: ScrapeMode.Fetch,
         headers: customHeaders,
       };
 
@@ -281,7 +286,7 @@ describe("FetchUrlTool", () => {
   describe("cleanup", () => {
     it("should call close() on fetcher and pipelines in finally block on success", async () => {
       const url = "https://example.com";
-      const options: FetchUrlToolOptions = { url, fetcher: "http" };
+      const options: FetchUrlToolOptions = { url, scrapeMode: ScrapeMode.Fetch };
 
       // Set up successful mock responses
       mockAutoDetectFetcher.canFetch = vi.fn().mockReturnValue(true);
@@ -307,7 +312,7 @@ describe("FetchUrlTool", () => {
 
     it("should call close() on fetcher and pipelines even when processing throws error", async () => {
       const url = "https://example.com";
-      const options: FetchUrlToolOptions = { url, fetcher: "http" };
+      const options: FetchUrlToolOptions = { url, scrapeMode: ScrapeMode.Fetch };
 
       // Set up mock to throw error during processing
       mockAutoDetectFetcher.canFetch = vi.fn().mockReturnValue(true);
@@ -332,7 +337,7 @@ describe("FetchUrlTool", () => {
 
     it("should handle pipeline cleanup errors gracefully", async () => {
       const url = "https://example.com";
-      const options: FetchUrlToolOptions = { url, fetcher: "http" };
+      const options: FetchUrlToolOptions = { url, scrapeMode: ScrapeMode.Fetch };
 
       // Set up successful mock responses
       mockAutoDetectFetcher.canFetch = vi.fn().mockReturnValue(true);

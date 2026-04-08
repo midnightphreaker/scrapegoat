@@ -1,10 +1,10 @@
 import type { AutoDetectFetcher, RawContent } from "../scraper/fetcher";
-import { HtmlPipeline } from "../scraper/pipelines/HtmlPipeline";
-import { MarkdownPipeline } from "../scraper/pipelines/MarkdownPipeline";
-import { TextPipeline } from "../scraper/pipelines/TextPipeline";
-import type { ContentPipeline, ProcessedContent } from "../scraper/pipelines/types";
+import { PipelineFactory } from "../scraper/pipelines/PipelineFactory";
+import type { ContentPipeline, PipelineResult } from "../scraper/pipelines/types";
+import { ScrapeMode } from "../scraper/types";
 import { convertToString } from "../scraper/utils/buffer";
 import { resolveCharset } from "../scraper/utils/charset";
+import type { AppConfig } from "../utils/config";
 import { logger } from "../utils/logger";
 import { ToolError, ValidationError } from "./errors";
 
@@ -22,69 +22,27 @@ export interface FetchUrlToolOptions {
   followRedirects?: boolean;
 
   /**
+   * Determines the HTML processing strategy.
+   * - 'fetch': Use a simple DOM parser (faster, less JS support).
+   * - 'playwright': Use a headless browser (slower, full JS support).
+   * - 'auto': Automatically select the best strategy (currently defaults to 'playwright').
+   * @default ScrapeMode.Auto
+   */
+  scrapeMode?: ScrapeMode;
+
+  /**
    * Custom HTTP headers to send with the request (e.g., for authentication).
    * Keys are header names, values are header values.
    */
   headers?: Record<string, string>;
-
-  /**
-   * Explicit fetcher selection: 'auto', 'http', 'crawl4ai', or 'file'.
-   * @default 'auto'
-   */
-  fetcher?: "auto" | "http" | "crawl4ai" | "file";
 }
 
 /**
  * Tool for fetching a single URL and converting its content to Markdown.
- *
- * @remarks
  * Unlike scrape_docs, this tool only processes one page without crawling
- * or storing the content. It's designed for quick, one-off content retrieval.
+ * or storing the content.
  *
- * Key features:
- * - Supports HTTP/HTTPS URLs with automatic charset detection
- * - Supports local file URLs (file://)
- * - Automatic content type detection (HTML, Markdown, plain text)
- * - Custom HTTP headers support for authenticated requests
- * - Multiple fetcher options (auto, http, crawl4ai, file)
- * - Proper cleanup of resources after processing
- *
- * Use cases:
- * - Quick preview of a documentation page
- * - Testing content extraction before full indexing
- * - Fetching individual pages without storing
- * - Converting local files to Markdown
- *
- * @example
- * ```typescript
- * const fetchTool = new FetchUrlTool(new AutoDetectFetcher());
- *
- * // Simple web fetch
- * const markdown = await fetchTool.execute({
- *   url: 'https://example.com/docs/api-reference'
- * });
- * console.log(markdown);
- *
- * // With custom headers (e.g., for authentication)
- * const markdown = await fetchTool.execute({
- *   url: 'https://private.docs.com/page',
- *   headers: {
- *     'Authorization': 'Bearer token123',
- *     'API-Key': 'secret-key'
- *   }
- * });
- *
- * // Local file
- * const markdown = await fetchTool.execute({
- *   url: 'file:///path/to/local/docs.md'
- * });
- *
- * // Using Crawl4AI fetcher
- * const markdown = await fetchTool.execute({
- *   url: 'https://example.com',
- *   fetcher: 'crawl4ai'
- * });
- * ```
+ * Supports both HTTP/HTTPS URLs and local file URLs (file://).
  */
 export class FetchUrlTool {
   /**
@@ -98,50 +56,20 @@ export class FetchUrlTool {
    */
   private readonly pipelines: ContentPipeline[];
 
-  /**
-   * Creates a new FetchUrlTool instance.
-   *
-   * @param fetcher - The fetcher to use for retrieving content
-   */
-  constructor(fetcher: AutoDetectFetcher) {
+  constructor(fetcher: AutoDetectFetcher, config: AppConfig) {
     this.fetcher = fetcher;
-    const htmlPipeline = new HtmlPipeline();
-    const markdownPipeline = new MarkdownPipeline();
-    const textPipeline = new TextPipeline();
-    // Order matters: more specific pipelines first, fallback (text) pipeline last
-    this.pipelines = [htmlPipeline, markdownPipeline, textPipeline];
+    // Use the central factory to ensure consistent pipeline configuration across the system
+    this.pipelines = PipelineFactory.createStandardPipelines(config);
   }
 
   /**
    * Fetches content from a URL and converts it to Markdown.
-   *
-   * @param options - The fetch options
-   * @param options.url - The URL to fetch (HTTP/HTTPS or file://)
-   * @param options.followRedirects - Whether to follow HTTP redirects. Default: true
-   * @param options.headers - Optional custom HTTP headers
-   * @param options.fetcher - Fetcher type: 'auto' | 'http' | 'crawl4ai' | 'file'. Default: 'auto'
-   *
-   * @returns Promise resolving to the processed Markdown content
-   *
-   * @throws {ValidationError} If the URL is invalid
+   * Supports both HTTP/HTTPS URLs and local file URLs (file://).
+   * @returns The processed Markdown content
    * @throws {ToolError} If fetching or processing fails
-   *
-   * @example
-   * ```typescript
-   * try {
-   *   const markdown = await fetchTool.execute({
-   *     url: 'https://react.dev/learn',
-   *     followRedirects: true
-   *   });
-   *   console.log('Content fetched successfully');
-   *   console.log(markdown);
-   * } catch (error) {
-   *   console.error('Failed to fetch:', error.message);
-   * }
-   * ```
    */
   async execute(options: FetchUrlToolOptions): Promise<string> {
-    const { url, headers, fetcher } = options;
+    const { url, scrapeMode = ScrapeMode.Auto, headers } = options;
 
     if (!this.fetcher.canFetch(url)) {
       throw new ValidationError(
@@ -157,7 +85,6 @@ export class FetchUrlTool {
         followRedirects: options.followRedirects ?? true,
         maxRetries: 3,
         headers, // propagate custom headers
-        fetcher, // propagate fetcher selection
       };
 
       // AutoDetectFetcher handles all fallback logic automatically
@@ -165,9 +92,9 @@ export class FetchUrlTool {
 
       logger.info("🔄 Processing content...");
 
-      let processed: Awaited<ProcessedContent> | undefined;
+      let processed: Awaited<PipelineResult> | undefined;
       for (const pipeline of this.pipelines) {
-        if (pipeline.canProcess(rawContent)) {
+        if (pipeline.canProcess(rawContent.mimeType, rawContent.content)) {
           processed = await pipeline.process(
             rawContent,
             {
@@ -181,8 +108,8 @@ export class FetchUrlTool {
               followRedirects: options.followRedirects ?? true,
               excludeSelectors: undefined,
               ignoreErrors: false,
+              scrapeMode,
               headers, // propagate custom headers
-              fetcher, // propagate fetcher selection
             },
             this.fetcher,
           );
@@ -204,7 +131,7 @@ export class FetchUrlTool {
         return contentString;
       }
 
-      for (const err of processed.errors) {
+      for (const err of processed.errors ?? []) {
         logger.warn(`⚠️  Processing error for ${url}: ${err.message}`);
       }
 
@@ -228,7 +155,7 @@ export class FetchUrlTool {
         this.constructor.name,
       );
     } finally {
-      // Cleanup all pipelines and fetcher to prevent resource leaks
+      // Cleanup all pipelines and fetcher to prevent resource leaks (e.g., browser instances)
       await Promise.allSettled([
         ...this.pipelines.map((pipeline) => pipeline.close()),
         this.fetcher.close(),

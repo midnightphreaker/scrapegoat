@@ -1,11 +1,10 @@
 import { Embeddings } from "@langchain/core/embeddings";
-import { describe, expect, test, vi } from "vitest";
+import { describe, expect, test } from "vitest";
+import { defaults } from "../../utils/config";
 import { DimensionError } from "../errors";
-import { VECTOR_DIMENSION } from "../types";
 import { FixedDimensionEmbeddings } from "./FixedDimensionEmbeddings";
 
 // Suppress logger output during tests
-vi.mock("../../utils/logger");
 
 // Mock embedding models that produce vectors of different sizes
 class MockBaseEmbeddings extends Embeddings {
@@ -23,7 +22,7 @@ class MockBaseEmbeddings extends Embeddings {
 }
 
 describe("FixedDimensionEmbeddings", () => {
-  const targetDimension = VECTOR_DIMENSION;
+  const targetDimension = defaults.embeddings.vectorDimension;
 
   test("should pass through vectors of correct dimension", async () => {
     const base = new MockBaseEmbeddings(targetDimension);
@@ -69,6 +68,40 @@ describe("FixedDimensionEmbeddings", () => {
     const wrapper = new FixedDimensionEmbeddings(base, targetDimension, "test:model");
 
     await expect(() => wrapper.embedQuery("test")).rejects.toThrow(DimensionError);
+  });
+
+  test("should truncate Gemini-sized vectors (3072d) to target dimension when allowTruncate is true", async () => {
+    const geminiDimension = 3072;
+    const base = new MockBaseEmbeddings(geminiDimension);
+    const wrapper = new FixedDimensionEmbeddings(
+      base,
+      targetDimension,
+      "gemini:gemini-embedding-001",
+      true,
+    );
+
+    const vector = await wrapper.embedQuery("test");
+    expect(vector.length).toBe(targetDimension);
+    expect(vector).toEqual(Array(targetDimension).fill(1));
+  });
+
+  test("should expose allowTruncate as a public property", () => {
+    const base = new MockBaseEmbeddings(targetDimension);
+    const withTruncate = new FixedDimensionEmbeddings(
+      base,
+      targetDimension,
+      "gemini:model",
+      true,
+    );
+    const withoutTruncate = new FixedDimensionEmbeddings(
+      base,
+      targetDimension,
+      "test:model",
+      false,
+    );
+
+    expect(withTruncate.allowTruncate).toBe(true);
+    expect(withoutTruncate.allowTruncate).toBe(false);
   });
 
   test("should process multiple documents correctly", async () => {

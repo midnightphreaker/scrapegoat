@@ -1,7 +1,6 @@
 import type { IPipeline } from "../pipeline/trpc/interfaces";
 import { PipelineJobStatus } from "../pipeline/types";
 import { logger } from "../utils/logger";
-import { validateRequiredString } from "../utils/validation";
 import { ToolError, ValidationError } from "./errors";
 
 /**
@@ -24,45 +23,13 @@ export interface CancelJobResult {
 
 /**
  * Tool for attempting to cancel a pipeline job.
- *
- * @remarks
- * This tool allows cancellation of active scraping jobs. It handles various scenarios:
- * - Cancels QUEUED or RUNNING jobs
- * - Returns gracefully if job is already completed/failed/cancelled
- * - Provides final status confirmation
- * - Handles non-existent job errors
- *
- * Use cases:
- * - Stopping long-running scraping operations
- * - Canceling stuck or hung jobs
- * - Cleaning up queued jobs before re-scraping
- * - Stopping jobs that were started by mistake
- *
- * @example
- * ```typescript
- * const cancelJobTool = new CancelJobTool(pipeline);
- *
- * // Cancel a running job
- * const result = await cancelJobTool.execute({
- *   jobId: 'abc-123-def'
- * });
- *
- * console.log(result.message);
- * console.log(`Final status: ${result.finalStatus}`);
- *
- * // Handle already completed jobs
- * if (result.finalStatus === PipelineJobStatus.COMPLETED) {
- *   console.log('Job was already completed');
- * }
- * ```
  */
 export class CancelJobTool {
   private pipeline: IPipeline;
 
   /**
    * Creates an instance of CancelJobTool.
-   *
-   * @param pipeline - The pipeline instance for job management
+   * @param pipeline The pipeline instance.
    */
   constructor(pipeline: IPipeline) {
     this.pipeline = pipeline;
@@ -70,59 +37,18 @@ export class CancelJobTool {
 
   /**
    * Executes the tool to attempt cancellation of a specific job.
-   *
-   * @remarks
-   * Cancellation behavior:
-   * - QUEUED/RUNNING jobs: Cancellation is attempted
-   * - COMPLETED/FAILED/CANCELLED jobs: Returns gracefully without action
-   * - Non-existent jobs: Throws ToolError
-   *
-   * @param input - The input parameters
-   * @param input.jobId - The unique identifier of the job to cancel
-   *
-   * @returns Promise resolving to cancellation result:
-   * - message: Human-readable outcome description
-   * - finalStatus: The job's status after cancellation attempt
-   *
-   * @throws {ValidationError} If the jobId is invalid or empty
-   * @throws {ToolError} If the job is not found
-   *
-   * @example
-   * ```typescript
-   * try {
-   *   const result = await cancelJobTool.execute({
-   *     jobId: '550e8400-e29b-41d4-a716-446655440000'
-   *   });
-   *
-   *   console.log(result.message);
-   *
-   *   // Check if cancellation was successful
-   *   if (result.finalStatus === PipelineJobStatus.CANCELLED) {
-   *     console.log('Job cancelled successfully');
-   *   } else if (result.finalStatus === PipelineJobStatus.COMPLETED) {
-   *     console.log('Job completed before cancellation');
-   *   }
-   * } catch (error) {
-   *   if (error instanceof ToolError) {
-   *     console.error('Failed to cancel job:', error.message);
-   *   }
-   * }
-   *
-   * // Cancel and wait for confirmation
-   * const result = await cancelJobTool.execute({ jobId: 'job-id' });
-   * while (result.finalStatus !== PipelineJobStatus.CANCELLED) {
-   *   await new Promise(resolve => setTimeout(resolve, 1000));
-   *   const job = await getJobInfoTool.execute({ jobId: 'job-id' });
-   *   if (job.job.status === PipelineJobStatus.CANCELLED) break;
-   * }
-   * ```
+   * @param input - The input parameters, containing the jobId.
+   * @returns A promise that resolves with the outcome message.
+   * @throws {ValidationError} If the jobId is invalid.
+   * @throws {ToolError} If the job is not found or cancellation fails.
    */
   async execute(input: CancelJobInput): Promise<CancelJobResult> {
     // Validate input
-    try {
-      validateRequiredString(input.jobId, "Job ID");
-    } catch (error) {
-      throw new ValidationError((error as Error).message, this.constructor.name);
+    if (!input.jobId || typeof input.jobId !== "string" || input.jobId.trim() === "") {
+      throw new ValidationError(
+        "Job ID is required and must be a non-empty string.",
+        this.constructor.name,
+      );
     }
 
     try {

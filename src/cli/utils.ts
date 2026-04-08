@@ -2,33 +2,50 @@
  * Shared CLI utilities and helper functions.
  */
 
-import type { Command } from "commander";
+import { execSync } from "node:child_process";
+import { existsSync } from "node:fs";
+import { createInterface } from "node:readline";
+import { chromium } from "playwright";
 import type { AppServerConfig } from "../app";
 import type { AuthConfig } from "../auth/types";
-import type { IPipeline, PipelineOptions } from "../pipeline";
-import { PipelineFactory } from "../pipeline";
-import type { DocumentManagementService } from "../store";
+import { EventBusService } from "../events";
 import {
   EmbeddingConfig,
   type EmbeddingModelConfig,
 } from "../store/embeddings/EmbeddingConfig";
-import { DEFAULT_HTTP_PORT } from "../utils/config";
-import { ConfigurationError, ValidationError } from "../utils/errors";
-import { LogLevel, logger, setLogLevel } from "../utils/logger";
+import { TelemetryService } from "../telemetry";
+import { logger } from "../utils/logger";
+import { getProjectRoot } from "../utils/paths";
 import type { GlobalOptions } from "./types";
 
 /**
- * Traverses the command hierarchy to find the root command and returns its options.
- * This is useful for accessing global options from within any subcommand.
- * @param command The current command instance.
- * @returns The global options from the root command.
+ * Context extended with EventBusService, injected via middleware.
  */
-export function getGlobalOptions(command?: Command): GlobalOptions {
-  let rootCommand = command;
-  while (rootCommand?.parent) {
-    rootCommand = rootCommand.parent;
+export interface CliContext {
+  _eventBus?: EventBusService;
+  [key: string]: unknown;
+}
+
+/**
+ * Retrieves the global EventBusService from the arguments context.
+ * @param argv The parsed arguments context.
+ * @returns The global EventBusService.
+ * @throws Error if EventBusService is not initialized.
+ */
+export function getEventBus(argv: CliContext): EventBusService {
+  const eventBus = argv._eventBus;
+  if (!eventBus) {
+    throw new Error("EventBusService not initialized");
   }
-  return rootCommand?.opts() || {};
+  return eventBus;
+}
+
+/**
+ * Helper to extract GlobalOptions from the argv.
+ * In Yargs, all options are in argv, so we just cast/pick.
+ */
+export function getGlobalOptions(argv: Record<string, unknown>): GlobalOptions {
+  return argv as unknown as GlobalOptions;
 }
 
 /**
@@ -39,6 +56,52 @@ export interface EmbeddingContext {
   aiEmbeddingProvider: string;
   aiEmbeddingModel: string;
   aiEmbeddingDimensions: number | null;
+}
+
+/**
+ * Ensures that the Playwright browsers are installed, unless a system Chromium path is set.
+ */
+export function ensurePlaywrightBrowsersInstalled(): void {
+  if (process.env.PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD === "1") {
+    logger.debug(
+      "PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD is set, skipping Playwright browser install.",
+    );
+    return;
+  }
+
+  // If PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH is set, skip install
+  const chromiumEnvPath = process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH;
+  if (chromiumEnvPath && existsSync(chromiumEnvPath)) {
+    logger.debug(
+      `PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH is set to '${chromiumEnvPath}', skipping Playwright browser install.`,
+    );
+    return;
+  }
+  try {
+    // Dynamically require Playwright and check for Chromium browser
+    // eslint-disable-next-line @typescript-eslint/no-var-requires
+    const chromiumPath = chromium.executablePath();
+    if (!chromiumPath || !existsSync(chromiumPath)) {
+      throw new Error("Playwright Chromium browser not found");
+    }
+  } catch (error) {
+    // Not installed or not found, attempt to install
+    logger.debug(String(error));
+    try {
+      logger.info(
+        "🌐 Installing Playwright Chromium browser... (this may take a moment)",
+      );
+      execSync("npm exec -y playwright install --no-shell --with-deps chromium", {
+        stdio: "ignore", // Suppress output
+        cwd: getProjectRoot(),
+      });
+    } catch (_installErr) {
+      logger.error(
+        "❌ Failed to install Playwright browsers automatically. Please run:\n  npx playwright install --no-shell --with-deps chromium\nand try again.",
+      );
+      process.exit(1);
+    }
+  }
 }
 
 /**
@@ -59,9 +122,7 @@ export function resolveProtocol(protocol: string): "stdio" | "http" {
     return protocol;
   }
 
-  throw new ConfigurationError(
-    `Invalid protocol: ${protocol}. Must be 'auto', 'stdio', or 'http'`,
-  );
+  throw new Error(`Invalid protocol: ${protocol}. Must be 'auto', 'stdio', or 'http'`);
 }
 
 /**
@@ -69,28 +130,10 @@ export function resolveProtocol(protocol: string): "stdio" | "http" {
  */
 export function validateResumeFlag(resume: boolean, serverUrl?: string): void {
   if (resume && serverUrl) {
-    throw new ConfigurationError(
-      "--resume flag is incompatible with --server-url. External workers handle their own job recovery.",
+    throw new Error(
+      "--resume flag is incompatible with --server-url. " +
+        "External workers handle their own job recovery.",
     );
-  }
-}
-
-/**
- * Formats output for CLI commands
- */
-export const formatOutput = (data: unknown): string => JSON.stringify(data, null, 2);
-
-/**
- * Sets up logging based on global options
- */
-export function setupLogging(options: GlobalOptions, protocol?: "stdio" | "http"): void {
-  // Suppress logging in stdio mode (before any logger calls)
-  if (protocol === "stdio") {
-    setLogLevel(LogLevel.ERROR);
-  } else if (options.silent) {
-    setLogLevel(LogLevel.ERROR);
-  } else if (options.verbose) {
-    setLogLevel(LogLevel.DEBUG);
   }
 }
 
@@ -100,11 +143,7 @@ export function setupLogging(options: GlobalOptions, protocol?: "stdio" | "http"
 export function validatePort(portString: string): number {
   const port = Number.parseInt(portString, 10);
   if (Number.isNaN(port) || port < 1 || port > 65535) {
-    throw new ValidationError(
-      "port",
-      portString,
-      "Port must be an integer between 1 and 65535",
-    );
+    throw new Error("Invalid port number");
   }
   return port;
 }
@@ -116,58 +155,22 @@ export function validateHost(hostString: string): string {
   // Basic validation - allow IPv4, IPv6, and hostnames
   const trimmed = hostString.trim();
   if (!trimmed) {
-    throw new ValidationError("host", hostString, "Host cannot be empty");
+    throw new Error("Host cannot be empty");
   }
 
   // Very basic format check - reject obviously invalid values
   if (trimmed.includes(" ") || trimmed.includes("\t") || trimmed.includes("\n")) {
-    throw new ValidationError("host", hostString, "Host cannot contain whitespace");
+    throw new Error("Host cannot contain whitespace");
   }
 
   return trimmed;
 }
 
 /**
- * Creates a pipeline (local or client) and attaches default CLI callbacks.
- * This makes the side-effects explicit and keeps creation consistent.
- */
-export async function createPipelineWithCallbacks(
-  docService: DocumentManagementService | undefined,
-  options: PipelineOptions = {},
-): Promise<IPipeline> {
-  logger.debug(`Initializing pipeline with options: ${JSON.stringify(options)}`);
-  const { serverUrl, ...rest } = options;
-  const pipeline = serverUrl
-    ? await PipelineFactory.createPipeline(undefined, { serverUrl, ...rest })
-    : await (async () => {
-        if (!docService) {
-          throw new Error("Local pipeline requires a DocumentManagementService instance");
-        }
-        return PipelineFactory.createPipeline(docService, rest);
-      })();
-
-  // Configure progress callbacks for real-time updates
-  pipeline.setCallbacks({
-    onJobProgress: async (job, progress) => {
-      logger.debug(
-        `Job ${job.id} progress: ${progress.pagesScraped}/${progress.totalPages} pages`,
-      );
-    },
-    onJobStatusChange: async (job) => {
-      logger.debug(`Job ${job.id} status changed to: ${job.status}`);
-    },
-    onJobError: async (job, error, document) => {
-      logger.warn(
-        `⚠️ Job ${job.id} error ${document ? `on document ${document.metadata.url}` : ""}: ${error.message}`,
-      );
-    },
-  });
-
-  return pipeline;
-}
-
-/**
- * Creates AppServerConfig based on service requirements
+ * Creates AppServerConfig based on service requirements.
+ *
+ * AppConfig is the source of truth for host/auth/telemetry/read-only settings.
+ * AppServerConfig only selects which services to run and which port to bind to.
  */
 export function createAppServerConfig(options: {
   enableWebInterface?: boolean;
@@ -175,10 +178,8 @@ export function createAppServerConfig(options: {
   enableApiServer?: boolean;
   enableWorker?: boolean;
   port: number;
-  host: string;
   externalWorkerUrl?: string;
-  readOnly?: boolean;
-  auth?: AuthConfig;
+  showLogo?: boolean;
   startupContext?: {
     cliCommand?: string;
     mcpProtocol?: "stdio" | "http";
@@ -191,10 +192,8 @@ export function createAppServerConfig(options: {
     enableApiServer: options.enableApiServer ?? false,
     enableWorker: options.enableWorker ?? true,
     port: options.port,
-    host: options.host,
     externalWorkerUrl: options.externalWorkerUrl,
-    readOnly: options.readOnly ?? false,
-    auth: options.auth,
+    showLogo: options.showLogo ?? true,
     startupContext: options.startupContext,
   };
 }
@@ -229,7 +228,7 @@ export function parseAuthConfig(options: {
   authIssuerUrl?: string;
   authAudience?: string;
 }): AuthConfig | undefined {
-  // Check if auth is enabled via CLI flag (environment variables handled by commander)
+  // Check if auth is enabled via CLI flag (environment variables handled by commander/yargs)
   if (!options.authEnabled) {
     return undefined;
   }
@@ -271,7 +270,7 @@ export function validateAuthConfig(authConfig: AuthConfig): void {
     errors.push("--auth-audience is required when auth is enabled");
   } else {
     // Audience can be any valid URI (URL or URN)
-    // Examples: https://api.example.com, urn:scrapegoat:api, urn:company:service
+    // Examples: https://api.example.com, urn:docs-mcp-server:api, urn:company:service
     try {
       // Try parsing as URL first (most common case)
       const url = new URL(authConfig.audience);
@@ -319,7 +318,7 @@ export function warnHttpUsage(authConfig: AuthConfig | undefined, port: number):
   // Check if we're likely running in production (not localhost)
   const isLocalhost =
     process.env.NODE_ENV !== "production" ||
-    port === DEFAULT_HTTP_PORT || // default dev port
+    port === 6280 || // default dev port
     process.env.HOSTNAME?.includes("localhost");
 
   if (!isLocalhost) {
@@ -331,13 +330,22 @@ export function warnHttpUsage(authConfig: AuthConfig | undefined, port: number):
 }
 
 /**
+ * Creates EventBusService and TelemetryService together.
+ * The TelemetryService automatically subscribes to events from the EventBusService.
+ * @returns Object containing both services
+ */
+export function createEventServices(): {
+  eventBus: EventBusService;
+  telemetryService: TelemetryService;
+} {
+  const eventBus = new EventBusService();
+  const telemetryService = new TelemetryService(eventBus);
+  return { eventBus, telemetryService };
+}
+
+/**
  * Resolves embedding configuration from the provided model specification.
  * This function centralizes the logic for determining the embedding model.
- *
- * Precedence:
- * 1. Explicitly passed `embeddingModel` parameter.
- * 2. `OPENAI_API_KEY` environment variable (defaults to OpenAI model).
- * 3. No configuration (embeddings disabled).
  *
  * @param embeddingModel The embedding model specification string.
  * @returns Embedding configuration or null if config is unavailable.
@@ -346,21 +354,10 @@ export function resolveEmbeddingContext(
   embeddingModel?: string,
 ): EmbeddingModelConfig | null {
   try {
-    let modelSpec = embeddingModel;
-
-    // If no model is specified, check for OPENAI_API_KEY
-    // to enable OpenAI embeddings by default.
-    if (!modelSpec && process.env.OPENAI_API_KEY) {
-      modelSpec = "text-embedding-3-small"; // Default OpenAI model
-      logger.debug(
-        "Using default OpenAI embedding model due to OPENAI_API_KEY presence.",
-      );
-    }
+    const modelSpec = embeddingModel;
 
     if (!modelSpec) {
-      logger.debug(
-        "No embedding model specified and OPENAI_API_KEY not found. Embeddings are disabled.",
-      );
+      logger.debug("No embedding model specified. Embeddings are disabled.");
       return null;
     }
 
@@ -370,4 +367,76 @@ export function resolveEmbeddingContext(
     logger.debug(`Failed to resolve embedding configuration: ${error}`);
     return null;
   }
+}
+
+/**
+ * Prompts the user interactively to confirm an embedding model change.
+ * Returns true if the user confirms (y/Y), false otherwise.
+ */
+function promptModelChangeConfirmation(
+  previousModel: string,
+  previousDimension: string,
+  currentModel: string,
+  currentDimension: string,
+): Promise<boolean> {
+  return new Promise((resolve) => {
+    console.error(
+      `\n⚠️  Embedding model change detected:\n` +
+        `   Previous: ${previousModel} (${previousDimension} dimensions)\n` +
+        `   Current:  ${currentModel} (${currentDimension} dimensions)\n\n` +
+        `   All existing embedding vectors will be invalidated.\n` +
+        `   Libraries must be re-scraped to restore vector search.\n` +
+        `   Full-text search will continue working for all existing documents.\n`,
+    );
+
+    const rl = createInterface({
+      input: process.stdin,
+      output: process.stderr,
+    });
+
+    rl.question("   Proceed with model change? (y/N) ", (answer) => {
+      rl.close();
+      const confirmed = answer.trim().toLowerCase() === "y";
+      resolve(confirmed);
+    });
+  });
+}
+
+/**
+ * Handles EmbeddingModelChangedError during service initialization.
+ *
+ * - In non-interactive mode (no TTY): re-throws the error to fail startup.
+ * - In interactive mode (TTY): prompts the user for confirmation, then either
+ *   resolves the model change (invalidates vectors) or exits.
+ *
+ * @param error The EmbeddingModelChangedError thrown by DocumentStore.initialize()
+ * @param service The DocumentManagementService instance (already partially initialized)
+ * @throws Re-throws the error in non-interactive mode or if the user rejects the change
+ */
+export async function handleEmbeddingModelChange(
+  error: import("../store/errors").EmbeddingModelChangedError,
+  service: import("../store/DocumentManagementService").DocumentManagementService,
+): Promise<void> {
+  // Non-interactive: fail startup entirely
+  if (!process.stdin.isTTY || !process.stdout.isTTY) {
+    throw error;
+  }
+
+  // Interactive: prompt user for confirmation
+  const confirmed = await promptModelChangeConfirmation(
+    error.previousModel,
+    error.previousDimension,
+    error.currentModel,
+    error.currentDimension,
+  );
+
+  if (!confirmed) {
+    throw new Error(
+      "Embedding model change rejected. Startup aborted.\n" +
+        "Restore the previous embedding model configuration to continue without changes.",
+    );
+  }
+
+  // User confirmed: invalidate vectors and complete initialization
+  await service.resolveModelChange();
 }

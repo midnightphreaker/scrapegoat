@@ -4,7 +4,7 @@ import { MarkdownAssemblyStrategy } from "./MarkdownAssemblyStrategy";
 
 describe("ContentAssemblyStrategy canHandle methods", () => {
   describe("MarkdownAssemblyStrategy", () => {
-    const strategy = new MarkdownAssemblyStrategy();
+    const strategy = new MarkdownAssemblyStrategy({} as any);
 
     it("handles markdown content types", () => {
       expect(strategy.canHandle("text/markdown")).toBe(true);
@@ -18,13 +18,14 @@ describe("ContentAssemblyStrategy canHandle methods", () => {
 
     it("handles plain text content types", () => {
       expect(strategy.canHandle("text/plain")).toBe(true);
-      expect(strategy.canHandle("text/css")).toBe(true);
+      expect(strategy.canHandle("text/csv")).toBe(true);
     });
 
     it("does not handle source code content types", () => {
       expect(strategy.canHandle("text/x-typescript")).toBe(false);
       expect(strategy.canHandle("text/javascript")).toBe(false);
       expect(strategy.canHandle("text/x-python")).toBe(false);
+      expect(strategy.canHandle("text/css")).toBe(false);
     });
 
     it("does not handle JSON content types", () => {
@@ -34,7 +35,7 @@ describe("ContentAssemblyStrategy canHandle methods", () => {
   });
 
   describe("HierarchicalAssemblyStrategy", () => {
-    const strategy = new HierarchicalAssemblyStrategy();
+    const strategy = new HierarchicalAssemblyStrategy({} as any);
 
     it("handles source code content types", () => {
       expect(strategy.canHandle("text/x-typescript")).toBe(true);
@@ -42,6 +43,7 @@ describe("ContentAssemblyStrategy canHandle methods", () => {
       expect(strategy.canHandle("text/x-python")).toBe(true);
       expect(strategy.canHandle("text/x-go")).toBe(true);
       expect(strategy.canHandle("text/x-rust")).toBe(true);
+      expect(strategy.canHandle("text/css")).toBe(true);
     });
 
     it("handles JSON content types", () => {
@@ -62,7 +64,7 @@ describe("ContentAssemblyStrategy canHandle methods", () => {
 
     it("does not handle plain text content types", () => {
       expect(strategy.canHandle("text/plain")).toBe(false);
-      expect(strategy.canHandle("text/css")).toBe(false);
+      expect(strategy.canHandle("text/csv")).toBe(false);
     });
 
     it("does not handle unknown content types", () => {

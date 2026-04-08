@@ -1,10 +1,6 @@
-import { GreedySplitter, SemanticMarkdownSplitter } from "../../splitter";
-import {
-  SPLITTER_MAX_CHUNK_SIZE,
-  SPLITTER_MIN_CHUNK_SIZE,
-  SPLITTER_PREFERRED_CHUNK_SIZE,
-} from "../../utils/config";
-import { logger } from "../../utils/logger";
+import { GreedySplitter } from "../../splitter/GreedySplitter";
+import { SemanticMarkdownSplitter } from "../../splitter/SemanticMarkdownSplitter";
+import type { AppConfig } from "../../utils/config";
 import { MimeTypeUtils } from "../../utils/mimeTypeUtils";
 import type { ContentFetcher, RawContent } from "../fetcher/types";
 import { MarkdownLinkExtractorMiddleware } from "../middleware/MarkdownLinkExtractorMiddleware";
@@ -13,22 +9,22 @@ import type { ContentProcessorMiddleware, MiddlewareContext } from "../middlewar
 import type { ScraperOptions } from "../types";
 import { convertToString } from "../utils/buffer";
 import { BasePipeline } from "./BasePipeline";
-import type { ProcessedContent } from "./types";
+import type { PipelineResult } from "./types";
 
 /**
- * Pipeline for processing Markdown content using middleware and semantic splitting with size optimization.
- * Uses SemanticMarkdownSplitter for content-type-aware semantic chunking,
- * followed by GreedySplitter for universal size optimization.
+ * MarkdownPipeline - Processes Markdown content using middleware and semantic splitting.
  */
 export class MarkdownPipeline extends BasePipeline {
   private readonly middleware: ContentProcessorMiddleware[];
   private readonly greedySplitter: GreedySplitter;
 
-  constructor(
-    preferredChunkSize = SPLITTER_PREFERRED_CHUNK_SIZE,
-    maxChunkSize = SPLITTER_MAX_CHUNK_SIZE,
-  ) {
+  constructor(config: AppConfig) {
     super();
+
+    const preferredChunkSize = config.splitter.preferredChunkSize;
+    const maxChunkSize = config.splitter.maxChunkSize;
+    const minChunkSize = config.splitter.minChunkSize;
+
     this.middleware = [
       new MarkdownMetadataExtractorMiddleware(),
       new MarkdownLinkExtractorMiddleware(),
@@ -41,31 +37,28 @@ export class MarkdownPipeline extends BasePipeline {
     );
     this.greedySplitter = new GreedySplitter(
       semanticSplitter,
-      SPLITTER_MIN_CHUNK_SIZE,
+      minChunkSize,
       preferredChunkSize,
+      maxChunkSize,
     );
   }
 
-  canProcess(rawContent: RawContent): boolean {
-    if (!rawContent.mimeType) return false;
-    return MimeTypeUtils.isMarkdown(rawContent.mimeType);
+  canProcess(mimeType: string): boolean {
+    if (!mimeType) return false;
+    return MimeTypeUtils.isMarkdown(mimeType);
   }
 
   async process(
     rawContent: RawContent,
     options: ScraperOptions,
     fetcher?: ContentFetcher,
-  ): Promise<ProcessedContent> {
-    logger.info(
-      `[PIPELINE] MarkdownPipeline processing ${rawContent.source} (mime-type: ${rawContent.mimeType}, charset: ${rawContent.charset})`,
-    );
-
+  ): Promise<PipelineResult> {
     const contentString = convertToString(rawContent.content, rawContent.charset);
 
     const context: MiddlewareContext = {
+      contentType: rawContent.mimeType || "text/markdown",
       content: contentString,
       source: rawContent.source,
-      metadata: {},
       links: [],
       errors: [],
       options,
@@ -82,8 +75,9 @@ export class MarkdownPipeline extends BasePipeline {
     );
 
     return {
+      title: context.title,
+      contentType: context.contentType,
       textContent: typeof context.content === "string" ? context.content : "",
-      metadata: context.metadata,
       links: context.links,
       errors: context.errors,
       chunks,

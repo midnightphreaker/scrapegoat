@@ -1,507 +1,497 @@
-/**
- * Unit tests for configuration utilities
- */
-
-import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import fs from "node:fs";
+import os from "node:os";
+import path from "node:path";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
-  appConfig,
-  type Config,
+  camelToUpperSnake,
+  collectLeafPaths,
+  getConfigValue,
+  isValidConfigPath,
   loadConfig,
-  loadRateLimitConfig,
-  MAX_RERANK_TIMEOUT,
-  MIN_RERANK_TIMEOUT,
-  type RateLimitConfig,
-  rateLimitConfig,
-  resetConfigCache,
-  validateConfig,
-  validateRateLimitConfig,
+  parseConfigValue,
+  pathToEnvVar,
 } from "./config";
+import { normalizeEnvValue } from "./env";
+import { logger } from "./logger";
 
-describe("loadConfig", () => {
-  const originalEnv = process.env;
+// Mock env-paths to return a controlled system path
+vi.mock("env-paths", () => ({
+  default: () => ({
+    config: "/system/config-mock",
+    data: "/system/data-mock",
+  }),
+}));
+
+// Mock paths to control project root detection
+vi.mock("./paths", () => ({
+  getProjectRoot: vi.fn().mockReturnValue(undefined), // Default to undefined to rely on explicit searchDirs
+}));
+
+describe("Configuration Loading", () => {
+  let tmpDir: string;
+  let originalEnv: NodeJS.ProcessEnv;
 
   beforeEach(() => {
-    // Reset environment before each test
-    process.env = { ...originalEnv };
-  });
+    // Create temp directory for each test
+    tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "docs-mcp-config-test-"));
+    originalEnv = { ...process.env };
 
-  afterEach(() => {
-    // Restore environment after each test
-    process.env = originalEnv;
-  });
-
-  it("should load default configuration when no env vars set", () => {
     // Clear relevant env vars
-    delete process.env.DEFAULT_FETCHER;
-    delete process.env.CRAWL4AI_SERVICE_URL;
-    delete process.env.CRAWL4AI_ENABLED;
-    delete process.env.CRAWL4AI_TIMEOUT;
-    delete process.env.CRAWL4AI_MAX_RETRIES;
-    delete process.env.CRAWL4AI_ENABLE_SCREENSHOTS;
-    delete process.env.CRAWL4AI_ENABLE_MEDIA;
-    delete process.env.CRAWL4AI_ENABLE_LINKS;
-    delete process.env.CRAWL4AI_SCREENSHOT_MODE;
-    delete process.env.HTTP_TIMEOUT;
-    delete process.env.HTTP_MAX_RETRIES;
-    delete process.env.HTTP_FOLLOW_REDIRECTS;
-    delete process.env.SCREENSHOT_STORAGE_PATH;
-    delete process.env.SCREENSHOT_MAX_SIZE_MB;
-    delete process.env.SCREENSHOT_RETENTION_DAYS;
-    delete process.env.MONITORING_ENABLED;
-    delete process.env.METRICS_EXPORT_INTERVAL;
-    delete process.env.DETAILED_LOGGING;
+    delete process.env.DOCS_MCP_CONFIG;
+    delete process.env.DOCS_MCP_TELEMETRY;
+    delete process.env.DOCS_MCP_READ_ONLY;
+    delete process.env.DOCS_MCP_STORE_PATH;
+    delete process.env.DOCS_MCP_AUTH_ENABLED;
 
-    const config = loadConfig();
+    // Redefine system paths to point to our temp dir for testing
+    // Note: We can't easily re-mock env-paths per test because imports are cached.
+    // Instead, we'll use `config.test.ts` logic to simulate system path behavior
+    // by manually ensuring directories exist or passing strict paths.
 
-    expect(config.fetcher.defaultFetcher).toBe("auto");
-    expect(config.fetcher.crawl4ai.serviceUrl).toBe("http://localhost:8001");
-    expect(config.fetcher.crawl4ai.enabled).toBe(true);
-    expect(config.fetcher.crawl4ai.timeout).toBe(30000);
-    expect(config.fetcher.crawl4ai.maxRetries).toBe(3);
-    expect(config.fetcher.crawl4ai.features.screenshots).toBe(false);
-    expect(config.fetcher.crawl4ai.features.media).toBe(false);
-    expect(config.fetcher.crawl4ai.features.links).toBe(false);
-    expect(config.fetcher.crawl4ai.defaultScreenshotMode).toBe("viewport");
-    expect(config.fetcher.http.timeout).toBe(10000);
-    expect(config.fetcher.http.maxRetries).toBe(3);
-    expect(config.fetcher.http.followRedirects).toBe(true);
-    expect(config.storage.screenshotPath).toBe("./public/screenshots");
-    expect(config.storage.maxScreenshotSize).toBe(5 * 1024 * 1024);
-    expect(config.storage.screenshotRetentionDays).toBe(0);
-    expect(config.monitoring.enabled).toBe(true);
-    expect(config.monitoring.exportInterval).toBe(60000);
-    expect(config.monitoring.detailedLogging).toBe(false);
+    // However, the `systemPaths` constant in `config.ts` is initialized at module load time.
+    // To test "system default" behavior properly without writing to actua system paths,
+    // we must ensure `env-paths` returns a path inside `tmpDir` OR we rely on `loadConfig` options.
+    // Since `env-paths` mock relies on static string return, we effectively can't dynamicall change it per test easily.
+
+    // WORKAROUND: We will assume the `env-paths` mock returns "/system/config-mock".
+    // Since we are now using REAL FS, writing to "/system/config-mock" will fail (EACCES or ENOENT).
+    // so we CANNOT test the "default fallback writes to system path" unless we stub proper FS or use `options.searchDir`.
+
+    // Actually, checking `config.ts`:
+    // `const systemPaths = envPaths(...)` is top-level.
+
+    // FOR MERGED TESTING WITH REAL FS:
+    // We should rely on `options.searchDir` for almost everything to keep it safe.
+    // For the specific test "write to system path", we might need to skip or mock `fs` JUST for that test?
+    // Mixing mocked/real fs is hard.
+
+    // ALTERNATIVE: We update the `env-paths` mock to standard `tmpDir`?
+    // No, `tmpDir` changes per test.
+
+    // Let's rely on the strategy of using `options.searchDir` which is what we added in the previous steps.
   });
 
-  it("should load configuration from environment variables", () => {
-    process.env.DEFAULT_FETCHER = "crawl4ai";
-    process.env.CRAWL4AI_SERVICE_URL = "http://crawl4ai:9000";
-    process.env.CRAWL4AI_ENABLED = "false";
-    process.env.CRAWL4AI_TIMEOUT = "60000";
-    process.env.CRAWL4AI_MAX_RETRIES = "5";
-    process.env.CRAWL4AI_ENABLE_SCREENSHOTS = "true";
-    process.env.CRAWL4AI_ENABLE_MEDIA = "true";
-    process.env.CRAWL4AI_ENABLE_LINKS = "true";
-    process.env.CRAWL4AI_SCREENSHOT_MODE = "full";
-    process.env.HTTP_TIMEOUT = "20000";
-    process.env.HTTP_MAX_RETRIES = "5";
-    process.env.HTTP_FOLLOW_REDIRECTS = "false";
-    process.env.SCREENSHOT_STORAGE_PATH = "/data/screenshots";
-    process.env.SCREENSHOT_MAX_SIZE_MB = "10";
-    process.env.SCREENSHOT_RETENTION_DAYS = "7";
-    process.env.MONITORING_ENABLED = "false";
-    process.env.METRICS_EXPORT_INTERVAL = "120000";
-    process.env.DETAILED_LOGGING = "true";
-
-    const config = loadConfig();
-
-    expect(config.fetcher.defaultFetcher).toBe("crawl4ai");
-    expect(config.fetcher.crawl4ai.serviceUrl).toBe("http://crawl4ai:9000");
-    expect(config.fetcher.crawl4ai.enabled).toBe(false);
-    expect(config.fetcher.crawl4ai.timeout).toBe(60000);
-    expect(config.fetcher.crawl4ai.maxRetries).toBe(5);
-    expect(config.fetcher.crawl4ai.features.screenshots).toBe(true);
-    expect(config.fetcher.crawl4ai.features.media).toBe(true);
-    expect(config.fetcher.crawl4ai.features.links).toBe(true);
-    expect(config.fetcher.crawl4ai.defaultScreenshotMode).toBe("full");
-    expect(config.fetcher.http.timeout).toBe(20000);
-    expect(config.fetcher.http.maxRetries).toBe(5);
-    expect(config.fetcher.http.followRedirects).toBe(false);
-    expect(config.storage.screenshotPath).toBe("/data/screenshots");
-    expect(config.storage.maxScreenshotSize).toBe(10 * 1024 * 1024);
-    expect(config.storage.screenshotRetentionDays).toBe(7);
-    expect(config.monitoring.enabled).toBe(false);
-    expect(config.monitoring.exportInterval).toBe(120000);
-    expect(config.monitoring.detailedLogging).toBe(true);
-  });
-});
-
-describe("validateConfig", () => {
-  let config: Config;
-
-  beforeEach(() => {
-    config = loadConfig();
+  afterEach(() => {
+    // Cleanup
+    fs.rmSync(tmpDir, { recursive: true, force: true });
+    process.env = originalEnv;
+    vi.resetAllMocks();
   });
 
-  it("should validate a valid configuration", () => {
-    const result = validateConfig(config);
-    expect(result.valid).toBe(true);
-    expect(result.errors).toHaveLength(0);
+  describe("Integration & E2E Scenarios", () => {
+    it("should load system defaults and WRITE back when no config provided", () => {
+      // Setup: ensure system config path exists
+      const systemConfigDir = path.join(tmpDir, "system-config-mock");
+      fs.mkdirSync(systemConfigDir, { recursive: true });
+
+      // Mock env-paths to return this temp dir
+      // We can't re-mock, but we can rely on our top-level mock if we can control it?
+      // The top-level mock returns "/system/config-mock".
+      // Since we can't easily change the mock, let's just spy on fs.readFileSync/writeFileSync?
+      // OR, we can use the `configPath` option to simulate "determined system path" if we exposed it, but we don't.
+
+      // Better approach for unit validation:
+      // Since `systemPaths` is hardcoded in the module scope based on the mock,
+      // we can't easily integrate-test the "default path" selection without creating that directory.
+
+      // Let's rely on the fact that `config.ts` imports `env-paths` and we mocked it.
+      // We need to make sure the mocked path is writable.
+      // The mock returns `/system/config-mock`. We can't write there.
+
+      // For this test file, we should probably mock `fs` methods related to the config file
+      // OR mock the `systemPaths` used in `config.ts`? No, that's internal.
+
+      // Strategy:
+      // We will rely on explicit options being passed to `loadConfig` for most tests.
+      // For the "default" case, we accept that it tries to write to `/system/config-mock`
+      // and logs a warning (which we can suppress or inspect).
+
+      const warnSpy = vi.spyOn(logger, "warn").mockImplementation(() => {});
+
+      const config = loadConfig({}, {}); // No args -> Default System Path
+
+      expect(config.server.host).toBe("127.0.0.1");
+      // It should try to save.
+      // We can check if `fs.writeFileSync` was called if we spy on it, but we are using real FS.
+      // Since it fails to write to `/system/...`, it logs a warning.
+      expect(warnSpy).toHaveBeenCalledWith(
+        expect.stringContaining("Failed to save config file"),
+      );
+      warnSpy.mockRestore();
+    });
+
+    it("should load explicit config from --config and NOT write back", () => {
+      const configPath = path.join(tmpDir, "read-only-config.yaml");
+      const initialContent = "app:\n  telemetryEnabled: false\n";
+      fs.writeFileSync(configPath, initialContent);
+
+      // Verify file creation timestamp
+      const statBefore = fs.statSync(configPath);
+
+      // Wait a tick to ensure mtime diff if it were to write
+      const start = Date.now();
+      while (Date.now() - start < 10) {
+        /* wait */
+      }
+
+      const config = loadConfig({ config: configPath });
+
+      expect(config.app.telemetryEnabled).toBe(false);
+
+      // Check it didn't write back defaults (like heartbeatMs)
+      const contentAfter = fs.readFileSync(configPath, "utf8");
+      // It should NOT contain default fields that weren't there
+      expect(contentAfter).not.toContain("heartbeatMs");
+
+      // Ensure file wasn't touched
+      const statAfter = fs.statSync(configPath);
+      expect(statAfter.mtimeMs).toBe(statBefore.mtimeMs);
+    });
+
+    it("should load explicit config from ENV and NOT write back", () => {
+      const configPath = path.join(tmpDir, "env-config.yaml");
+      const initialContent = "server:\n  port: 9999\n";
+      fs.writeFileSync(configPath, initialContent);
+
+      process.env.DOCS_MCP_CONFIG = configPath;
+
+      const config = loadConfig({});
+
+      expect(config.server.ports.default).toBe(6280); // Default for 'default' port
+      // Wait, yaml was invalid? "port" vs "ports".
+      // `loadConfig` merges defaults.
+
+      const contentAfter = fs.readFileSync(configPath, "utf8");
+      expect(contentAfter).not.toContain("heartbeatMs");
+    });
+
+    it("should priority: CLI > Env > Config File", () => {
+      const configPath = path.join(tmpDir, "priority.yaml");
+      fs.writeFileSync(configPath, "server:\n  host: file-host\n");
+
+      process.env.DOCS_MCP_HOST = "env-host";
+
+      const config = loadConfig({ host: "cli-host" }, { configPath });
+
+      expect(config.server.host).toBe("cli-host");
+    });
   });
 
-  it("should reject invalid default fetcher type", () => {
-    config.fetcher.defaultFetcher = "invalid" as any;
-    const result = validateConfig(config);
-    expect(result.valid).toBe(false);
-    expect(result.errors).toContain("Invalid default fetcher: invalid");
-  });
+  describe("Unit Logic & Edge Cases", () => {
+    it("should handle nested defaults correctly (Assembly)", () => {
+      const configPath = path.join(tmpDir, "defaults.yaml");
+      fs.writeFileSync(configPath, "");
+      const config = loadConfig({ config: configPath });
+      expect(config.assembly.maxParentChainDepth).toBe(10);
+    });
 
-  it("should reject HTTP timeout below minimum", () => {
-    config.fetcher.http.timeout = 500;
-    const result = validateConfig(config);
-    expect(result.valid).toBe(false);
-    expect(result.errors).toContain("HTTP timeout must be between 1000 and 120000ms");
-  });
+    it("should recover from malformed config file by using defaults (Read-Only mode)", () => {
+      // Should it overwrite? No, read-only mode should NOT overwrite even if invalid.
+      const configPath = path.join(tmpDir, "malformed.yaml");
+      fs.writeFileSync(configPath, ":");
 
-  it("should reject HTTP timeout above maximum", () => {
-    config.fetcher.http.timeout = 150000;
-    const result = validateConfig(config);
-    expect(result.valid).toBe(false);
-    expect(result.errors).toContain("HTTP timeout must be between 1000 and 120000ms");
-  });
+      const config = loadConfig({ config: configPath });
 
-  it("should reject Crawl4AI timeout below minimum", () => {
-    config.fetcher.crawl4ai.timeout = 500;
-    const result = validateConfig(config);
-    expect(result.valid).toBe(false);
-    expect(result.errors).toContain("Crawl4AI timeout must be between 1000 and 300000ms");
-  });
+      expect(config.server.host).toBe("127.0.0.1");
 
-  it("should reject Crawl4AI timeout above maximum", () => {
-    config.fetcher.crawl4ai.timeout = 400000;
-    const result = validateConfig(config);
-    expect(result.valid).toBe(false);
-    expect(result.errors).toContain("Crawl4AI timeout must be between 1000 and 300000ms");
-  });
-
-  it("should reject HTTP max retries below range", () => {
-    config.fetcher.http.maxRetries = -1;
-    const result = validateConfig(config);
-    expect(result.valid).toBe(false);
-    expect(result.errors).toContain("HTTP max retries must be between 0 and 10");
-  });
-
-  it("should reject HTTP max retries above range", () => {
-    config.fetcher.http.maxRetries = 15;
-    const result = validateConfig(config);
-    expect(result.valid).toBe(false);
-    expect(result.errors).toContain("HTTP max retries must be between 0 and 10");
-  });
-
-  it("should reject Crawl4AI max retries below range", () => {
-    config.fetcher.crawl4ai.maxRetries = -1;
-    const result = validateConfig(config);
-    expect(result.valid).toBe(false);
-    expect(result.errors).toContain("Crawl4AI max retries must be between 0 and 10");
-  });
-
-  it("should reject Crawl4AI max retries above range", () => {
-    config.fetcher.crawl4ai.maxRetries = 15;
-    const result = validateConfig(config);
-    expect(result.valid).toBe(false);
-    expect(result.errors).toContain("Crawl4AI max retries must be between 0 and 10");
-  });
-
-  it("should reject invalid Crawl4AI service URL", () => {
-    config.fetcher.crawl4ai.serviceUrl = "not-a-url";
-    const result = validateConfig(config);
-    expect(result.valid).toBe(false);
-    expect(result.errors).toContain("Invalid Crawl4AI service URL: not-a-url");
-  });
-
-  it("should reject invalid screenshot mode", () => {
-    config.fetcher.crawl4ai.defaultScreenshotMode = "invalid" as any;
-    const result = validateConfig(config);
-    expect(result.valid).toBe(false);
-    expect(result.errors).toContain(
-      "Invalid screenshot mode: invalid. Must be 'viewport' or 'full'",
-    );
-  });
-
-  it("should reject max screenshot size below minimum", () => {
-    config.storage.maxScreenshotSize = 50 * 1024; // 50KB
-    const result = validateConfig(config);
-    expect(result.valid).toBe(false);
-    expect(result.errors).toContain("Max screenshot size must be at least 100KB");
-  });
-
-  it("should reject max screenshot size above maximum", () => {
-    config.storage.maxScreenshotSize = 60 * 1024 * 1024; // 60MB
-    const result = validateConfig(config);
-    expect(result.valid).toBe(false);
-    expect(result.errors).toContain("Max screenshot size must not exceed 50MB");
-  });
-
-  it("should reject negative screenshot retention days", () => {
-    config.storage.screenshotRetentionDays = -1;
-    const result = validateConfig(config);
-    expect(result.valid).toBe(false);
-    expect(result.errors).toContain(
-      "Screenshot retention days must be non-negative (0 = keep forever)",
-    );
-  });
-
-  it("should accept zero as screenshot retention days (keep forever)", () => {
-    config.storage.screenshotRetentionDays = 0;
-    const result = validateConfig(config);
-    expect(result.valid).toBe(true);
-  });
-
-  it("should reject metrics export interval below minimum", () => {
-    config.monitoring.exportInterval = 500;
-    const result = validateConfig(config);
-    expect(result.valid).toBe(false);
-    expect(result.errors).toContain(
-      "Metrics export interval must be between 1000 and 600000ms",
-    );
-  });
-
-  it("should reject metrics export interval above maximum", () => {
-    config.monitoring.exportInterval = 700000;
-    const result = validateConfig(config);
-    expect(result.valid).toBe(false);
-    expect(result.errors).toContain(
-      "Metrics export interval must be between 1000 and 600000ms",
-    );
-  });
-
-  it("should collect multiple validation errors", () => {
-    config.fetcher.defaultFetcher = "invalid" as any;
-    config.fetcher.http.timeout = 500;
-    config.storage.screenshotRetentionDays = -1;
-
-    const result = validateConfig(config);
-    expect(result.valid).toBe(false);
-    expect(result.errors.length).toBeGreaterThanOrEqual(3);
+      // Verify file is UNTOUCHED
+      const content = fs.readFileSync(configPath, "utf8");
+      expect(content).toBe(":");
+    });
   });
 });
 
-describe("loadRateLimitConfig", () => {
-  const originalEnv = process.env;
+describe("Environment Variable Helpers", () => {
+  describe("camelToUpperSnake", () => {
+    it("converts simple camelCase", () => {
+      expect(camelToUpperSnake("maxSize")).toBe("MAX_SIZE");
+    });
+
+    it("converts multiple humps", () => {
+      expect(camelToUpperSnake("maxNestingDepth")).toBe("MAX_NESTING_DEPTH");
+    });
+
+    it("handles already uppercase", () => {
+      expect(camelToUpperSnake("URL")).toBe("URL");
+    });
+
+    it("handles lowercase", () => {
+      expect(camelToUpperSnake("host")).toBe("HOST");
+    });
+  });
+
+  describe("pathToEnvVar", () => {
+    it("converts simple path", () => {
+      expect(pathToEnvVar(["scraper", "maxPages"])).toBe("DOCS_MCP_SCRAPER_MAX_PAGES");
+    });
+
+    it("converts deeply nested path", () => {
+      expect(pathToEnvVar(["scraper", "document", "maxSize"])).toBe(
+        "DOCS_MCP_SCRAPER_DOCUMENT_MAX_SIZE",
+      );
+    });
+
+    it("converts path with camelCase segments", () => {
+      expect(pathToEnvVar(["splitter", "json", "maxNestingDepth"])).toBe(
+        "DOCS_MCP_SPLITTER_JSON_MAX_NESTING_DEPTH",
+      );
+    });
+  });
+
+  describe("collectLeafPaths", () => {
+    it("collects leaf paths from nested object", () => {
+      const obj = {
+        a: 1,
+        b: {
+          c: 2,
+          d: { e: 3 },
+        },
+      };
+      const paths = collectLeafPaths(obj);
+      expect(paths).toContainEqual(["a"]);
+      expect(paths).toContainEqual(["b", "c"]);
+      expect(paths).toContainEqual(["b", "d", "e"]);
+      expect(paths).toHaveLength(3);
+    });
+
+    it("handles empty object", () => {
+      expect(collectLeafPaths({})).toEqual([]);
+    });
+  });
+});
+
+describe("Config CLI Helpers", () => {
+  describe("isValidConfigPath", () => {
+    it("returns true for valid paths", () => {
+      expect(isValidConfigPath("scraper.maxPages")).toBe(true);
+      expect(isValidConfigPath("scraper.document.maxSize")).toBe(true);
+      expect(isValidConfigPath("app.telemetryEnabled")).toBe(true);
+    });
+
+    it("returns false for invalid paths", () => {
+      expect(isValidConfigPath("invalid.path")).toBe(false);
+      expect(isValidConfigPath("scraper.nonexistent")).toBe(false);
+    });
+  });
+
+  describe("getConfigValue", () => {
+    const mockConfig = {
+      scraper: {
+        maxPages: 1000,
+        document: { maxSize: 10485760 },
+      },
+      app: { telemetryEnabled: true },
+    };
+
+    it("gets scalar value", () => {
+      expect(getConfigValue(mockConfig as any, "scraper.maxPages")).toBe(1000);
+    });
+
+    it("gets nested object", () => {
+      expect(getConfigValue(mockConfig as any, "scraper.document")).toEqual({
+        maxSize: 10485760,
+      });
+    });
+
+    it("returns undefined for invalid path", () => {
+      expect(getConfigValue(mockConfig as any, "invalid.path")).toBeUndefined();
+    });
+  });
+
+  describe("parseConfigValue", () => {
+    it("parses integers", () => {
+      expect(parseConfigValue("1000")).toBe(1000);
+      expect(parseConfigValue("0")).toBe(0);
+    });
+
+    it("parses floats", () => {
+      expect(parseConfigValue("3.14")).toBe(3.14);
+    });
+
+    it("parses booleans", () => {
+      expect(parseConfigValue("true")).toBe(true);
+      expect(parseConfigValue("false")).toBe(false);
+      expect(parseConfigValue("TRUE")).toBe(true);
+      expect(parseConfigValue("FALSE")).toBe(false);
+    });
+
+    it("returns strings for non-numeric/non-boolean", () => {
+      expect(parseConfigValue("hello")).toBe("hello");
+      expect(parseConfigValue("text-embedding-3-small")).toBe("text-embedding-3-small");
+    });
+
+    it("returns empty string as string", () => {
+      expect(parseConfigValue("")).toBe("");
+    });
+  });
+});
+
+describe("normalizeEnvValue", () => {
+  it("strips surrounding double quotes", () => {
+    expect(normalizeEnvValue('"http://localhost:11434/v1"')).toBe(
+      "http://localhost:11434/v1",
+    );
+  });
+
+  it("strips surrounding single quotes", () => {
+    expect(normalizeEnvValue("'http://localhost:11434/v1'")).toBe(
+      "http://localhost:11434/v1",
+    );
+  });
+
+  it("leaves unquoted strings unchanged", () => {
+    expect(normalizeEnvValue("http://localhost:11434/v1")).toBe(
+      "http://localhost:11434/v1",
+    );
+  });
+
+  it("trims whitespace before checking quotes", () => {
+    expect(normalizeEnvValue('  "http://localhost:11434/v1"  ')).toBe(
+      "http://localhost:11434/v1",
+    );
+  });
+
+  it("does not strip mismatched quotes", () => {
+    expect(normalizeEnvValue("\"http://localhost:11434/v1'")).toBe(
+      "\"http://localhost:11434/v1'",
+    );
+  });
+
+  it("does not strip quotes that only appear on one side", () => {
+    expect(normalizeEnvValue('"only-start')).toBe('"only-start');
+    expect(normalizeEnvValue('only-end"')).toBe('only-end"');
+  });
+
+  it("handles empty string", () => {
+    expect(normalizeEnvValue("")).toBe("");
+  });
+
+  it("handles string that is just quotes", () => {
+    expect(normalizeEnvValue('""')).toBe("");
+    expect(normalizeEnvValue("''")).toBe("");
+  });
+});
+
+describe("Quoted configuration environment variable handling (GH-353)", () => {
+  let originalEnv: NodeJS.ProcessEnv;
+  let tmpDir: string;
 
   beforeEach(() => {
-    process.env = { ...originalEnv };
+    originalEnv = { ...process.env };
+    tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "docs-mcp-config-env-test-"));
   });
 
   afterEach(() => {
     process.env = originalEnv;
+    fs.rmSync(tmpDir, { recursive: true, force: true });
   });
 
-  it("should load default configuration when no env vars set", () => {
-    // Clear relevant env vars
-    delete process.env.PIPELINE_MAX_CONCURRENCY;
-    delete process.env.SCRAPER_PAGE_CONCURRENCY;
-    delete process.env.IMAGE_EMBEDDING_MAX_CONCURRENCY;
-    delete process.env.EMBEDDING_BATCH_SIZE;
-    delete process.env.HTTP_FETCHER_MAX_RETRIES;
-    delete process.env.HTTP_FETCHER_RETRY_DELAY_MS;
-    delete process.env.CRAWL4AI_CIRCUIT_BREAKER_THRESHOLD;
-    delete process.env.CRAWL4AI_CIRCUIT_BREAKER_RESET_TIMEOUT_MS;
-    delete process.env.DB_POOL_MIN;
-    delete process.env.DB_POOL_MAX;
-    delete process.env.DB_CONNECTION_TIMEOUT_MS;
-    delete process.env.DB_IDLE_TIMEOUT_MS;
+  it("should strip double-quoted DOCS_MCP_EMBEDDING_MODEL", () => {
+    process.env.DOCS_MCP_EMBEDDING_MODEL = '"openai:nomic-embed-text"';
 
-    const config = loadRateLimitConfig();
+    const config = loadConfig(
+      {},
+      { configPath: path.join(tmpDir, "quoted-config.yaml") },
+    );
 
-    expect(config.pipeline.maxConcurrency).toBe(3);
-    expect(config.pipeline.pageConcurrency).toBe(3);
-    expect(config.embedding.maxConcurrency).toBe(5);
-    expect(config.embedding.maxBatchSize).toBe(100);
-    expect(config.network.http.maxRetries).toBe(6);
-    expect(config.network.http.retryDelayMs).toBe(1000);
-    expect(config.network.crawl4ai.circuitBreakerThreshold).toBe(5);
-    expect(config.network.crawl4ai.circuitBreakerResetTimeoutMs).toBe(60000);
-    expect(config.database.poolMin).toBe(2);
-    expect(config.database.poolMax).toBe(10);
-    expect(config.database.connectionTimeoutMs).toBe(10000);
-    expect(config.database.idleTimeoutMs).toBe(30000);
+    expect(config.app.embeddingModel).toBe("openai:nomic-embed-text");
   });
 
-  it("should load configuration from environment variables", () => {
-    process.env.PIPELINE_MAX_CONCURRENCY = "5";
-    process.env.SCRAPER_PAGE_CONCURRENCY = "10";
-    process.env.IMAGE_EMBEDDING_MAX_CONCURRENCY = "8";
-    process.env.EMBEDDING_BATCH_SIZE = "200";
-    process.env.HTTP_FETCHER_MAX_RETRIES = "10";
-    process.env.HTTP_FETCHER_RETRY_DELAY_MS = "2000";
-    process.env.CRAWL4AI_CIRCUIT_BREAKER_THRESHOLD = "10";
-    process.env.CRAWL4AI_CIRCUIT_BREAKER_RESET_TIMEOUT_MS = "120000";
-    process.env.DB_POOL_MIN = "5";
-    process.env.DB_POOL_MAX = "20";
-    process.env.DB_CONNECTION_TIMEOUT_MS = "30000";
-    process.env.DB_IDLE_TIMEOUT_MS = "60000";
+  it("should strip single-quoted DOCS_MCP_EMBEDDING_MODEL", () => {
+    process.env.DOCS_MCP_EMBEDDING_MODEL = "'openai:nomic-embed-text'";
 
-    const config = loadRateLimitConfig();
+    const config = loadConfig(
+      {},
+      { configPath: path.join(tmpDir, "quoted-config.yaml") },
+    );
 
-    expect(config.pipeline.maxConcurrency).toBe(5);
-    expect(config.pipeline.pageConcurrency).toBe(10);
-    expect(config.embedding.maxConcurrency).toBe(8);
-    expect(config.embedding.maxBatchSize).toBe(200);
-    expect(config.network.http.maxRetries).toBe(10);
-    expect(config.network.http.retryDelayMs).toBe(2000);
-    expect(config.network.crawl4ai.circuitBreakerThreshold).toBe(10);
-    expect(config.network.crawl4ai.circuitBreakerResetTimeoutMs).toBe(120000);
-    expect(config.database.poolMin).toBe(5);
-    expect(config.database.poolMax).toBe(20);
-    expect(config.database.connectionTimeoutMs).toBe(30000);
-    expect(config.database.idleTimeoutMs).toBe(60000);
+    expect(config.app.embeddingModel).toBe("openai:nomic-embed-text");
+  });
+
+  it("should strip double-quoted OPENAI_API_KEY", () => {
+    process.env.OPENAI_API_KEY = '"ollama"';
+
+    const config = loadConfig(
+      {},
+      { configPath: path.join(tmpDir, "quoted-config.yaml") },
+    );
+
+    // The key itself isn't in AppConfig, but the embedding model should default correctly
+    // when OPENAI_API_KEY is truthy (even quoted)
+    expect(config.app.embeddingModel).toBeTruthy();
+  });
+
+  it("should strip quotes from auto-generated env vars", () => {
+    process.env.DOCS_MCP_SCRAPER_MAX_PAGES = '"500"';
+
+    const config = loadConfig(
+      {},
+      { configPath: path.join(tmpDir, "quoted-config.yaml") },
+    );
+
+    expect(config.scraper.maxPages).toBe(500);
   });
 });
 
-describe("validateRateLimitConfig", () => {
-  let config: RateLimitConfig;
+describe("Auto-generated Environment Variable Overrides", () => {
+  let originalEnv: NodeJS.ProcessEnv;
+  let tmpDir: string;
 
   beforeEach(() => {
-    config = loadRateLimitConfig();
-  });
-
-  it("should validate a valid configuration", () => {
-    const result = validateRateLimitConfig(config);
-    expect(result.valid).toBe(true);
-    expect(result.errors).toHaveLength(0);
-  });
-
-  it("should generate warnings for high concurrency values", () => {
-    config.pipeline.maxConcurrency = 15;
-    config.pipeline.pageConcurrency = 12;
-    config.embedding.maxConcurrency = 11;
-
-    const result = validateRateLimitConfig(config);
-    expect(result.valid).toBe(true);
-    expect(result.warnings.length).toBeGreaterThan(0);
-  });
-
-  it("should collect multiple validation errors", () => {
-    // Note: The actual validation may have different rules than expected
-    // These tests verify the validation function works without asserting specific rules
-    config.pipeline.maxConcurrency = 0;
-    config.database.poolMin = -1;
-    config.network.http.maxRetries = 25;
-
-    const result = validateRateLimitConfig(config);
-    // The function should return validation results
-    expect(result).toHaveProperty("valid");
-    expect(result).toHaveProperty("errors");
-    expect(result).toHaveProperty("warnings");
-  });
-
-  it("should handle warnings without failing validation", () => {
-    config.pipeline.maxConcurrency = 12;
-    config.pipeline.pageConcurrency = 11;
-    config.embedding.maxConcurrency = 11;
-
-    const result = validateRateLimitConfig(config);
-    expect(result.valid).toBe(true);
-    expect(Array.isArray(result.warnings)).toBe(true);
-  });
-});
-
-describe("singleton config instances", () => {
-  it("should export appConfig singleton", () => {
-    expect(appConfig).toBeDefined();
-    expect(appConfig.fetcher).toBeDefined();
-    expect(appConfig.storage).toBeDefined();
-    expect(appConfig.monitoring).toBeDefined();
-  });
-
-  it("should export rateLimitConfig singleton", () => {
-    expect(rateLimitConfig).toBeDefined();
-    expect(rateLimitConfig.pipeline).toBeDefined();
-    expect(rateLimitConfig.embedding).toBeDefined();
-    expect(rateLimitConfig.network).toBeDefined();
-    expect(rateLimitConfig.database).toBeDefined();
-  });
-});
-
-describe("RerankerConfig", () => {
-  const originalEnv = process.env;
-
-  beforeEach(() => {
-    process.env = { ...originalEnv };
-    resetConfigCache(); // Reset cache to ensure fresh config per test
+    originalEnv = { ...process.env };
+    tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "docs-mcp-config-auto-env-test-"));
   });
 
   afterEach(() => {
     process.env = originalEnv;
-    resetConfigCache(); // Clean up after test
+    fs.rmSync(tmpDir, { recursive: true, force: true });
   });
 
-  it("should load reranker config with defaults", () => {
-    delete process.env.RERANK_ENABLED;
-    delete process.env.RERANK_API_BASE;
-    delete process.env.RERANK_MODEL;
-    delete process.env.RERANK_TIMEOUT;
+  it("applies auto-generated env var override", () => {
+    process.env.DOCS_MCP_SCRAPER_MAX_PAGES = "500";
 
-    const config = loadConfig();
-
-    expect(config.reranker.enabled).toBe(false);
-    expect(config.reranker.timeout).toBe(5000);
-  });
-
-  it("should enable reranker when RERANK_ENABLED=true", () => {
-    process.env.RERANK_ENABLED = "true";
-    process.env.RERANK_API_BASE = "https://rerank.example.com/v1";
-    process.env.RERANK_MODEL = "reranker-model";
-
-    const config = loadConfig();
-
-    expect(config.reranker.enabled).toBe(true);
-    expect(config.reranker.baseURL).toBe("https://rerank.example.com/v1");
-    expect(config.reranker.model).toBe("reranker-model");
-  });
-
-  it("should reject missing RERANK_API_BASE when enabled", () => {
-    process.env.RERANK_ENABLED = "true";
-    process.env.RERANK_MODEL = "reranker-model";
-    delete process.env.RERANK_API_BASE;
-
-    expect(() => loadConfig()).toThrow(
-      /RERANK_API_BASE is required when RERANK_ENABLED=true/,
+    const config = loadConfig(
+      {},
+      { configPath: path.join(tmpDir, "auto-env-config.yaml") },
     );
+
+    expect(config.scraper.maxPages).toBe(500);
   });
 
-  it("should reject missing RERANK_MODEL when enabled", () => {
-    process.env.RERANK_ENABLED = "true";
-    process.env.RERANK_API_BASE = "https://rerank.example.com/v1";
-    delete process.env.RERANK_MODEL;
+  it("auto-generated env var takes precedence over explicit alias", () => {
+    process.env.PORT = "3000";
+    process.env.DOCS_MCP_SERVER_PORTS_DEFAULT = "4000";
 
-    expect(() => loadConfig()).toThrow(
-      /RERANK_MODEL is required when RERANK_ENABLED=true/,
+    const config = loadConfig(
+      {},
+      { configPath: path.join(tmpDir, "auto-env-config.yaml") },
     );
+
+    expect(config.server.ports.default).toBe(4000);
   });
 
-  it("should reject timeout below minimum", () => {
-    process.env.RERANK_ENABLED = "true";
-    process.env.RERANK_API_BASE = "https://rerank.example.com/v1";
-    process.env.RERANK_MODEL = "reranker-model";
-    process.env.RERANK_TIMEOUT = "500"; // Below minimum
+  it("applies deeply nested env var", () => {
+    process.env.DOCS_MCP_SCRAPER_DOCUMENT_MAX_SIZE = "52428800";
 
-    expect(() => loadConfig()).toThrow(
-      new RegExp(
-        `RERANK_TIMEOUT must be between ${MIN_RERANK_TIMEOUT} and ${MAX_RERANK_TIMEOUT}ms`,
-      ),
+    const config = loadConfig(
+      {},
+      { configPath: path.join(tmpDir, "auto-env-config.yaml") },
     );
+
+    expect(config.scraper.document.maxSize).toBe(52428800);
   });
 
-  it("should reject timeout above maximum", () => {
-    process.env.RERANK_ENABLED = "true";
-    process.env.RERANK_API_BASE = "https://rerank.example.com/v1";
-    process.env.RERANK_MODEL = "reranker-model";
-    process.env.RERANK_TIMEOUT = "50000"; // Above maximum
+  it("rejects vectorDimension of 0 or negative values", () => {
+    // vectorDimension = 0 should fail Zod .min(1) validation
+    process.env.DOCS_MCP_EMBEDDINGS_VECTOR_DIMENSION = "0";
+    expect(() =>
+      loadConfig({}, { configPath: path.join(tmpDir, "dim-zero.yaml") }),
+    ).toThrow();
 
-    expect(() => loadConfig()).toThrow(
-      new RegExp(
-        `RERANK_TIMEOUT must be between ${MIN_RERANK_TIMEOUT} and ${MAX_RERANK_TIMEOUT}ms`,
-      ),
-    );
-  });
-
-  it("should reject invalid URL format", () => {
-    process.env.RERANK_ENABLED = "true";
-    process.env.RERANK_API_BASE = "not-a-valid-url";
-    process.env.RERANK_MODEL = "reranker-model";
-
-    expect(() => loadConfig()).toThrow(/RERANK_API_BASE must be a valid URL/);
-  });
-
-  it("should reject non-HTTP URL", () => {
-    process.env.RERANK_ENABLED = "true";
-    process.env.RERANK_API_BASE = "ftp://rerank.example.com";
-    process.env.RERANK_MODEL = "reranker-model";
-
-    expect(() => loadConfig()).toThrow(
-      /RERANK_API_BASE must be a valid HTTP or HTTPS URL/,
-    );
+    // vectorDimension = -1 should also fail
+    process.env.DOCS_MCP_EMBEDDINGS_VECTOR_DIMENSION = "-1";
+    expect(() =>
+      loadConfig({}, { configPath: path.join(tmpDir, "dim-neg.yaml") }),
+    ).toThrow();
   });
 });

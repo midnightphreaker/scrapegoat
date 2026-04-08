@@ -8,7 +8,7 @@ import {
   OpenAIEmbeddings,
   type OpenAIEmbeddingsParams,
 } from "@langchain/openai";
-import { VECTOR_DIMENSION } from "../../utils/config";
+import type { AppConfig } from "../../utils/config";
 import { MissingCredentialsError } from "../errors";
 import { FixedDimensionEmbeddings } from "./FixedDimensionEmbeddings";
 
@@ -117,14 +117,27 @@ export function areCredentialsAvailable(provider: EmbeddingProvider): boolean {
  * @throws {UnsupportedProviderError} If an unsupported provider is specified.
  * @throws {ModelConfigurationError} If there's an issue with the model configuration.
  */
-export function createEmbeddingModel(providerAndModel: string): Embeddings {
+export function createEmbeddingModel(
+  providerAndModel: string,
+  runtime?: {
+    requestTimeoutMs?: number;
+    vectorDimension?: number;
+    config?: AppConfig["embeddings"];
+  },
+): Embeddings {
+  const config = runtime?.config;
+  const requestTimeoutMs = runtime?.requestTimeoutMs ?? config?.requestTimeoutMs;
+  const vectorDimension = runtime?.vectorDimension ?? config?.vectorDimension;
+  if (vectorDimension === undefined) {
+    throw new ModelConfigurationError(
+      "Embedding vector dimension is required; set DOCS_MCP_EMBEDDINGS_VECTOR_DIMENSION or embeddings.vectorDimension in config.",
+    );
+  }
   // Parse provider and model name
   const [providerOrModel, ...modelNameParts] = providerAndModel.split(":");
   const modelName = modelNameParts.join(":");
-  const provider: EmbeddingProvider = modelName
-    ? (providerOrModel as EmbeddingProvider)
-    : "openai";
-  const model: string = modelName || providerOrModel || "text-embedding-3-small";
+  const provider = modelName ? (providerOrModel as EmbeddingProvider) : "openai";
+  const model = modelName || providerOrModel;
 
   // Default configuration for each provider
   const baseConfig = { stripNewLines: true };
@@ -134,22 +147,18 @@ export function createEmbeddingModel(providerAndModel: string): Embeddings {
       if (!process.env.OPENAI_API_KEY) {
         throw new MissingCredentialsError("openai", ["OPENAI_API_KEY"]);
       }
-      // Use smaller batch size for self-hosted models (e.g., qwen3-text-embedding)
-      // Custom base URLs indicate self-hosted models with lower batch size limits
-      const baseURL = process.env.OPENAI_API_BASE;
-      const batchSize = baseURL ? 32 : 512; // 32 for self-hosted, 512 for OpenAI
-
       const config: Partial<OpenAIEmbeddingsParams> & { configuration?: ClientOptions } =
         {
           ...baseConfig,
           modelName: model,
-          batchSize, // Adjusted based on whether using self-hosted model
-          // dimensions: VECTOR_DIMENSION, // Removed: qwen3-text-embedding does not support matryoshka (e.g., qwen3-text-embedding)
+          batchSize: 512, // OpenAI supports large batches
+          timeout: requestTimeoutMs,
         };
       // Add custom base URL if specified
-      if (baseURL) {
-        config.configuration = { baseURL };
-      }
+      const baseURL = process.env.OPENAI_API_BASE;
+      config.configuration = baseURL
+        ? { baseURL, timeout: requestTimeoutMs }
+        : { timeout: requestTimeoutMs };
       return new OpenAIEmbeddings(config);
     }
 
@@ -176,7 +185,7 @@ export function createEmbeddingModel(providerAndModel: string): Embeddings {
       });
       return new FixedDimensionEmbeddings(
         baseEmbeddings,
-        VECTOR_DIMENSION,
+        vectorDimension,
         providerAndModel,
         true,
       );

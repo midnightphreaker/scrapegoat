@@ -4,16 +4,56 @@
  */
 
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { createCliProgram } from "./index";
-import {
-  resolveEmbeddingContext,
-  resolveProtocol,
-  validatePort,
-  validateResumeFlag,
-} from "./utils";
+import { DocumentManagementService } from "../store";
+import { resolveStorePath } from "../utils/paths";
+import { createCli } from "./index";
+import { resolveProtocol, validatePort, validateResumeFlag } from "./utils";
 
 // Mocks for execution tests will be defined below in dedicated describe block
-vi.mock("../utils/logger");
+
+// Mock CLI utils early to prevent side effects (like Playwright installation)
+vi.mock("./utils", async () => {
+  const actual = await vi.importActual<any>("./utils");
+  return {
+    ...actual,
+    ensurePlaywrightBrowsersInstalled: vi.fn(), // Mock to prevent side effects in tests
+  };
+});
+
+vi.mock("../events", () => ({
+  EventBusService: vi.fn().mockImplementation(() => ({
+    emitter: {},
+    emit: vi.fn(),
+    on: vi.fn(),
+    off: vi.fn(),
+  })),
+}));
+
+// Mock telemetry to prevent side effects and timeouts
+vi.mock("../telemetry", async () => {
+  return {
+    initTelemetry: vi.fn(),
+    shouldEnableTelemetry: vi.fn().mockReturnValue(false),
+    TelemetryService: vi.fn().mockImplementation(() => ({
+      shutdown: vi.fn(),
+    })),
+    telemetry: {
+      isEnabled: vi.fn().mockReturnValue(false),
+      setGlobalContext: vi.fn(),
+      track: vi.fn(),
+      shutdown: vi.fn(),
+    },
+    TelemetryEvent: {
+      APP_STARTED: "app_started",
+      APP_SHUTDOWN: "app_shutdown",
+      CLI_COMMAND: "cli_command",
+      TOOL_USED: "tool_used",
+      PIPELINE_JOB_STARTED: "pipeline_job_started",
+      PIPELINE_JOB_COMPLETED: "pipeline_job_completed",
+      PIPELINE_JOB_FAILED: "pipeline_job_failed",
+    },
+  };
+});
 
 // --- Additional mocks for createPipelineWithCallbacks behavior tests ---
 vi.mock("../pipeline/PipelineFactory", () => ({
@@ -42,277 +82,8 @@ vi.mock("../tools", async () => {
   };
 });
 
-describe("CLI Command Arguments Matrix", () => {
-  const program = createCliProgram();
-
-  // Extract command options for easier testing
-  const getCommandOptions = (commandName?: string) => {
-    if (!commandName) {
-      // Main program options (default action)
-      return program.options.map((opt) => opt.long);
-    }
-
-    const command = program.commands.find((cmd) => cmd.name() === commandName);
-    return command?.options.map((opt) => opt.long) || [];
-  };
-
-  // Test that embedding-model option is available on commands that require embeddings
-  describe("embedding-model option availability", () => {
-    const commandMatrix = {
-      default: true,
-      mcp: true,
-      web: true,
-      worker: true,
-      scrape: true,
-      search: true,
-      list: false,
-      remove: false,
-      "find-version": false,
-      "fetch-url": false,
-    };
-
-    Object.entries(commandMatrix).forEach(([commandName, shouldHaveEmbeddingOption]) => {
-      it(`${commandName} command should ${shouldHaveEmbeddingOption ? "have" : "not have"} --embedding-model option`, () => {
-        const options = getCommandOptions(
-          commandName === "default" ? undefined : commandName,
-        );
-
-        if (shouldHaveEmbeddingOption) {
-          expect(options).toContain("--embedding-model");
-        } else {
-          expect(options).not.toContain("--embedding-model");
-        }
-      });
-    });
-  });
-
-  // Test the CLI Commands and Arguments Matrix
-  const commandMatrix = {
-    default: {
-      hasVerboseSilent: true,
-      hasPort: true,
-      hasServerUrl: false, // Default action doesn't have server-url
-      hasProtocol: true,
-      hasResume: true,
-      hasReadOnly: true,
-      requiresEmbedding: true, // Default action starts servers that need search capability
-    },
-    mcp: {
-      hasVerboseSilent: true,
-      hasPort: true,
-      hasServerUrl: true,
-      hasProtocol: true,
-      hasResume: false,
-      hasReadOnly: true,
-      requiresEmbedding: true, // MCP server provides search tools
-    },
-    web: {
-      hasVerboseSilent: true,
-      hasPort: true,
-      hasServerUrl: true,
-      hasProtocol: false,
-      hasResume: false,
-      hasReadOnly: false,
-      requiresEmbedding: true, // Web interface has search functionality
-    },
-    worker: {
-      hasVerboseSilent: true,
-      hasPort: true,
-      hasServerUrl: false,
-      hasProtocol: false,
-      hasResume: true,
-      hasReadOnly: false,
-      requiresEmbedding: true, // Worker handles scraping/indexing and search
-    },
-    scrape: {
-      hasVerboseSilent: true,
-      hasPort: false,
-      hasServerUrl: true,
-      hasProtocol: false,
-      hasResume: false,
-      hasReadOnly: false,
-      requiresEmbedding: true, // Scrape needs embeddings for indexing
-    },
-    search: {
-      hasVerboseSilent: true,
-      hasPort: false,
-      hasServerUrl: true,
-      hasProtocol: false,
-      hasResume: false,
-      hasReadOnly: false,
-      requiresEmbedding: true, // Search explicitly needs embeddings
-    },
-    list: {
-      hasVerboseSilent: true,
-      hasPort: false,
-      hasServerUrl: true,
-      hasProtocol: false,
-      hasResume: false,
-      hasReadOnly: false,
-      requiresEmbedding: false, // List only queries metadata, no embeddings needed
-    },
-    remove: {
-      hasVerboseSilent: true,
-      hasPort: false,
-      hasServerUrl: true,
-      hasProtocol: false,
-      hasResume: false,
-      hasReadOnly: false,
-      requiresEmbedding: false, // Remove only deletes records, no embeddings needed
-    },
-    "find-version": {
-      hasVerboseSilent: true,
-      hasPort: false,
-      hasServerUrl: true,
-      hasProtocol: false,
-      hasResume: false,
-      hasReadOnly: false,
-      requiresEmbedding: false, // Find-version only queries metadata, no embeddings needed
-    },
-    "fetch-url": {
-      hasVerboseSilent: true,
-      hasPort: false,
-      hasServerUrl: false,
-      hasProtocol: false,
-      hasResume: false,
-      hasReadOnly: false,
-      requiresEmbedding: false, // Fetch-url is standalone, doesn't use document store
-    },
-  };
-
-  // Test each command according to the matrix
-  Object.entries(commandMatrix).forEach(([commandName, expectedOptions]) => {
-    it(`should have correct options for ${commandName} command`, () => {
-      const options = getCommandOptions(
-        commandName === "default" ? undefined : commandName,
-      );
-
-      // Global options (--verbose/--silent) are inherited for all commands
-      if (expectedOptions.hasVerboseSilent && commandName !== "default") {
-        // For subcommands, global options are available through parent
-        const globalOptions = program.options.map((opt) => opt.long);
-        expect(globalOptions).toContain("--verbose");
-        expect(globalOptions).toContain("--silent");
-      } else if (commandName === "default") {
-        expect(options).toContain("--verbose");
-        expect(options).toContain("--silent");
-      }
-
-      // Test specific options
-      if (expectedOptions.hasPort) {
-        expect(options).toContain("--port");
-      } else {
-        expect(options).not.toContain("--port");
-      }
-
-      if (expectedOptions.hasServerUrl) {
-        expect(options).toContain("--server-url");
-      } else {
-        expect(options).not.toContain("--server-url");
-      }
-
-      if (expectedOptions.hasProtocol) {
-        expect(options).toContain("--protocol");
-      } else {
-        expect(options).not.toContain("--protocol");
-      }
-
-      if (expectedOptions.hasResume) {
-        expect(options).toContain("--resume");
-      } else {
-        expect(options).not.toContain("--resume");
-      }
-
-      if (expectedOptions.hasReadOnly) {
-        expect(options).toContain("--read-only");
-      } else {
-        expect(options).not.toContain("--read-only");
-      }
-    });
-  });
-
-  it("should register all expected commands", () => {
-    const commandNames = program.commands.map((cmd) => cmd.name());
-    expect(commandNames).toEqual([
-      "mcp",
-      "web",
-      "worker",
-      "scrape",
-      "search",
-      "list",
-      "find-version",
-      "remove",
-      "fetch-url",
-    ]);
-  });
-});
-
-describe("createPipelineWithCallbacks behavior", () => {
-  afterEach(() => {
-    vi.clearAllMocks();
-  });
-
-  it("attaches callbacks for local pipeline and throws when docService missing", async () => {
-    const { createPipelineWithCallbacks } = await import("./utils");
-    const { PipelineFactory } = await import("../pipeline/PipelineFactory");
-    const mockSetCallbacks = vi.fn();
-
-    // Local path requires a DocumentManagementService instance
-    await expect(createPipelineWithCallbacks(undefined as any, {})).rejects.toThrow(
-      "Local pipeline requires a DocumentManagementService instance",
-    );
-
-    // Provide a fake docService and ensure callbacks are wired
-    vi.mocked(PipelineFactory.createPipeline).mockResolvedValueOnce({
-      setCallbacks: mockSetCallbacks,
-    } as any);
-
-    const fakeDocService = {} as any;
-    const pipeline = await createPipelineWithCallbacks(fakeDocService, {
-      concurrency: 2,
-    });
-
-    expect(PipelineFactory.createPipeline).toHaveBeenCalledWith(fakeDocService, {
-      concurrency: 2,
-    });
-    expect(mockSetCallbacks).toHaveBeenCalledWith(
-      expect.objectContaining({
-        onJobProgress: expect.any(Function),
-        onJobStatusChange: expect.any(Function),
-        onJobError: expect.any(Function),
-      }),
-    );
-    expect(pipeline).toBeDefined();
-  });
-
-  it("creates remote pipeline when serverUrl is provided and attaches callbacks", async () => {
-    const { createPipelineWithCallbacks } = await import("./utils");
-    const { PipelineFactory } = await import("../pipeline/PipelineFactory");
-    const mockSetCallbacks = vi.fn();
-
-    vi.mocked(PipelineFactory.createPipeline).mockResolvedValueOnce({
-      setCallbacks: mockSetCallbacks,
-    } as any);
-
-    const pipeline = await createPipelineWithCallbacks(undefined, {
-      serverUrl: "http://localhost:8181",
-      concurrency: 1,
-    });
-
-    expect(PipelineFactory.createPipeline).toHaveBeenCalledWith(undefined, {
-      serverUrl: "http://localhost:8181",
-      concurrency: 1,
-    });
-    expect(mockSetCallbacks).toHaveBeenCalledWith(
-      expect.objectContaining({
-        onJobProgress: expect.any(Function),
-        onJobStatusChange: expect.any(Function),
-        onJobError: expect.any(Function),
-      }),
-    );
-    expect(pipeline).toBeDefined();
-  });
-});
+// CLI Command Arguments Matrix tests removed as they relied on Commander-specific internal properties.
+// Command configuration is now verified by individual command tests and Typescript validation.
 
 describe("CLI command handler parameters", () => {
   beforeEach(() => {
@@ -321,19 +92,22 @@ describe("CLI command handler parameters", () => {
   });
 
   it("list command forwards --server-url and uses correct (options, command) signature", async () => {
-    const { createCliProgram } = await import("./index");
-    const program = createCliProgram();
+    const program = createCli([]);
     const serverUrl = "http://example.com/api";
 
     await expect(
-      program.parseAsync(["node", "test", "list", "--server-url", serverUrl]),
+      program.parseAsync(["list", "--server-url", serverUrl]),
     ).resolves.not.toThrow();
 
-    expect(capturedCreateArgs).toContainEqual({
-      serverUrl,
-      storePath: expect.any(String),
-      embeddingConfig: undefined,
-    });
+    expect(capturedCreateArgs).toContainEqual(
+      expect.objectContaining({
+        eventBus: expect.any(Object),
+        serverUrl,
+        appConfig: expect.objectContaining({
+          app: expect.objectContaining({ storePath: expect.any(String) }),
+        }),
+      }),
+    );
     expect(listToolExecuteCalled).toBe(true);
   });
 });
@@ -352,12 +126,17 @@ vi.mock("../store", async () => {
       capturedCreateArgs.push(opts);
       return { shutdown: vi.fn() } as any;
     }),
-    createLocalDocumentManagement: vi.fn().mockResolvedValue({
-      initialize: vi.fn(),
+    DocumentManagementService: vi.fn().mockImplementation(() => ({
+      initialize: vi.fn().mockResolvedValue(undefined),
       shutdown: vi.fn(),
-    }),
+    })),
   };
 });
+vi.mock("../store/errors", () => ({
+  EmbeddingModelChangedError: class EmbeddingModelChangedError extends Error {
+    name = "EmbeddingModelChangedError";
+  },
+}));
 
 vi.mock("../app", () => ({
   startAppServer: vi.fn().mockResolvedValue({
@@ -375,17 +154,14 @@ vi.mock("../mcp/startStdioServer", () => ({
 
 describe("Global option propagation", () => {
   let mockResolveStorePath: any;
-  let mockCreateLocalDocumentManagement: any;
+  let mockDocumentManagementService: any;
 
   beforeEach(async () => {
     vi.clearAllMocks();
 
     // Get references to the mocked functions
-    const { resolveStorePath } = await import("../utils/paths");
-    const { createLocalDocumentManagement } = await import("../store");
-
     mockResolveStorePath = vi.mocked(resolveStorePath);
-    mockCreateLocalDocumentManagement = vi.mocked(createLocalDocumentManagement);
+    mockDocumentManagementService = vi.mocked(DocumentManagementService);
   });
 
   it("should pass --store-path through preAction hook to default command", async () => {
@@ -395,14 +171,11 @@ describe("Global option propagation", () => {
     // Mock the path resolution to return a resolved path
     mockResolveStorePath.mockReturnValue(resolvedStorePath);
 
-    const { createCliProgram } = await import("./index");
-    const program = createCliProgram();
+    const program = createCli([]);
 
     // Simulate running the default command with --store-path
     // Use --protocol http to get a random available port
     const _parsePromise = program.parseAsync([
-      "node",
-      "test",
       "--store-path",
       customStorePath,
       "--protocol",
@@ -415,10 +188,14 @@ describe("Global option propagation", () => {
     // Verify that resolveStorePath was called with the CLI option
     expect(mockResolveStorePath).toHaveBeenCalledWith(customStorePath);
 
-    // Verify that createLocalDocumentManagement was called with the resolved path
-    expect(mockCreateLocalDocumentManagement).toHaveBeenCalledWith(
-      resolvedStorePath,
-      expect.any(Object), // embeddingConfig
+    // Verify that DocumentManagementService was constructed with the resolved path
+    expect(mockDocumentManagementService).toHaveBeenCalledWith(
+      expect.objectContaining({
+        emitter: expect.any(Object),
+      }), // EventBusService instance
+      expect.objectContaining({
+        app: expect.objectContaining({ storePath: resolvedStorePath }),
+      }),
     );
 
     // The parseAsync promise will hang since it starts a server, but we've verified our assertions
@@ -435,12 +212,11 @@ describe("Global option propagation", () => {
     // Mock the path resolution
     mockResolveStorePath.mockReturnValue(resolvedStorePath);
 
-    const { createCliProgram } = await import("./index");
-    const program = createCliProgram();
+    const program = createCli([]);
 
     // Run default command without explicit --store-path
     // Use --protocol http to get a random available port
-    const _parsePromise = program.parseAsync(["node", "test", "--protocol", "http"]);
+    const _parsePromise = program.parseAsync(["--protocol", "http"]);
 
     // Give it a moment to start and then verify the mocks were called
     await new Promise((resolve) => setTimeout(resolve, 100));
@@ -448,14 +224,72 @@ describe("Global option propagation", () => {
     // Verify that resolveStorePath was called with the env var value
     expect(mockResolveStorePath).toHaveBeenCalledWith(envStorePath);
 
-    // Verify that createLocalDocumentManagement was called with the resolved path
-    expect(mockCreateLocalDocumentManagement).toHaveBeenCalledWith(
-      resolvedStorePath,
-      expect.any(Object), // embeddingConfig
+    // Verify that DocumentManagementService was constructed with the resolved path
+    expect(mockDocumentManagementService).toHaveBeenCalledWith(
+      expect.objectContaining({
+        emitter: expect.any(Object),
+      }), // EventBusService instance
+      expect.objectContaining({
+        app: expect.objectContaining({ storePath: resolvedStorePath }),
+      }),
     );
 
     // Clean up
     delete process.env.DOCS_MCP_STORE_PATH;
+  }, 10000);
+
+  it("should pass --embedding-model through to document management", async () => {
+    const embeddingModel = "openai:text-embedding-3-large";
+    const resolvedStorePath = "/mocked/resolved/path";
+    mockResolveStorePath.mockReturnValue(resolvedStorePath);
+
+    const program = createCli([]);
+
+    // Parse with embedding model flag
+    const _parsePromise = program.parseAsync([
+      "--embedding-model",
+      embeddingModel,
+      "--protocol",
+      "http",
+    ]);
+
+    await new Promise((resolve) => setTimeout(resolve, 100));
+
+    expect(mockDocumentManagementService).toHaveBeenCalledWith(
+      expect.any(Object),
+      expect.objectContaining({
+        app: expect.objectContaining({
+          storePath: resolvedStorePath,
+          embeddingModel,
+        }),
+      }),
+    );
+  }, 10000);
+
+  it("should pick up DOCS_MCP_EMBEDDING_MODEL environment variable", async () => {
+    const envModel = "openai:text-embedding-ada-002";
+    const resolvedStorePath = "/mocked/resolved/path";
+    process.env.DOCS_MCP_EMBEDDING_MODEL = envModel;
+    mockResolveStorePath.mockReturnValue(resolvedStorePath);
+
+    const program = createCli([]);
+
+    // Run without explicit --embedding-model
+    const _parsePromise = program.parseAsync(["--protocol", "http"]);
+
+    await new Promise((resolve) => setTimeout(resolve, 100));
+
+    expect(mockDocumentManagementService).toHaveBeenCalledWith(
+      expect.any(Object),
+      expect.objectContaining({
+        app: expect.objectContaining({
+          storePath: resolvedStorePath,
+          embeddingModel: envModel,
+        }),
+      }),
+    );
+
+    delete process.env.DOCS_MCP_EMBEDDING_MODEL;
   }, 10000);
 });
 
@@ -502,7 +336,7 @@ describe("CLI Validation Logic", () => {
   describe("validatePort", () => {
     it("should accept valid port numbers", () => {
       expect(validatePort("3000")).toBe(3000);
-      expect(validatePort("8181")).toBe(8181);
+      expect(validatePort("8080")).toBe(8080);
       expect(validatePort("1")).toBe(1);
       expect(validatePort("65535")).toBe(65535);
     });
@@ -530,53 +364,6 @@ describe("CLI Validation Logic", () => {
       expect(() => validateResumeFlag(true, "http://example.com")).toThrow(
         "--resume flag is incompatible with --server-url. External workers handle their own job recovery.",
       );
-    });
-  });
-
-  describe("resolveEmbeddingContext", () => {
-    afterEach(() => {
-      // Clean up environment after each test
-      delete process.env.DOCS_MCP_EMBEDDING_MODEL;
-      delete process.env.OPENAI_API_KEY;
-    });
-
-    it("should return null when no embedding model is configured and no OPENAI_API_KEY", () => {
-      // Ensure no env vars are set
-      delete process.env.DOCS_MCP_EMBEDDING_MODEL;
-      delete process.env.OPENAI_API_KEY;
-      const result = resolveEmbeddingContext();
-      expect(result).toBeNull();
-    });
-
-    it("should return default config when OPENAI_API_KEY is present but no embedding model specified", () => {
-      // Ensure no embedding model env var is set, but OPENAI_API_KEY is present
-      delete process.env.DOCS_MCP_EMBEDDING_MODEL;
-      process.env.OPENAI_API_KEY = "test-key";
-      const result = resolveEmbeddingContext();
-      expect(result).toMatchObject({
-        provider: "openai",
-        model: "text-embedding-3-small", // Default fallback
-      });
-    });
-
-    it("should return config when embedding model is configured via environment", () => {
-      process.env.DOCS_MCP_EMBEDDING_MODEL = "openai:text-embedding-ada-002";
-      // The function now checks for OPENAI_API_KEY when using OpenAI models
-      process.env.OPENAI_API_KEY = "test-key";
-      const result = resolveEmbeddingContext();
-      expect(result).toMatchObject({
-        provider: "openai",
-        model: "text-embedding-3-small",
-      });
-    });
-
-    it("should prioritize CLI args over environment variables", () => {
-      process.env.DOCS_MCP_EMBEDDING_MODEL = "openai:text-embedding-ada-002";
-      const result = resolveEmbeddingContext("openai:text-embedding-3-small");
-      expect(result).toMatchObject({
-        provider: "openai",
-        model: "text-embedding-3-small",
-      });
     });
   });
 });

@@ -1,14 +1,21 @@
-import type { Document, ProgressCallback } from "../../types";
+/**
+ * Web scraper strategy that normalizes URLs, fetches content with automatic
+ * fetcher selection, and routes content through pipelines. Requires resolved
+ * configuration from the entrypoint to avoid implicit config loading.
+ */
+import fsPromises from "node:fs/promises";
+import os from "node:os";
+import path from "node:path";
+import type { AppConfig } from "../../utils/config";
 import { logger } from "../../utils/logger";
-import { saveScreenshot } from "../../utils/screenshotStorage";
 import type { UrlNormalizerOptions } from "../../utils/url";
 import { AutoDetectFetcher } from "../fetcher";
-import type { RawContent } from "../fetcher/types";
+import { FetchStatus, type RawContent } from "../fetcher/types";
 import { PipelineFactory } from "../pipelines/PipelineFactory";
-import type { ContentPipeline, ProcessedContent } from "../pipelines/types";
-import type { ScraperOptions, ScraperProgress } from "../types";
-import { isInScope } from "../utils/scope";
-import { BaseScraperStrategy, type QueueItem } from "./BaseScraperStrategy";
+import type { ContentPipeline, PipelineResult } from "../pipelines/types";
+import type { QueueItem, ScraperOptions } from "../types";
+import { BaseScraperStrategy, type ProcessItemResult } from "./BaseScraperStrategy";
+import { LocalFileStrategy } from "./LocalFileStrategy";
 
 export interface WebScraperStrategyOptions {
   urlNormalizerOptions?: UrlNormalizerOptions;
@@ -16,14 +23,18 @@ export interface WebScraperStrategyOptions {
 }
 
 export class WebScraperStrategy extends BaseScraperStrategy {
-  private readonly fetcher = new AutoDetectFetcher();
+  private readonly fetcher: AutoDetectFetcher;
   private readonly shouldFollowLinkFn?: (baseUrl: URL, targetUrl: URL) => boolean;
   private readonly pipelines: ContentPipeline[];
+  private readonly localFileStrategy: LocalFileStrategy;
+  private tempFiles: string[] = [];
 
-  constructor(options: WebScraperStrategyOptions = {}) {
-    super({ urlNormalizerOptions: options.urlNormalizerOptions });
+  constructor(config: AppConfig, options: WebScraperStrategyOptions = {}) {
+    super(config, { urlNormalizerOptions: options.urlNormalizerOptions });
     this.shouldFollowLinkFn = options.shouldFollowLink;
-    this.pipelines = PipelineFactory.createStandardPipelines();
+    this.fetcher = new AutoDetectFetcher(config.scraper);
+    this.pipelines = PipelineFactory.createStandardPipelines(config);
+    this.localFileStrategy = new LocalFileStrategy(config);
   }
 
   canHandle(url: string): boolean {
@@ -48,46 +59,53 @@ export class WebScraperStrategy extends BaseScraperStrategy {
   protected override async processItem(
     item: QueueItem,
     options: ScraperOptions,
-    _progressCallback?: ProgressCallback<ScraperProgress>, // Base class passes it, but not used here
-    signal?: AbortSignal, // Add signal
-  ): Promise<{ document?: Document; links?: string[]; finalUrl?: string }> {
+    signal?: AbortSignal,
+  ): Promise<ProcessItemResult> {
     const { url } = item;
 
     try {
-      // Define fetch options, passing signal, followRedirects, headers, and useCrawl4AI
+      // Log when processing with ETag for conditional requests
+      if (item.etag) {
+        logger.debug(`Processing ${url} with stored ETag: ${item.etag}`);
+      }
+
+      // Check for Archive Root URL (only if depth 0)
+      if (item.depth === 0) {
+        const isArchive = /\.(zip|tar|gz|tgz)$/i.test(new URL(url).pathname);
+        if (isArchive) {
+          return this.processRootArchive(item, options, signal);
+        }
+      }
+
+      // Define fetch options, passing signal, followRedirects, headers, and etag
       const fetchOptions = {
         signal,
         followRedirects: options.followRedirects,
         headers: options.headers, // Forward custom headers
-        useCrawl4AI: options.useCrawl4AI, // Forward Crawl4AI preference
+        etag: item.etag, // Pass ETag for conditional requests
       };
 
       // Use AutoDetectFetcher which handles fallbacks automatically
       const rawContent: RawContent = await this.fetcher.fetch(url, fetchOptions);
 
-      // --- Save Screenshot (Phase 3B) ---
-      let screenshotPath: string | undefined;
-      if (rawContent.screenshot) {
-        try {
-          screenshotPath = await saveScreenshot({
-            library: options.library,
-            version: options.version,
-            url,
-            data: rawContent.screenshot,
-          });
-          logger.debug(`Screenshot saved: ${screenshotPath}`);
-        } catch (error) {
-          logger.warn(
-            `Failed to save screenshot for ${url}: ${error instanceof Error ? error.message : String(error)}`,
-          );
-          // Continue without screenshot - non-critical failure
-        }
+      logger.debug(
+        `Fetch result for ${url}: status=${rawContent.status}, etag=${rawContent.etag || "none"}`,
+      );
+
+      // Return the status directly - BaseScraperStrategy handles NOT_MODIFIED and NOT_FOUND
+      // Use the final URL from rawContent.source (which may differ due to redirects)
+      if (rawContent.status !== FetchStatus.SUCCESS) {
+        logger.debug(`Skipping pipeline for ${url} due to status: ${rawContent.status}`);
+        return { url: rawContent.source, links: [], status: rawContent.status };
       }
 
       // --- Start Pipeline Processing ---
-      let processed: ProcessedContent | undefined;
+      let processed: PipelineResult | undefined;
       for (const pipeline of this.pipelines) {
-        if (pipeline.canProcess(rawContent)) {
+        const contentBuffer = Buffer.isBuffer(rawContent.content)
+          ? rawContent.content
+          : Buffer.from(rawContent.content);
+        if (pipeline.canProcess(rawContent.mimeType || "text/plain", contentBuffer)) {
           logger.debug(
             `Selected ${pipeline.constructor.name} for content type "${rawContent.mimeType}" (${url})`,
           );
@@ -97,14 +115,15 @@ export class WebScraperStrategy extends BaseScraperStrategy {
       }
 
       if (!processed) {
+        // If content type is unsupported (e.g. binary/archive encountered during crawl), we just skip
         logger.warn(
           `⚠️  Unsupported content type "${rawContent.mimeType}" for URL ${url}. Skipping processing.`,
         );
-        return { document: undefined, links: [] };
+        return { url: rawContent.source, links: [], status: FetchStatus.SUCCESS };
       }
 
       // Log errors from pipeline
-      for (const err of processed.errors) {
+      for (const err of processed.errors ?? []) {
         logger.warn(`⚠️  Processing error for ${url}: ${err.message}`);
       }
 
@@ -113,64 +132,52 @@ export class WebScraperStrategy extends BaseScraperStrategy {
         logger.warn(
           `⚠️  No processable content found for ${url} after pipeline execution.`,
         );
-        return { document: undefined, links: processed.links };
+        return {
+          url: rawContent.source,
+          links: processed.links,
+          status: FetchStatus.SUCCESS,
+        };
       }
 
-      // Determine base for scope filtering:
-      // For depth 0 (initial page) use the final fetched URL (rawContent.source) so protocol/host redirects don't drop links.
-      // For deeper pages, use canonicalBaseUrl (set after first page) or fallback to original.
-      const baseUrl =
-        item.depth === 0
-          ? new URL(rawContent.source)
-          : (this.canonicalBaseUrl ?? new URL(options.url));
+      // Update canonical base URL from the first page's final URL (after redirects)
+      if (item.depth === 0) {
+        this.canonicalBaseUrl = new URL(rawContent.source);
+      }
 
-      const filteredLinks = processed.links.filter((link) => {
-        try {
-          const targetUrl = new URL(link);
-          const scope = options.scope || "subpages";
-          const inScope = isInScope(baseUrl, targetUrl, scope);
-          if (!inScope) {
-            logger.debug(`[SCOPE] Link ${link} filtered out by scope (${scope})`);
+      const filteredLinks =
+        processed.links?.filter((link) => {
+          try {
+            const targetUrl = new URL(link);
+
+            // Check for archive links during crawl - ignore them
+            if (/\.(zip|tar|gz|tgz)$/i.test(targetUrl.pathname)) {
+              return false;
+            }
+
+            // Use the base class's shouldProcessUrl which handles scope + include/exclude patterns
+            if (!this.shouldProcessUrl(targetUrl.href, options)) {
+              return false;
+            }
+            // Apply optional custom filter function if provided
+            if (this.shouldFollowLinkFn) {
+              const baseUrl = this.canonicalBaseUrl ?? new URL(options.url);
+              return this.shouldFollowLinkFn(baseUrl, targetUrl);
+            }
+            return true;
+          } catch {
+            return false;
           }
-          return (
-            inScope &&
-            (!this.shouldFollowLinkFn || this.shouldFollowLinkFn(baseUrl, targetUrl))
-          );
-        } catch {
-          return false;
-        }
-      });
-
-      if (processed.links.length > 0) {
-        logger.info(
-          `[LINKS] ${processed.links.length} links extracted, ${filteredLinks.length} passed scope filter (scope: ${options.scope || "subpages"})`,
-        );
-      }
-
-      // --- Build Enhanced Metadata (Phase 3B) ---
-      const enhancedMetadata = {
-        url,
-        title:
-          typeof processed.metadata.title === "string"
-            ? processed.metadata.title
-            : "Untitled",
-        library: options.library,
-        version: options.version,
-        ...processed.metadata,
-        // Add Phase 3B enhanced fields
-        ...(screenshotPath && { screenshotPath }),
-        ...(rawContent.fetcherType && { fetcherType: rawContent.fetcherType }),
-        ...(rawContent.media && { media: rawContent.media }),
-        ...(rawContent.links && { links: rawContent.links }),
-      };
+        }) ?? [];
 
       return {
-        document: {
-          content: processed.textContent,
-          metadata: enhancedMetadata,
-        } satisfies Document,
+        url: rawContent.source,
+        etag: rawContent.etag,
+        lastModified: rawContent.lastModified,
+        sourceContentType: rawContent.mimeType,
+        contentType: processed.contentType || rawContent.mimeType,
+        content: processed,
         links: filteredLinks,
-        finalUrl: rawContent.source,
+        status: FetchStatus.SUCCESS,
       };
     } catch (error) {
       // Log fetch errors or pipeline execution errors (if run throws)
@@ -179,13 +186,80 @@ export class WebScraperStrategy extends BaseScraperStrategy {
     }
   }
 
+  private async processRootArchive(
+    item: QueueItem,
+    options: ScraperOptions,
+    signal?: AbortSignal,
+  ): Promise<ProcessItemResult> {
+    logger.info(`📦 Downloading root archive: ${item.url}`);
+
+    // We need to stream the download to a temp file
+    // Since fetcher.fetch returns a buffer (usually), we might want to bypass it or use it if small enough?
+    // But archives can be huge. fetcher.fetch currently loads into memory.
+    // For now, let's assume we can use fetcher but warn about memory, OR implement stream download here.
+    // Our fetcher abstraction returns RawContent with Buffer.
+    // If we want to stream, we might need to access the underlying axios/fetch stream.
+    // `AutoDetectFetcher` doesn't expose stream easily.
+    // Ideally we refactor fetcher to support streams, but that's out of scope.
+    // So we will use fetcher and write buffer to temp file.
+    // LIMITATION: Large archives will hit memory limits.
+
+    const rawContent = await this.fetcher.fetch(item.url, {
+      signal,
+      headers: options.headers,
+    });
+
+    if (rawContent.status !== FetchStatus.SUCCESS) {
+      return { url: rawContent.source, links: [], status: rawContent.status };
+    }
+
+    const buffer = Buffer.isBuffer(rawContent.content)
+      ? rawContent.content
+      : Buffer.from(rawContent.content);
+
+    const tempDir = os.tmpdir();
+    const tempFile = path.join(
+      tempDir,
+      `scraper-${Date.now()}-${path.basename(new URL(item.url).pathname)}`,
+    );
+
+    // Track file immediately so we can clean it up if write fails or later
+    this.tempFiles.push(tempFile);
+
+    await fsPromises.writeFile(tempFile, buffer);
+
+    // Delegate to LocalFileStrategy
+    const localUrl = `file://${tempFile}`;
+    const localItem = { ...item, url: localUrl };
+
+    const result = await this.localFileStrategy.processItem(localItem, options, signal);
+
+    // We need to fix up the links to point back to something meaningful?
+    // If we process a zip, we get file:///tmp/.../file.txt
+    // These links are only useful if we continue to treat them as local files for this session.
+    // But `WebScraper` expects http links usually?
+    // Actually, if we return file:// links, the queue might try to fetch them.
+    // `WebScraperStrategy` handles http/https. `LocalFileStrategy` handles file://.
+    // If we return file:// links, the scraper will need to route them to `LocalFileStrategy`.
+    // The `ScraperService` uses `ScraperRegistry` to pick strategy.
+    // So file:// links will work!
+
+    return {
+      ...result,
+      url: item.url, // Keep original URL as the source of this item
+      // links are file://...
+    };
+  }
+
   /**
-   * Cleanup resources used by this strategy, specifically pipelines and fetcher instances.
+   * Cleanup resources used by this strategy, specifically the pipeline browser instances and fetcher.
    */
   async cleanup(): Promise<void> {
     await Promise.allSettled([
       ...this.pipelines.map((pipeline) => pipeline.close()),
+      this.localFileStrategy.cleanup(),
       this.fetcher.close(),
+      ...this.tempFiles.map((file) => fsPromises.unlink(file).catch(() => {})),
     ]);
   }
 }

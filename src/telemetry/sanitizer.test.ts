@@ -86,10 +86,10 @@ describe("sanitizeError", () => {
 
 describe("extractCliFlags", () => {
   it("should extract CLI flags", () => {
-    const args = ["node", "script.js", "--verbose", "--port=8080", "file.txt"];
+    const args = ["node", "script.js", "--verbose", "--port=3000", "file.txt"];
     const result = extractCliFlags(args);
 
-    expect(result).toEqual(["--verbose", "--port=8080"]);
+    expect(result).toEqual(["--verbose", "--port=3000"]);
     expect(result.length).toBe(2);
   });
 

@@ -2,7 +2,6 @@
  * CLI types and interfaces for command definitions and shared functionality.
  */
 
-import type { Command } from "commander";
 import type { IPipeline } from "../pipeline";
 import type { IDocumentManagement } from "../store/trpc/interfaces";
 
@@ -11,9 +10,10 @@ import type { IDocumentManagement } from "../store/trpc/interfaces";
  */
 export interface GlobalOptions {
   verbose?: boolean;
-  silent?: boolean;
+  quiet?: boolean;
   telemetry?: boolean;
   storePath?: string;
+  output?: "json" | "yaml" | "toon";
 }
 
 /**
@@ -49,8 +49,3 @@ export interface OptionDefinition {
   defaultValue?: string | boolean | number;
   parser?: (value: string, previous?: unknown) => unknown;
 }
-
-/**
- * Factory function type for creating command instances
- */
-export type CommandFactory = (program: Command) => Command;

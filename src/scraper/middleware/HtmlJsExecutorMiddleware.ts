@@ -58,8 +58,7 @@ export class HtmlJsExecutorMiddleware implements ContentProcessorMiddleware {
             "application/x-javascript",
           ];
           // Allow common JS types or be lenient if type is generic/unknown
-          const mimeTypeParts = rawContent.mimeType.toLowerCase().split(";");
-          const mimeTypeLower = mimeTypeParts[0]?.trim() ?? "";
+          const mimeTypeLower = rawContent.mimeType.toLowerCase().split(";")[0].trim();
           if (
             !allowedMimeTypes.includes(mimeTypeLower) &&
             !["application/octet-stream", "unknown/unknown", ""].includes(mimeTypeLower) // Allow empty MIME type as well
@@ -115,16 +114,11 @@ export class HtmlJsExecutorMiddleware implements ContentProcessorMiddleware {
         }
       };
 
-      // Configure sandbox options with timeout from context if available
-      // Timeout options are read from context.options and passed to the sandbox
-      // Default timeout is handled by the sandbox utility (5000ms)
+      // TODO: Plumb timeout options from context.options if available
       const sandboxOptions = {
         html: context.content,
         url: context.source,
         fetchScriptContent: fetchScriptContentCallback,
-        timeout:
-          (context.options as { timeout?: number; fetchTimeout?: number })?.timeout ||
-          (context.options as { timeout?: number; fetchTimeout?: number })?.fetchTimeout,
       };
 
       const result = await executeJsInSandbox(sandboxOptions);

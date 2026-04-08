@@ -1,10 +1,10 @@
 import fs from "node:fs";
 import path from "node:path";
 import type { Pool, PoolClient } from "pg";
-import { MIGRATION_MAX_RETRIES, MIGRATION_RETRY_DELAY_MS } from "../utils/config";
 import { logger } from "../utils/logger";
 import { getProjectRoot } from "../utils/paths";
 import { StoreError } from "./errors";
+import type { PostgresConnection } from "./PostgresConnection";
 
 // Construct the absolute path to the migrations directory using the project root
 const MIGRATIONS_DIR = path.join(getProjectRoot(), "db", "migrations");
@@ -12,22 +12,25 @@ const MIGRATIONS_TABLE = "_schema_migrations";
 
 /**
  * Ensures the migration tracking table exists in the database.
+ * @param client The PostgreSQL pool client within an active transaction.
  */
 async function ensureMigrationsTable(client: PoolClient): Promise<void> {
   await client.query(`
     CREATE TABLE IF NOT EXISTS ${MIGRATIONS_TABLE} (
       id TEXT PRIMARY KEY,
-      applied_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      applied_at TIMESTAMPTZ DEFAULT NOW()
     )
   `);
 }
 
 /**
  * Retrieves the set of already applied migration IDs (filenames) from the tracking table.
+ * @param client The PostgreSQL pool client within an active transaction.
+ * @returns A Set containing the IDs of applied migrations.
  */
 async function getAppliedMigrations(client: PoolClient): Promise<Set<string>> {
   const result = await client.query(`SELECT id FROM ${MIGRATIONS_TABLE}`);
-  return new Set(result.rows.map((row) => row.id));
+  return new Set(result.rows.map((row: { id: string }) => row.id));
 }
 
 /**
@@ -35,10 +38,23 @@ async function getAppliedMigrations(client: PoolClient): Promise<Set<string>> {
  * Migrations are expected to be .sql files with sequential prefixes (e.g., 001-, 002-).
  * It tracks applied migrations in the _schema_migrations table.
  *
- * @param pool The PostgreSQL connection pool
- * @throws {StoreError} If any migration fails.
+ * Uses a PoolClient with explicit BEGIN/COMMIT/ROLLBACK for transaction safety.
+ * Retries on deadlock or serialization errors with configurable backoff.
+ *
+ * @param connection The PostgreSQL connection pool wrapper.
+ * @param options Optional runtime configuration for retry behavior.
+ * @throws {StoreError} If any migration fails after exhausting retries.
  */
-export async function applyMigrations(pool: Pool): Promise<void> {
+export async function applyMigrations(
+  connection: PostgresConnection,
+  options?: {
+    maxRetries?: number;
+    retryDelayMs?: number;
+  },
+): Promise<void> {
+  const pool = connection.getPool();
+  const maxRetries = options?.maxRetries ?? 5;
+  const retryDelayMs = options?.retryDelayMs ?? 300;
   let retries = 0;
 
   while (true) {
@@ -53,12 +69,12 @@ export async function applyMigrations(pool: Pool): Promise<void> {
           error.message.includes("deadlock") ||
           error.message.includes("could not serialize");
 
-        if (isRetryable && retries < MIGRATION_MAX_RETRIES) {
+        if (isRetryable && retries < maxRetries) {
           retries++;
           logger.warn(
-            `⚠️  Migrations encountered ${error.message}, retrying attempt ${retries}/${MIGRATION_MAX_RETRIES} in ${MIGRATION_RETRY_DELAY_MS}ms...`,
+            `⚠️  Migrations encountered ${error.message}, retrying attempt ${retries}/${maxRetries} in ${retryDelayMs}ms...`,
           );
-          await new Promise((resolve) => setTimeout(resolve, MIGRATION_RETRY_DELAY_MS));
+          await new Promise((resolve) => setTimeout(resolve, retryDelayMs));
           continue;
         }
       }
@@ -73,7 +89,11 @@ export async function applyMigrations(pool: Pool): Promise<void> {
 }
 
 /**
- * Internal function that performs the migration in a transaction
+ * Internal function that performs the migration in a single transaction.
+ * Acquires a PoolClient, runs BEGIN/COMMIT/ROLLBACK, and releases the client.
+ *
+ * @param pool The PostgreSQL connection pool.
+ * @throws {StoreError} If any migration fails within the transaction.
  */
 async function applyMigrationsTransaction(pool: Pool): Promise<void> {
   const client = await pool.connect();
@@ -136,14 +156,14 @@ async function applyMigrationsTransaction(pool: Pool): Promise<void> {
       logger.debug("Database schema is up to date");
     }
 
-    // Analyze tables after migrations for query planner
+    // Analyze tables after migrations for query planner statistics
     if (appliedCount > 0) {
       try {
         logger.debug("Running ANALYZE to update query planner statistics...");
         await client.query("ANALYZE");
         logger.debug("ANALYZE completed successfully");
       } catch (error) {
-        logger.warn(`⚠️ Could not run ANALYZE after migrations: ${error}`);
+        logger.warn(`⚠️  Could not run ANALYZE after migrations: ${error}`);
         // Don't fail the migration process if ANALYZE fails
       }
     }

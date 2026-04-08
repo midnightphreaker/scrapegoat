@@ -1,45 +1,41 @@
-import { GreedySplitter, SemanticMarkdownSplitter } from "../../splitter";
-import {
-  SPLITTER_MAX_CHUNK_SIZE,
-  SPLITTER_MIN_CHUNK_SIZE,
-  SPLITTER_PREFERRED_CHUNK_SIZE,
-} from "../../utils/config";
+import { GreedySplitter } from "../../splitter/GreedySplitter";
+import { SemanticMarkdownSplitter } from "../../splitter/SemanticMarkdownSplitter";
+import type { AppConfig } from "../../utils/config";
 import { logger } from "../../utils/logger";
 import { MimeTypeUtils } from "../../utils/mimeTypeUtils";
 import type { ContentFetcher, RawContent } from "../fetcher/types";
-import { HtmlSanitizerMiddleware } from "../middleware";
 import { HtmlCheerioParserMiddleware } from "../middleware/HtmlCheerioParserMiddleware";
 import { HtmlLinkExtractorMiddleware } from "../middleware/HtmlLinkExtractorMiddleware";
 import { HtmlMetadataExtractorMiddleware } from "../middleware/HtmlMetadataExtractorMiddleware";
 import { HtmlNormalizationMiddleware } from "../middleware/HtmlNormalizationMiddleware";
+import { HtmlPlaywrightMiddleware } from "../middleware/HtmlPlaywrightMiddleware";
+import { HtmlSanitizerMiddleware } from "../middleware/HtmlSanitizerMiddleware";
 import { HtmlToMarkdownMiddleware } from "../middleware/HtmlToMarkdownMiddleware";
 import type { ContentProcessorMiddleware, MiddlewareContext } from "../middleware/types";
 import type { ScraperOptions } from "../types";
 import { convertToString } from "../utils/buffer";
 import { resolveCharset } from "../utils/charset";
 import { BasePipeline } from "./BasePipeline";
-import type { ProcessedContent } from "./types";
+import type { PipelineResult } from "./types";
 
 /**
- * Pipeline for processing HTML content using middleware and semantic splitting with size optimization.
- * Converts HTML to clean markdown format then uses SemanticMarkdownSplitter for semantic chunking,
- * followed by GreedySplitter for universal size optimization.
- *
- * Note: Previously used HtmlPlaywrightMiddleware for in-process browser rendering,
- * but now relies on Crawl4AI to provide pre-rendered HTML.
+ * HtmlPipeline - Processes HTML content into Markdown chunks.
+ * Uses Playwright for rendering if needed and Cheerio for semantic extraction.
  */
 export class HtmlPipeline extends BasePipeline {
-  private readonly middleware: ContentProcessorMiddleware[];
+  private readonly playwrightMiddleware: HtmlPlaywrightMiddleware;
+  private readonly standardMiddleware: ContentProcessorMiddleware[];
   private readonly greedySplitter: GreedySplitter;
 
-  constructor(
-    preferredChunkSize = SPLITTER_PREFERRED_CHUNK_SIZE,
-    maxChunkSize = SPLITTER_MAX_CHUNK_SIZE,
-  ) {
+  constructor(config: AppConfig) {
     super();
-    // Always use standard middleware stack
-    // Crawl4AI returns pre-rendered HTML, no in-process rendering needed
-    this.middleware = [
+
+    const preferredChunkSize = config.splitter.preferredChunkSize;
+    const maxChunkSize = config.splitter.maxChunkSize;
+    const minChunkSize = config.splitter.minChunkSize;
+
+    this.playwrightMiddleware = new HtmlPlaywrightMiddleware(config.scraper);
+    this.standardMiddleware = [
       new HtmlCheerioParserMiddleware(),
       new HtmlMetadataExtractorMiddleware(),
       new HtmlLinkExtractorMiddleware(),
@@ -55,24 +51,21 @@ export class HtmlPipeline extends BasePipeline {
     );
     this.greedySplitter = new GreedySplitter(
       semanticSplitter,
-      SPLITTER_MIN_CHUNK_SIZE,
+      minChunkSize,
       preferredChunkSize,
+      maxChunkSize,
     );
   }
 
-  canProcess(rawContent: RawContent): boolean {
-    return MimeTypeUtils.isHtml(rawContent.mimeType);
+  canProcess(mimeType: string): boolean {
+    return MimeTypeUtils.isHtml(mimeType);
   }
 
   async process(
     rawContent: RawContent,
     options: ScraperOptions,
     fetcher?: ContentFetcher,
-  ): Promise<ProcessedContent> {
-    logger.info(
-      `[PIPELINE] HtmlPipeline processing ${rawContent.source} (mime-type: ${rawContent.mimeType}, charset: ${rawContent.charset})`,
-    );
-
+  ): Promise<PipelineResult> {
     // Use enhanced charset detection that considers HTML meta tags
     const resolvedCharset = resolveCharset(
       rawContent.charset,
@@ -83,17 +76,23 @@ export class HtmlPipeline extends BasePipeline {
 
     const context: MiddlewareContext = {
       content: contentString,
+      contentType: rawContent.mimeType || "text/html",
       source: rawContent.source,
-      metadata: {},
+      // metadata: {},
       links: [],
       errors: [],
       options,
       fetcher,
     };
 
+    // Build middleware stack dynamically based on scrapeMode
+    let middleware: ContentProcessorMiddleware[] = [...this.standardMiddleware];
+    if (options.scrapeMode === "playwright" || options.scrapeMode === "auto") {
+      middleware = [this.playwrightMiddleware, ...middleware];
+    }
+
     // Execute the middleware stack using the base class method
-    // Always use standard middleware stack - Crawl4AI provides pre-rendered HTML
-    await this.executeMiddlewareStack(this.middleware, context);
+    await this.executeMiddlewareStack(middleware, context);
 
     // Split the content using SemanticMarkdownSplitter (HTML is converted to markdown by middleware)
     const chunks = await this.greedySplitter.splitText(
@@ -101,11 +100,28 @@ export class HtmlPipeline extends BasePipeline {
     );
 
     return {
-      textContent: typeof context.content === "string" ? context.content : "",
-      metadata: context.metadata,
+      title: context.title,
+      contentType: context.contentType,
+      textContent: context.content,
       links: context.links,
       errors: context.errors,
       chunks,
     };
+  }
+
+  /**
+   * Cleanup resources used by this pipeline, specifically the Playwright browser instance.
+   * Errors during cleanup are logged but not propagated to ensure graceful shutdown.
+   */
+  public async close(): Promise<void> {
+    await super.close(); // Call base class close (no-op by default)
+    try {
+      await this.playwrightMiddleware.closeBrowser();
+    } catch (error) {
+      // Log error but don't throw - cleanup should be best-effort
+      // The closeBrowser method already handles errors internally, but
+      // this provides an additional safety layer for unexpected failures
+      logger.warn(`⚠️  Error during browser cleanup: ${error}`);
+    }
   }
 }

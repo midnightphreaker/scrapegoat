@@ -1,11 +1,9 @@
-import { describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { ProgressCallback } from "../types";
 import { ScraperError } from "../utils/errors";
 import type { ScraperRegistry } from "./ScraperRegistry";
 import { ScraperService } from "./ScraperService";
-import type { ScraperOptions, ScraperProgress } from "./types";
-
-vi.mock("../utils/logger");
+import type { ScraperOptions, ScraperProgressEvent } from "./types";
 
 describe("ScraperService", () => {
   // Mock registry
@@ -16,7 +14,14 @@ describe("ScraperService", () => {
   // Mock strategy
   const mockStrategy = {
     scrape: vi.fn(),
+    cleanup: vi.fn(),
   };
+
+  beforeEach(() => {
+    mockRegistry.getStrategy.mockReset();
+    mockStrategy.scrape.mockReset();
+    mockStrategy.cleanup.mockReset();
+  });
 
   it("should use registry to get correct strategy", async () => {
     const service = new ScraperService(mockRegistry as unknown as ScraperRegistry);
@@ -27,7 +32,7 @@ describe("ScraperService", () => {
       maxPages: 10,
       maxDepth: 1,
     };
-    const progressCallback: ProgressCallback<ScraperProgress> = vi.fn();
+    const progressCallback: ProgressCallback<ScraperProgressEvent> = vi.fn();
 
     mockRegistry.getStrategy.mockReturnValue(mockStrategy);
     // Call scrape without a signal (it's optional)
@@ -51,7 +56,7 @@ describe("ScraperService", () => {
       maxPages: 10,
       maxDepth: 1,
     };
-    const progressCallback: ProgressCallback<ScraperProgress> = vi.fn();
+    const progressCallback: ProgressCallback<ScraperProgressEvent> = vi.fn();
 
     mockRegistry.getStrategy.mockReturnValue(mockStrategy);
     // Call scrape without a signal
@@ -74,7 +79,7 @@ describe("ScraperService", () => {
       maxPages: 10,
       maxDepth: 1,
     };
-    const progressCallback: ProgressCallback<ScraperProgress> = vi.fn();
+    const progressCallback: ProgressCallback<ScraperProgressEvent> = vi.fn();
 
     mockRegistry.getStrategy.mockReturnValue(mockStrategy);
     // Call scrape without a signal
@@ -89,7 +94,7 @@ describe("ScraperService", () => {
     );
   });
 
-  it("should throw error if no strategy found", async () => {
+  it("should throw error when registry rejects unknown URLs", async () => {
     const service = new ScraperService(mockRegistry as unknown as ScraperRegistry);
     const options: ScraperOptions = {
       url: "unknown://example.com",
@@ -98,13 +103,15 @@ describe("ScraperService", () => {
       maxPages: 10,
       maxDepth: 1,
     };
-    const progressCallback: ProgressCallback<ScraperProgress> = vi.fn();
+    const progressCallback: ProgressCallback<ScraperProgressEvent> = vi.fn();
 
-    mockRegistry.getStrategy.mockReturnValue(null);
+    mockRegistry.getStrategy.mockImplementation(() => {
+      throw new ScraperError(`No strategy found for URL: ${options.url}`, false);
+    });
 
     await expect(service.scrape(options, progressCallback)).rejects.toThrow(ScraperError);
     await expect(service.scrape(options, progressCallback)).rejects.toThrow(
-      "No scraper strategy found for URL: unknown://example.com",
+      `No strategy found for URL: ${options.url}`,
     );
   });
 
@@ -117,7 +124,7 @@ describe("ScraperService", () => {
       maxPages: 10,
       maxDepth: 1,
     };
-    const progressCallback: ProgressCallback<ScraperProgress> = vi.fn();
+    const progressCallback: ProgressCallback<ScraperProgressEvent> = vi.fn();
 
     mockRegistry.getStrategy.mockReturnValue(mockStrategy);
     mockStrategy.scrape.mockRejectedValue(new Error("Strategy error"));
@@ -138,11 +145,12 @@ describe("ScraperService", () => {
       maxPages: 1,
       maxDepth: 1,
     };
-    const progressCallback: ProgressCallback<ScraperProgress> = vi.fn();
+    const progressCallback: ProgressCallback<ScraperProgressEvent> = vi.fn();
 
     // Mock a strategy that would handle JSON files
     const jsonStrategy = {
       scrape: vi.fn().mockResolvedValue(undefined),
+      cleanup: vi.fn(),
     };
 
     mockRegistry.getStrategy.mockReturnValue(jsonStrategy);
@@ -155,5 +163,45 @@ describe("ScraperService", () => {
       progressCallback,
       undefined,
     );
+    expect(jsonStrategy.cleanup).toHaveBeenCalledOnce();
+  });
+
+  it("should cleanup strategy after successful scrape", async () => {
+    const service = new ScraperService(mockRegistry as unknown as ScraperRegistry);
+    const options: ScraperOptions = {
+      url: "https://example.com",
+      library: "test",
+      version: "1.0",
+      maxPages: 10,
+      maxDepth: 1,
+    };
+    const progressCallback: ProgressCallback<ScraperProgressEvent> = vi.fn();
+
+    mockStrategy.scrape.mockResolvedValue(undefined);
+    mockRegistry.getStrategy.mockReturnValue(mockStrategy);
+
+    await service.scrape(options, progressCallback);
+
+    expect(mockStrategy.cleanup).toHaveBeenCalledOnce();
+  });
+
+  it("should cleanup strategy after failed scrape", async () => {
+    const service = new ScraperService(mockRegistry as unknown as ScraperRegistry);
+    const options: ScraperOptions = {
+      url: "https://example.com",
+      library: "test",
+      version: "1.0",
+      maxPages: 10,
+      maxDepth: 1,
+    };
+    const progressCallback: ProgressCallback<ScraperProgressEvent> = vi.fn();
+
+    mockStrategy.scrape.mockRejectedValue(new Error("Strategy error"));
+    mockRegistry.getStrategy.mockReturnValue(mockStrategy);
+
+    await expect(service.scrape(options, progressCallback)).rejects.toThrow(
+      "Strategy error",
+    );
+    expect(mockStrategy.cleanup).toHaveBeenCalledOnce();
   });
 });

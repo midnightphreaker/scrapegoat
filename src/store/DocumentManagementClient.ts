@@ -3,8 +3,10 @@
  * Implements IDocumentManagement and delegates to /api data router.
  */
 import { createTRPCProxyClient, httpBatchLink } from "@trpc/client";
+import superjson from "superjson";
 import type { ScraperOptions } from "../scraper/types";
 import { logger } from "../utils/logger";
+import type { EmbeddingModelConfig } from "./embeddings/EmbeddingConfig";
 import type { IDocumentManagement } from "./trpc/interfaces";
 import type { DataRouter } from "./trpc/router";
 import type {
@@ -23,16 +25,28 @@ export class DocumentManagementClient implements IDocumentManagement {
   constructor(serverUrl: string) {
     this.baseUrl = serverUrl.replace(/\/$/, "");
     this.client = createTRPCProxyClient<DataRouter>({
-      links: [httpBatchLink({ url: this.baseUrl })],
+      links: [
+        httpBatchLink({
+          url: this.baseUrl,
+          transformer: superjson,
+        }),
+      ],
     });
     logger.debug(`DocumentManagementClient (tRPC) created for: ${this.baseUrl}`);
   }
 
   async initialize(): Promise<void> {
-    // Connectivity check
-    await (
-      this.client as unknown as { ping: { query: () => Promise<unknown> } }
-    ).ping.query();
+    // Connectivity check using ping procedure
+    try {
+      await this.client.ping.query();
+    } catch (error) {
+      logger.debug(
+        `Failed to connect to DocumentManagement server at ${this.baseUrl}: ${error}`,
+      );
+      throw new Error(
+        `Failed to connect to server at ${this.baseUrl}.\n\nPlease verify the server URL includes the correct port (default 8080) and ends with '/api' (e.g., 'http://localhost:8080/api').`,
+      );
+    }
   }
 
   async shutdown(): Promise<void> {
@@ -67,27 +81,6 @@ export class DocumentManagementClient implements IDocumentManagement {
     await this.client.removeVersion.mutate({ library, version });
   }
 
-  async renameVersion(
-    library: string,
-    oldVersion: string | null,
-    newVersion: string,
-  ): Promise<boolean> {
-    const result = await this.client.renameVersion.mutate({
-      library,
-      oldVersion,
-      newVersion,
-    });
-    return result.renamed;
-  }
-
-  async renameLibrary(library: string, newName: string): Promise<boolean> {
-    const result = await this.client.renameLibrary.mutate({
-      library,
-      newName,
-    });
-    return result.renamed;
-  }
-
   async removeAllDocuments(library: string, version?: string | null): Promise<void> {
     await this.client.removeAllDocuments.mutate({ library, version: version ?? null });
   }
@@ -111,11 +104,7 @@ export class DocumentManagementClient implements IDocumentManagement {
     status: VersionStatus,
     errorMessage?: string,
   ): Promise<void> {
-    await this.client.updateVersionStatus.mutate({
-      versionId,
-      status: status as unknown as string,
-      errorMessage,
-    });
+    await this.client.updateVersionStatus.mutate({ versionId, status, errorMessage });
   }
 
   async updateVersionProgress(
@@ -128,5 +117,12 @@ export class DocumentManagementClient implements IDocumentManagement {
 
   async storeScraperOptions(versionId: number, options: ScraperOptions): Promise<void> {
     await this.client.storeScraperOptions.mutate({ versionId, options });
+  }
+
+  getActiveEmbeddingConfig(): EmbeddingModelConfig | null {
+    // For remote client, embedding config is not available locally.
+    // The remote server's embedding status cannot be synchronously queried.
+    // Return null to indicate embeddings status is unknown/unavailable.
+    return null;
   }
 }

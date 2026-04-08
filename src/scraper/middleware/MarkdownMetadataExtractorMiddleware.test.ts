@@ -4,7 +4,6 @@ import { MarkdownMetadataExtractorMiddleware } from "./MarkdownMetadataExtractor
 import type { MiddlewareContext } from "./types";
 
 // Suppress logger output during tests
-vi.mock("../../utils/logger");
 
 // Helper to create a minimal valid ScraperOptions object
 const createMockScraperOptions = (url = "http://example.com"): ScraperOptions => ({
@@ -27,8 +26,8 @@ const createMockContext = (
 ): MiddlewareContext => {
   return {
     content: markdownContent,
+    contentType: "text/markdown",
     source,
-    metadata: {},
     links: [],
     errors: [],
     options: { ...createMockScraperOptions(source), ...options },
@@ -45,7 +44,7 @@ describe("MarkdownMetadataExtractorMiddleware", () => {
     await middleware.process(context, next);
 
     expect(next).toHaveBeenCalledOnce();
-    expect(context.metadata.title).toBe("My Title");
+    expect(context.title).toBe("My Title");
     expect(context.errors).toHaveLength(0);
   });
 
@@ -58,7 +57,7 @@ describe("MarkdownMetadataExtractorMiddleware", () => {
     await middleware.process(context, next);
 
     expect(next).toHaveBeenCalledOnce();
-    expect(context.metadata.title).toBe("Untitled");
+    expect(context.title).toBe("Untitled");
     expect(context.errors).toHaveLength(0);
   });
 
@@ -71,7 +70,7 @@ describe("MarkdownMetadataExtractorMiddleware", () => {
     await middleware.process(context, next);
 
     expect(next).toHaveBeenCalledOnce();
-    expect(context.metadata.title).toBe("My Spaced Title");
+    expect(context.title).toBe("My Spaced Title");
     expect(context.errors).toHaveLength(0);
   });
 
@@ -84,7 +83,7 @@ describe("MarkdownMetadataExtractorMiddleware", () => {
     await middleware.process(context, next);
 
     expect(next).toHaveBeenCalledOnce();
-    expect(context.metadata.title).toBe("First Title");
+    expect(context.title).toBe("First Title");
     expect(context.errors).toHaveLength(0);
   });
 
@@ -97,7 +96,7 @@ describe("MarkdownMetadataExtractorMiddleware", () => {
     await middleware.process(context, next);
 
     expect(next).toHaveBeenCalledOnce();
-    expect(context.metadata.title).toBe("Untitled");
+    expect(context.title).toBe("Untitled");
     expect(context.errors).toHaveLength(0);
   });
 
@@ -110,7 +109,7 @@ describe("MarkdownMetadataExtractorMiddleware", () => {
     await middleware.process(context, next);
 
     expect(next).toHaveBeenCalledOnce();
-    expect(context.metadata.title).toBe("The Actual Title");
+    expect(context.title).toBe("The Actual Title");
     expect(context.errors).toHaveLength(0);
   });
 
@@ -132,5 +131,79 @@ describe("MarkdownMetadataExtractorMiddleware", () => {
       "Failed to extract metadata from Markdown",
     );
     expect(context.errors[0].message).toContain("Simulated error");
+  });
+
+  it("should extract title from YAML frontmatter", async () => {
+    const middleware = new MarkdownMetadataExtractorMiddleware();
+    const markdown = "---\ntitle: Frontmatter Title\n---\n# H1 Title";
+    const context = createMockContext(markdown);
+    const next = vi.fn().mockResolvedValue(undefined);
+
+    await middleware.process(context, next);
+
+    expect(next).toHaveBeenCalledOnce();
+    expect(context.title).toBe("Frontmatter Title");
+    expect(context.errors).toHaveLength(0);
+  });
+
+  it("should prioritize frontmatter title over H1", async () => {
+    const middleware = new MarkdownMetadataExtractorMiddleware();
+    const markdown = "---\ntitle: Correct Title\n---\n# Wrong Title";
+    const context = createMockContext(markdown);
+    const next = vi.fn().mockResolvedValue(undefined);
+
+    await middleware.process(context, next);
+
+    expect(context.title).toBe("Correct Title");
+  });
+
+  it("should fallback to H1 if frontmatter exists but has no title", async () => {
+    const middleware = new MarkdownMetadataExtractorMiddleware();
+    const markdown = "---\nauthor: Someone\n---\n# Backup Title";
+    const context = createMockContext(markdown);
+    const next = vi.fn().mockResolvedValue(undefined);
+
+    await middleware.process(context, next);
+
+    expect(context.title).toBe("Backup Title");
+  });
+
+  it("should handle numeric titles in frontmatter", async () => {
+    const middleware = new MarkdownMetadataExtractorMiddleware();
+    const markdown = "---\ntitle: 12345\n---\n# Backup Title";
+    const context = createMockContext(markdown);
+    const next = vi.fn().mockResolvedValue(undefined);
+
+    await middleware.process(context, next);
+
+    expect(context.title).toBe("12345");
+  });
+
+  it("should fallback to H1 if frontmatter title is empty or whitespace", async () => {
+    const middleware = new MarkdownMetadataExtractorMiddleware();
+    const markdown = '---\ntitle: "   "\n---\n# Backup Title';
+    const context = createMockContext(markdown);
+    const next = vi.fn().mockResolvedValue(undefined);
+
+    await middleware.process(context, next);
+
+    expect(context.title).toBe("Backup Title");
+  });
+
+  it("should handle malformed frontmatter gracefully", async () => {
+    const middleware = new MarkdownMetadataExtractorMiddleware();
+    // Invalid YAML (indentation error or similar that gray-matter might catch or ignore)
+    // gray-matter is quite resilient, but let's try something that looks like frontmatter but fails parsing if strict
+    // Actually gray-matter might just return empty data for bad YAML.
+    // Let's rely on the try/catch block we added.
+    const markdown = "---\ntitle: : bad yaml\n---\n# Backup Title";
+    const context = createMockContext(markdown);
+    const next = vi.fn().mockResolvedValue(undefined);
+
+    await middleware.process(context, next);
+
+    // It should not throw, and should fallback to H1
+    expect(context.title).toBe("Backup Title");
+    expect(context.errors).toHaveLength(0);
   });
 });

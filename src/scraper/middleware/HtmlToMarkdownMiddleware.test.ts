@@ -7,7 +7,6 @@ import { HtmlToMarkdownMiddleware } from "./HtmlToMarkdownMiddleware";
 import type { MiddlewareContext } from "./types";
 
 // Suppress logger output during tests
-vi.mock("../../../utils/logger");
 
 // Helper to create a minimal valid ScraperOptions object
 const createMockScraperOptions = (url = "http://example.com"): ScraperOptions => ({
@@ -30,8 +29,8 @@ const createMockContext = (
 ): MiddlewareContext => {
   const context: MiddlewareContext = {
     content: htmlContent || "",
+    contentType: "text/html",
     source,
-    metadata: {},
     links: [],
     errors: [],
     options: { ...createMockScraperOptions(source), ...options },
@@ -61,6 +60,7 @@ describe("HtmlToMarkdownMiddleware", () => {
     expect(context.content).toBe(
       "# Heading 1\n\nThis is a paragraph with **bold** and _italic_ text.\n\n-   Item 1\n-   Item 2\n\n[Link](http://link.com)",
     );
+    expect(context.contentType).toBe("text/markdown");
     expect(context.errors).toHaveLength(0);
 
     // No close needed
@@ -235,6 +235,77 @@ A link with empty href: Empty Href.
 
 Mixed: [Another Valid](http://another.com) and bad one.`;
     expect(context.content).toBe(expectedMarkdown);
+    expect(context.errors).toHaveLength(0);
+  });
+
+  it("should normalize block-level anchor whitespace into a single readable link label", async () => {
+    const middleware = new HtmlToMarkdownMiddleware();
+    const html = `
+      <html><body>
+        <a href="https://react.dev/reference/react/useDeferredValue">
+          <div>
+            <span>Previous</span>
+            <span>useDeferredValue</span>
+          </div>
+        </a>
+      </body></html>`;
+    const context = createMockContext(html);
+    const next = vi.fn().mockResolvedValue(undefined);
+
+    await middleware.process(context, next);
+
+    expect(next).toHaveBeenCalledOnce();
+    expect(context.content).toBe(
+      "[Previous useDeferredValue](https://react.dev/reference/react/useDeferredValue)",
+    );
+    expect(context.errors).toHaveLength(0);
+  });
+
+  it("should preserve nested markdown formatting inside links", async () => {
+    const middleware = new HtmlToMarkdownMiddleware();
+    const html = `
+      <html><body>
+        <a href="https://example.com/docs"><div><strong>Bold</strong> and <em>italic</em></div></a>
+      </body></html>`;
+    const context = createMockContext(html);
+    const next = vi.fn().mockResolvedValue(undefined);
+
+    await middleware.process(context, next);
+
+    expect(next).toHaveBeenCalledOnce();
+    expect(context.content).toBe("[**Bold** and _italic_](https://example.com/docs)");
+    expect(context.errors).toHaveLength(0);
+  });
+
+  it("should preserve inline code formatting inside links", async () => {
+    const middleware = new HtmlToMarkdownMiddleware();
+    const html = `
+      <html><body>
+        <a href="https://example.com/api"><div><code>useEffect</code><span> API</span></div></a>
+      </body></html>`;
+    const context = createMockContext(html);
+    const next = vi.fn().mockResolvedValue(undefined);
+
+    await middleware.process(context, next);
+
+    expect(next).toHaveBeenCalledOnce();
+    expect(context.content).toBe("[`useEffect` API](https://example.com/api)");
+    expect(context.errors).toHaveLength(0);
+  });
+
+  it("should preserve image links while collapsing wrapper whitespace", async () => {
+    const middleware = new HtmlToMarkdownMiddleware();
+    const html = `
+      <html><body>
+        <a href="https://example.com/image"><div><img src="hero.png" alt="Hero"></div></a>
+      </body></html>`;
+    const context = createMockContext(html);
+    const next = vi.fn().mockResolvedValue(undefined);
+
+    await middleware.process(context, next);
+
+    expect(next).toHaveBeenCalledOnce();
+    expect(context.content).toBe("[![Hero](hero.png)](https://example.com/image)");
     expect(context.errors).toHaveLength(0);
   });
 });

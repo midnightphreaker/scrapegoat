@@ -14,7 +14,7 @@ export function detectCharsetFromHtml(htmlContent: string): string | undefined {
     /<meta\s+charset\s*=\s*["']?([^"'>\s]+)["']?[^>]*>/i,
   );
   if (charsetMatch) {
-    return charsetMatch[1]?.toLowerCase();
+    return charsetMatch[1].toLowerCase();
   }
 
   // Match <meta http-equiv="Content-Type" content="...charset=..."> (HTML4 style)
@@ -22,7 +22,7 @@ export function detectCharsetFromHtml(htmlContent: string): string | undefined {
     /<meta\s+http-equiv\s*=\s*["']?content-type["']?\s+content\s*=\s*["']?[^"'>]*charset=([^"'>\s;]+)/i,
   );
   if (httpEquivMatch) {
-    return httpEquivMatch[1]?.toLowerCase();
+    return httpEquivMatch[1].toLowerCase();
   }
 
   return undefined;
