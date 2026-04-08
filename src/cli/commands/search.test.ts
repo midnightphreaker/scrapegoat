@@ -1,7 +1,11 @@
 /** Unit test for searchAction */
 
-import { Command } from "commander";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import yargs from "yargs";
+import { SearchTool } from "../../tools";
+import { createSearchCommand } from "./search";
+
+const stdoutWriteMock = vi.fn();
 
 vi.mock("../../store", () => ({
   createDocumentManagement: vi.fn(async () => ({ shutdown: vi.fn() })),
@@ -11,24 +15,68 @@ vi.mock("../../tools", () => ({
     .fn()
     .mockImplementation(() => ({ execute: vi.fn(async () => ({ results: [] })) })),
 }));
+vi.mock("../utils", () => ({
+  getGlobalOptions: vi.fn(() => ({ storePath: undefined })),
+  getEventBus: vi.fn(() => ({
+    on: vi.fn(),
+    emit: vi.fn(),
+  })),
+  resolveEmbeddingContext: vi.fn(() => ({ provider: "mock", model: "mock-model" })),
+  CliContext: {},
+}));
+// Mock loadConfig to avoid Zod issues during tests if any, or ensuring defaults
+vi.mock("../../utils/config", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("../../utils/config")>();
+  return {
+    ...actual,
+    loadConfig: vi.fn(() => ({
+      app: { embeddingModel: "mock-model", storePath: "/mock/store" },
+      search: { overfetchFactor: 2 },
+    })),
+  };
+});
 
-import { searchAction } from "./search";
+describe("search command", () => {
+  let stdoutWriteSpy: { mockRestore: () => void };
 
-function _cmd() {
-  return new Command();
-}
-beforeEach(() => vi.clearAllMocks());
+  beforeEach(() => {
+    vi.clearAllMocks();
+    stdoutWriteMock.mockReset();
+    stdoutWriteSpy = vi
+      .spyOn(process.stdout, "write")
+      .mockImplementation(stdoutWriteMock as any);
+  });
 
-describe("searchAction", () => {
+  afterEach(() => {
+    stdoutWriteSpy.mockRestore();
+  });
+
   it("invokes SearchTool with parameters", async () => {
-    await searchAction("react", "hooks", {
-      version: "18.x",
-      limit: "3",
-      exactMatch: false,
-      serverUrl: undefined,
-      embeddingModel: "mock-embedding-model",
-    });
-    const { SearchTool } = await import("../../tools");
+    const parser = yargs().scriptName("test");
+    createSearchCommand(parser);
+
+    await parser.parse("search react hooks --version 18.x --limit 3");
+
     expect(SearchTool).toHaveBeenCalledTimes(1);
+    const mockInstance = (SearchTool as any).mock.results[0].value;
+    expect(mockInstance.execute).toHaveBeenCalledWith(
+      expect.objectContaining({
+        library: "react",
+        query: "hooks",
+        version: "18.x",
+        limit: 3,
+        exactMatch: false,
+      }),
+    );
+    expect(stdoutWriteMock).toHaveBeenCalledWith("[]\n");
+  });
+
+  it("renders YAML when requested globally", async () => {
+    const parser = yargs().scriptName("test");
+    createSearchCommand(parser);
+
+    await parser.parse("search react hooks --output yaml");
+
+    expect(stdoutWriteMock).toHaveBeenCalledWith("[]\n");
   });
 });

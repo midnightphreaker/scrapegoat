@@ -1,55 +1,69 @@
-# Build stage
-FROM node:22-slim AS builder
+# Base stage with build dependencies
+FROM node:22-slim AS base
 
+WORKDIR /app
+
+# Install build dependencies for native modules (better-sqlite3, tree-sitter, etc.)
+RUN apt-get update \
+  && apt-get install -y --no-install-recommends \
+  python3 \
+  make \
+  g++ \
+  && rm -rf /var/lib/apt/lists/*
+
+# Build stage
+FROM base AS builder
+
+# Accept build argument for PostHog API key
 ARG POSTHOG_API_KEY
 ENV POSTHOG_API_KEY=$POSTHOG_API_KEY
 
-WORKDIR /app
-
-RUN apt-get update \
-  && apt-get install -y --no-install-recommends \
-  python3 make g++ nodejs npm \
-  && rm -rf /var/lib/apt/lists/*
-
+# Copy package files
 COPY package*.json ./
-COPY src/web-sveltekit/package*.json ./src/web-sveltekit/
 
-RUN npm pkg delete overrides.baseline-browser-mapping >/dev/null 2>&1 || true
-RUN npm i -D baseline-browser-mapping@latest --package-lock-only --legacy-peer-deps
-RUN npm ci --legacy-peer-deps
+# Install all dependencies (including dev dependencies for building)
+RUN npm ci
 
+# Copy source code
 COPY . .
 
+# Build application
 RUN npm run build
 
-RUN rm -rf node_modules && npm ci --omit=dev --legacy-peer-deps
-
 # Production stage
-FROM node:22-slim
+FROM base AS production
 
-WORKDIR /app
+# Set environment variables for Playwright
+ENV PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD=1
+ENV PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH=/usr/bin/chromium
 
+# Install Chromium from apt-get
+RUN apt-get update \
+  && apt-get install -y --no-install-recommends \
+  chromium \
+  && rm -rf /var/lib/apt/lists/*
+
+# Copy package files and database
+COPY package*.json .
 COPY db db
 
+# Copy built files from builder
+COPY --from=builder /app/node_modules ./node_modules
+COPY --from=builder /app/public ./public
+COPY --from=builder /app/dist ./dist
 
-COPY --from=builder /app               .
-COPY --from=builder /app/dist          ./dist
-COPY --from=builder /app/public        ./public
-COPY --from=builder /app/node_modules  ./node_modules
-
-RUN apt-get update \
-  && apt-get install -y --no-install-recommends chromium \
-  && rm -rf /var/lib/apt/lists/* /tmp/* \
-  && CHROMIUM_PATH=$(command -v chromium || command -v chromium-browser) \
-  && if [ -z "$CHROMIUM_PATH" ]; then echo "Chromium not found!" && exit 1; fi \
-  && echo "Chromium at $CHROMIUM_PATH"
-
-ENV PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH=/usr/bin/chromium
+# Set data directory for the container
 ENV DOCS_MCP_STORE_PATH=/data
-ENV PORT=8080
+ENV XDG_CONFIG_HOME=/config
+
+# Define volumes
+VOLUME /data
+VOLUME /config
+
+# Expose the default port of the application
+EXPOSE 6280
+ENV PORT=6280
 ENV HOST=0.0.0.0
 
-VOLUME /data
-EXPOSE 8080
-
-ENTRYPOINT ["node", "dist/index.js"]
+# Set the command to run the application
+ENTRYPOINT ["node", "--enable-source-maps", "dist/index.js"]

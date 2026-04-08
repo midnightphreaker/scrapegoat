@@ -1,123 +1,72 @@
 /**
- * Web service that registers API routes for the SvelteKit web interface.
- * The old JSX/Alpine.js/HTMX routes have been removed.
+ * Web service that registers all web interface routes for human interaction.
+ * Extracted from src/web/web.ts to enable modular server composition.
  */
 
 import type { FastifyInstance } from "fastify";
+import type { EventBusService } from "../events/EventBusService";
 import type { IPipeline } from "../pipeline/trpc/interfaces";
 import type { IDocumentManagement } from "../store/trpc/interfaces";
-import { appConfig, DEFAULT_HTTP_PORT, validateConfig } from "../utils/config";
-import { logger } from "../utils/logger";
+import { SearchTool } from "../tools";
+import { CancelJobTool } from "../tools/CancelJobTool";
+import { ClearCompletedJobsTool } from "../tools/ClearCompletedJobsTool";
+import { ListJobsTool } from "../tools/ListJobsTool";
+import { ListLibrariesTool } from "../tools/ListLibrariesTool";
+import { RefreshVersionTool } from "../tools/RefreshVersionTool";
+import { RemoveTool } from "../tools/RemoveTool";
+import { ScrapeTool } from "../tools/ScrapeTool";
+import type { AppConfig } from "../utils/config";
+import { registerEventsRoute } from "../web/routes/events";
+import { registerIndexRoute } from "../web/routes/index";
+import { registerCancelJobRoute } from "../web/routes/jobs/cancel";
+import { registerClearCompletedJobsRoute } from "../web/routes/jobs/clear-completed";
+import { registerJobListRoutes } from "../web/routes/jobs/list";
+import { registerNewJobRoutes } from "../web/routes/jobs/new";
+import { registerLibraryDetailRoutes } from "../web/routes/libraries/detail";
+import { registerLibrariesRoutes } from "../web/routes/libraries/list";
+import { registerStatsRoute } from "../web/routes/stats";
 
 /**
- * Register API routes on a Fastify server instance.
+ * Register web interface routes on a Fastify server instance.
+ * This includes all human-facing UI routes.
  * Note: Static file serving and form body parsing are handled by AppServer.
  */
 export async function registerWebService(
   server: FastifyInstance,
-  _docService: IDocumentManagement,
-  _pipeline: IPipeline,
+  docService: IDocumentManagement,
+  pipeline: IPipeline,
+  eventBus: EventBusService,
+  appConfig: AppConfig,
+  externalWorkerUrl?: string,
 ): Promise<void> {
-  /**
-   * GET /api/health/mcp
-   * Check MCP server health
-   */
-  server.get("/api/health/mcp", async (_request, reply) => {
-    try {
-      // Read MCP configuration from environment variables
-      const mcpPort = process.env.SCRAPEGOAT_PORT
-        ? Number.parseInt(process.env.SCRAPEGOAT_PORT, 10)
-        : process.env.MCP_PORT
-          ? Number.parseInt(process.env.MCP_PORT, 10)
-          : DEFAULT_HTTP_PORT;
-      const mcpHost = process.env.MCP_HOST || "localhost";
-      const mcpUrl = `http://${mcpHost}:${mcpPort}`;
+  // Note: Web interface uses direct event tracking without session management
+  // This approach provides meaningful analytics without the complexity of per-request sessions
+  // Future enhancements could add browser-based session correlation if needed
 
-      // Simple reachability check
-      try {
-        const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 2000);
+  // Instantiate tools for web routes
+  const listLibrariesTool = new ListLibrariesTool(docService);
+  const listJobsTool = new ListJobsTool(pipeline);
+  const scrapeTool = new ScrapeTool(pipeline, appConfig.scraper);
+  const removeTool = new RemoveTool(docService, pipeline);
+  const refreshVersionTool = new RefreshVersionTool(pipeline);
+  const searchTool = new SearchTool(docService);
+  const cancelJobTool = new CancelJobTool(pipeline);
+  const clearCompletedJobsTool = new ClearCompletedJobsTool(pipeline);
 
-        await fetch(mcpUrl, {
-          method: "HEAD",
-          signal: controller.signal,
-        });
-
-        clearTimeout(timeoutId);
-
-        reply.send({
-          status: "ok",
-          connected: true,
-          url: mcpUrl,
-          port: mcpPort,
-        });
-      } catch (_error) {
-        reply.status(503).send({
-          status: "down",
-          connected: false,
-          error: "MCP server not reachable",
-        });
-      }
-    } catch (error) {
-      logger.error(`MCP health check failed: ${error}`);
-      reply.status(503).send({
-        status: "down",
-        connected: false,
-        error: error instanceof Error ? error.message : "Unknown error",
-      });
-    }
-  });
-
-  /**
-   * GET /api/config
-   * Get application configuration (read-only, sanitized)
-   */
-  server.get("/api/config", async (_request, reply) => {
-    try {
-      const validation = validateConfig(appConfig);
-
-      // Read MCP configuration from environment variables
-      const mcpPort = process.env.SCRAPEGOAT_PORT
-        ? Number.parseInt(process.env.SCRAPEGOAT_PORT, 10)
-        : process.env.MCP_PORT
-          ? Number.parseInt(process.env.MCP_PORT, 10)
-          : DEFAULT_HTTP_PORT;
-      const mcpHost = process.env.MCP_HOST || "localhost";
-      const mcpUrl = `http://${mcpHost}:${mcpPort}`;
-
-      reply.send({
-        config: {
-          fetcher: {
-            defaultFetcher: appConfig.fetcher.defaultFetcher,
-            http: {
-              timeout: appConfig.fetcher.http.timeout,
-              maxRetries: appConfig.fetcher.http.maxRetries,
-            },
-            crawl4ai: {
-              serviceUrl: appConfig.fetcher.crawl4ai.serviceUrl,
-              enabled: appConfig.fetcher.crawl4ai.enabled,
-              timeout: appConfig.fetcher.crawl4ai.timeout,
-              features: appConfig.fetcher.crawl4ai.features,
-              defaultScreenshotMode: appConfig.fetcher.crawl4ai.defaultScreenshotMode,
-            },
-          },
-          storage: appConfig.storage,
-          monitoring: {
-            enabled: appConfig.monitoring.enabled,
-            exportInterval: appConfig.monitoring.exportInterval,
-          },
-        },
-        mcp: {
-          enabled: true, // MCP server runs as a separate service
-          host: mcpHost,
-          port: mcpPort,
-          url: mcpUrl,
-        },
-        validation,
-      });
-    } catch (error) {
-      logger.error(`Error retrieving config: ${error}`);
-      reply.status(500).send({ error: "Failed to retrieve configuration" });
-    }
-  });
+  // Register all web routes
+  registerIndexRoute(server, externalWorkerUrl);
+  registerLibrariesRoutes(server, listLibrariesTool, removeTool, refreshVersionTool);
+  registerLibraryDetailRoutes(
+    server,
+    listLibrariesTool,
+    searchTool,
+    scrapeTool,
+    docService,
+  );
+  registerJobListRoutes(server, listJobsTool);
+  registerNewJobRoutes(server, scrapeTool, appConfig.scraper);
+  registerCancelJobRoute(server, cancelJobTool);
+  registerClearCompletedJobsRoute(server, clearCompletedJobsTool);
+  registerEventsRoute(server, eventBus);
+  registerStatsRoute(server, docService);
 }

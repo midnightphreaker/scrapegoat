@@ -1,145 +1,181 @@
 /**
- * Main CLI setup and command registration.
+ * Main CLI setup and command registration using Yargs.
  */
 
-import { Command, Option } from "commander";
-import packageJson from "../../package.json";
+import yargs, { type Argv } from "yargs";
+import { hideBin } from "yargs/helpers";
+import { EventBusService } from "../events";
 import {
-  analytics,
   initTelemetry,
   shouldEnableTelemetry,
-  TelemetryEvent,
+  TelemetryService,
+  telemetry,
 } from "../telemetry";
+import { loadConfig } from "../utils/config";
 import { resolveStorePath } from "../utils/paths";
+// Commands
+import { createConfigCommand } from "./commands/config";
 import { createDefaultAction } from "./commands/default";
 import { createFetchUrlCommand } from "./commands/fetchUrl";
 import { createFindVersionCommand } from "./commands/findVersion";
 import { createListCommand } from "./commands/list";
 import { createMcpCommand } from "./commands/mcp";
+import { createRefreshCommand } from "./commands/refresh";
 import { createRemoveCommand } from "./commands/remove";
 import { createScrapeCommand } from "./commands/scrape";
 import { createSearchCommand } from "./commands/search";
 import { createWebCommand } from "./commands/web";
 import { createWorkerCommand } from "./commands/worker";
-import { setupLogging } from "./utils";
+import { applyGlobalCliOutputMode, registerGlobalOutputOptions } from "./output";
+import { registerGlobalServices } from "./services";
 
 /**
  * Creates and configures the main CLI program with all commands.
  */
-export function createCliProgram(): Command {
-  const program = new Command();
 
-  // Store command start times for duration tracking
+/**
+ * Creates and configures the main CLI program with all commands.
+ */
+export function createCli(argv: string[]): Argv {
+  // Global service instances
+  let globalEventBus: EventBusService | null = null;
+  let globalTelemetryService: TelemetryService | null = null;
   const commandStartTimes = new Map<string, number>();
 
-  // Configure main program
-  program
-    .name("docs-mcp-server")
-    .description("Unified CLI, MCP Server, and Web Interface for Docs MCP Server.")
-    .version(packageJson.version)
-    // Mutually exclusive logging flags
-    .addOption(
-      new Option("--verbose", "Enable verbose (debug) logging").conflicts("silent"),
-    )
-    .addOption(new Option("--silent", "Disable all logging except errors"))
-    .addOption(
-      new Option("--telemetry", "Enable telemetry collection")
-        .env("DOCS_MCP_TELEMETRY")
-        .argParser((value) => {
-          if (value === undefined) {
-            return (
-              process.env.DOCS_MCP_TELEMETRY !== "false" &&
-              process.env.DOCS_MCP_TELEMETRY !== "0"
-            );
-          }
-          return value;
-        })
-        .default(true),
-    )
-    .addOption(new Option("--no-telemetry", "Disable telemetry collection"))
-    .addOption(
-      new Option("--store-path <path>", "Custom path for data storage directory").env(
-        "DOCS_MCP_STORE_PATH",
-      ),
-    )
-    .enablePositionalOptions()
-    .allowExcessArguments(false)
-    .showHelpAfterError(true);
+  const cli = registerGlobalOutputOptions(yargs(hideBin(argv)))
+    .scriptName("docs-mcp-server")
+    .strict()
+    .usage("Usage: $0 <command> [options]")
+    .version(__APP_VERSION__)
+    // Global Options
+    .option("verbose", {
+      type: "boolean",
+      description: "Enable verbose (debug) logging",
+      default: false,
+    })
+    .option("quiet", {
+      type: "boolean",
+      description: "Disable all logging except errors",
+      default: false,
+      alias: ["silent"],
+    })
+    .option("telemetry", {
+      type: "boolean",
+      description: "Enable/disable telemetry collection",
+      // yargs handles boolean logic for --no-telemetry automatically if strictly typed
+      // but we want tri-state or env var handling.
+      // Yargs doesn't naturally do "default: true, but respecting env var DOCS_MCP_TELEMETRY"
+      // without middleware overriding.
+      default: undefined, // Let config loader handle defaults
+    })
+    .option("store-path", {
+      type: "string",
+      description: "Custom path for data storage directory",
+      alias: "storePath",
+    })
+    .option("config", {
+      type: "string",
+      description: "Path to configuration file",
+    })
+    .option("logo", {
+      type: "boolean",
+      description: "Show ASCII art logo on startup",
+      default: true,
+    })
+    // Middleware for Global Setup (similar to preAction)
+    .middleware(async (argv) => {
+      // 0. Validate Options
+      if (argv.verbose && argv.quiet) {
+        throw new Error("Arguments verbose and quiet are mutually exclusive");
+      }
 
-  // Set up global options handling
-  program.hook("preAction", async (thisCommand, actionCommand) => {
-    const globalOptions = thisCommand.opts();
+      // 1. Load Config & Resolve Paths
+      const rawStorePath = (argv.storePath as string) || process.env.DOCS_MCP_STORE_PATH;
+      const resolvedStorePath = resolveStorePath(rawStorePath);
 
-    // Resolve store path centrally using the new centralized logic
-    const resolvedStorePath = resolveStorePath(globalOptions.storePath);
-    globalOptions.storePath = resolvedStorePath;
+      // Mutate argv to use resolved path
+      argv.storePath = resolvedStorePath;
 
-    // Setup logging
-    setupLogging(globalOptions);
+      const appConfig = loadConfig(argv, {
+        configPath: argv.config as string,
+        searchDir: resolvedStorePath,
+      });
 
-    // Initialize telemetry system with proper configuration
-    initTelemetry({
-      enabled: globalOptions.telemetry ?? true,
-      storePath: resolvedStorePath,
-    });
+      // Update options with config values if not set by CLI
+      if (argv.telemetry === undefined) {
+        argv.telemetry = appConfig.app.telemetryEnabled;
+      }
 
-    // Initialize telemetry if enabled
-    if (shouldEnableTelemetry()) {
-      // Set global context for CLI commands
-      if (analytics.isEnabled()) {
-        analytics.setGlobalContext({
-          appVersion: packageJson.version,
+      // 2. Setup Logging
+      applyGlobalCliOutputMode({
+        verbose: argv.verbose as boolean,
+        quiet: argv.quiet as boolean,
+      });
+
+      // 3. Init Telemetry
+      initTelemetry({
+        enabled: !!argv.telemetry,
+        storePath: resolvedStorePath,
+      });
+
+      // 4. Init Services
+      if (!globalEventBus) {
+        globalEventBus = new EventBusService();
+      }
+      if (!globalTelemetryService) {
+        globalTelemetryService = new TelemetryService(globalEventBus);
+        registerGlobalServices({ telemetryService: globalTelemetryService });
+      }
+
+      // 5. Attach to argv context
+      // This makes global services available to all commands
+      argv._eventBus = globalEventBus;
+
+      // 6. Telemetry Context
+      if (shouldEnableTelemetry() && telemetry.isEnabled()) {
+        const commandName = argv._[0]?.toString() || "default";
+        telemetry.setGlobalContext({
+          appVersion: __APP_VERSION__,
           appPlatform: process.platform,
           appNodeVersion: process.version,
           appInterface: "cli",
-          cliCommand: actionCommand.name(),
+          cliCommand: commandName,
         });
 
-        // Store command start time for duration tracking
-        const commandKey = `${actionCommand.name()}-${Date.now()}`;
+        const commandKey = `${commandName}-${Date.now()}`;
         commandStartTimes.set(commandKey, Date.now());
-        // Store the key for retrieval in postAction
-        (actionCommand as { _trackingKey?: string })._trackingKey = commandKey;
+        argv._trackingKey = commandKey;
       }
-    }
-  });
+    })
+    // Post-command tracking is handled by yargs 'onFinishCommand' or similar?
+    // Yargs doesn't have a direct 'postAction' hook for all commands easily.
+    // We can handle it in the handler wrapper or use 'onFinishCommand' if available (it isn't).
+    // An alternative is using middleware that runs after? No.
+    // We will rely on explicit telemetry calls in command handlers or wrap usage.
+    // However, existing `main.ts` handles cleanup.
+    // We can add a global `finish` logic if needed.
+    // For now, we'll keep the start time tracking here, but actual completion tracking might need to be in handlers.
+    // BUT legacy code had `postAction` hook for `CLI_COMMAND` event.
+    // We can simulate this by wrapping commands or using `cli.on('finish', ...)`?
+    // Yargs doesn't emit finish events.
+    // We might need to move the `CLI_COMMAND` tracking into `main.ts` or inside `createDefaultAction`.
 
-  // Track CLI command completion
-  program.hook("postAction", async (_thisCommand, actionCommand) => {
-    if (analytics.isEnabled()) {
-      // Track CLI_COMMAND event for all CLI commands (standalone and server)
-      const trackingKey = (actionCommand as { _trackingKey?: string })._trackingKey;
-      const startTime = trackingKey ? commandStartTimes.get(trackingKey) : Date.now();
-      const durationMs = startTime ? Date.now() - startTime : 0;
+    .alias("help", "h")
+    .showHelpOnFail(true);
 
-      // Clean up the tracking data
-      if (trackingKey) {
-        commandStartTimes.delete(trackingKey);
-      }
+  // Register Commands
+  createConfigCommand(cli);
+  createDefaultAction(cli);
+  createFetchUrlCommand(cli);
+  createFindVersionCommand(cli);
+  createListCommand(cli);
+  createMcpCommand(cli);
+  createRefreshCommand(cli);
+  createRemoveCommand(cli);
+  createScrapeCommand(cli);
+  createSearchCommand(cli);
+  createWebCommand(cli);
+  createWorkerCommand(cli);
 
-      analytics.track(TelemetryEvent.CLI_COMMAND, {
-        cliCommand: actionCommand.name(),
-        success: true, // If we reach postAction, command succeeded
-        durationMs,
-      });
-
-      await analytics.shutdown();
-    }
-  });
-
-  // Register all commands
-  createMcpCommand(program);
-  createWebCommand(program);
-  createWorkerCommand(program);
-  createScrapeCommand(program);
-  createSearchCommand(program);
-  createListCommand(program);
-  createFindVersionCommand(program);
-  createRemoveCommand(program);
-  createFetchUrlCommand(program);
-
-  // Set default action for when no subcommand is specified
-  createDefaultAction(program);
-
-  return program;
+  return cli;
 }

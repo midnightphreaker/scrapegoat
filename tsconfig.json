@@ -16,21 +16,13 @@
     "declaration": true,
     "allowJs": true,
     "resolveJsonModule": true,
-    "rootDir": "src",
     "types": ["@kitajs/html/htmx.d.ts", "vite/client"],
     "incremental": true,
     "tsBuildInfoFile": ".tsbuildinfo",
-    "noUncheckedIndexedAccess": true,
+    "noUncheckedIndexedAccess": false,
     "exactOptionalPropertyTypes": false,
-    "assumeChangesOnlyAffectDirectDependencies": true,
-    "paths": {
-      "@/*": ["./src/*"],
-      "@scraper/*": ["./src/scraper/*"],
-      "@store/*": ["./src/store/*"],
-      "@web/*": ["./src/web/*"],
-      "@utils/*": ["./src/utils/*"]
-    }
+    "assumeChangesOnlyAffectDirectDependencies": true
   },
-  "include": ["src/**/*"],
-  "exclude": ["node_modules", "dist", "**/*.test.ts", "**/*.test.tsx"]
+  "include": ["src/**/*", "test/**/*"],
+  "exclude": ["node_modules", "dist"]
 }

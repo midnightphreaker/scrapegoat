@@ -3,57 +3,75 @@ import { logger } from "../utils/logger";
 import { ConnectionError } from "./errors";
 
 /**
- * PostgreSQL connection pool configuration and management.
- * Provides connection pooling, health checks, and extension verification.
+ * PostgreSQL connection pool management.
+ * Provides connection pooling, health checks, and pgvector extension verification.
+ *
+ * The pool starts as `null` and must be initialized via {@link initialize} before use.
+ * Call {@link getPool} to access the underlying pool (throws if not initialized).
  */
 export class PostgresConnection {
-  private pool: Pool;
+  private pool: Pool | null = null;
+  private readonly connectionString: string;
+  private readonly poolConfig: Partial<PoolConfig>;
 
-  constructor(connectionString: string, config?: Partial<PoolConfig>) {
+  constructor(connectionString: string, poolConfig?: Partial<PoolConfig>) {
     if (!connectionString) {
       throw new ConnectionError("PostgreSQL connection string is required");
     }
+    this.connectionString = connectionString;
+    this.poolConfig = poolConfig ?? {};
+  }
 
-    // Create connection pool with optimal defaults
-    const poolConfig: PoolConfig = {
-      connectionString,
-      // Connection pool sizing
-      max: config?.max ?? 20, // Maximum pool size
-      min: config?.min ?? 5, // Minimum idle connections
-      // Timeout configuration
-      idleTimeoutMillis: config?.idleTimeoutMillis ?? 30000, // 30s idle timeout
-      connectionTimeoutMillis: config?.connectionTimeoutMillis ?? 5000, // 5s connection timeout
-      // Keepalive for long-running connections
-      keepAlive: config?.keepAlive ?? true,
-      keepAliveInitialDelayMillis: config?.keepAliveInitialDelayMillis ?? 10000,
-      ...config,
+  /**
+   * Initialize the connection pool and verify connectivity.
+   * Installs pgvector extension if not present.
+   */
+  async initialize(): Promise<void> {
+    const config: PoolConfig = {
+      connectionString: this.connectionString,
+      max: this.poolConfig.max ?? 10,
+      min: this.poolConfig.min ?? 2,
+      idleTimeoutMillis: this.poolConfig.idleTimeoutMillis ?? 10000,
+      connectionTimeoutMillis: this.poolConfig.connectionTimeoutMillis ?? 5000,
     };
 
-    this.pool = new Pool(poolConfig);
+    this.pool = new Pool(config);
 
-    // Handle pool errors
     this.pool.on("error", (err) => {
       logger.error(`Unexpected PostgreSQL pool error: ${err.message}`);
     });
 
     logger.debug(
-      `PostgreSQL connection pool created (max: ${poolConfig.max}, min: ${poolConfig.min})`,
+      `PostgreSQL connection pool created (max: ${config.max}, min: ${config.min})`,
     );
+
+    await this.testConnection();
+    await this.installPgvectorExtension();
+
+    logger.info("✅ PostgreSQL connection initialized successfully");
   }
 
   /**
-   * Get the underlying pool instance
+   * Get the underlying pool instance. Throws if not initialized.
+   * @throws {ConnectionError} if the pool has not been initialized
    */
   getPool(): Pool {
+    if (!this.pool) {
+      throw new ConnectionError(
+        "Connection pool not initialized. Call initialize() first.",
+      );
+    }
     return this.pool;
   }
 
   /**
-   * Test database connectivity
+   * Test database connectivity with a simple query.
+   * @throws {ConnectionError} if the connection test fails
    */
   async testConnection(): Promise<void> {
+    const pool = this.getPool();
     try {
-      const client = await this.pool.connect();
+      const client = await pool.connect();
       try {
         await client.query("SELECT 1");
         logger.debug("PostgreSQL connection test successful");
@@ -66,42 +84,14 @@ export class PostgresConnection {
   }
 
   /**
-   * Check if pgvector extension is available and enabled
-   */
-  async checkPgvectorExtension(): Promise<{
-    installed: boolean;
-    version: string | null;
-  }> {
-    try {
-      const client = await this.pool.connect();
-      try {
-        // Check if extension exists
-        const result = await client.query(
-          "SELECT extversion FROM pg_extension WHERE extname = 'vector'",
-        );
-
-        if (result.rows.length === 0) {
-          return { installed: false, version: null };
-        }
-
-        const version = result.rows[0].extversion;
-        logger.debug(`pgvector extension installed (version: ${version})`);
-        return { installed: true, version };
-      } finally {
-        client.release();
-      }
-    } catch (error) {
-      throw new ConnectionError("Failed to check pgvector extension", error);
-    }
-  }
-
-  /**
-   * Install pgvector extension
-   * Requires superuser or extension creation privileges
+   * Install pgvector extension if not already present.
+   * Requires superuser or extension creation privileges.
+   * @throws {ConnectionError} if installation fails due to permissions or missing extension
    */
   async installPgvectorExtension(): Promise<void> {
+    const pool = this.getPool();
     try {
-      const client = await this.pool.connect();
+      const client = await pool.connect();
       try {
         await client.query("CREATE EXTENSION IF NOT EXISTS vector");
         logger.info("✅ pgvector extension installed successfully");
@@ -133,76 +123,33 @@ export class PostgresConnection {
   }
 
   /**
-   * Verify database has required permissions
+   * Check if the database is healthy by executing a simple query.
+   * @returns `true` if the database responds, `false` otherwise
    */
-  async checkPermissions(): Promise<{
-    canCreateTables: boolean;
-    canCreateIndexes: boolean;
-    canCreateExtensions: boolean;
-  }> {
-    const client = await this.pool.connect();
+  async healthCheck(): Promise<boolean> {
     try {
-      const permissions = {
-        canCreateTables: false,
-        canCreateIndexes: false,
-        canCreateExtensions: false,
-      };
-
-      // Check if we can create tables
-      try {
-        await client.query("BEGIN");
-        await client.query("CREATE TEMP TABLE _scrapegoat_permission_test (id INTEGER)");
-        await client.query("DROP TABLE _scrapegoat_permission_test");
-        await client.query("COMMIT");
-        permissions.canCreateTables = true;
-        permissions.canCreateIndexes = true; // If we can create tables, we can create indexes
-      } catch (_error) {
-        await client.query("ROLLBACK");
-        logger.warn("⚠️ Insufficient permissions to create tables");
-      }
-
-      // Check if we can create extensions (optional - not required if extension already exists)
-      try {
-        await client.query("BEGIN");
-        await client.query("CREATE EXTENSION IF NOT EXISTS vector");
-        await client.query("ROLLBACK"); // Don't actually create it in the test
-        permissions.canCreateExtensions = true;
-      } catch (_error) {
-        await client.query("ROLLBACK");
-        // This is OK if extension already exists
-      }
-
-      return permissions;
-    } finally {
-      client.release();
+      const pool = this.getPool();
+      const result = await pool.query("SELECT 1");
+      return result.rows.length > 0;
+    } catch {
+      return false;
     }
   }
 
   /**
-   * Get connection pool statistics
-   */
-  getPoolStats(): {
-    total: number;
-    idle: number;
-    waiting: number;
-  } {
-    return {
-      total: this.pool.totalCount,
-      idle: this.pool.idleCount,
-      waiting: this.pool.waitingCount,
-    };
-  }
-
-  /**
-   * Close all connections in the pool
+   * Close all connections in the pool and release resources.
+   * @throws {ConnectionError} if the pool cannot be closed cleanly
    */
   async close(): Promise<void> {
-    try {
-      await this.pool.end();
-      logger.debug("PostgreSQL connection pool closed");
-    } catch (error) {
-      logger.error(`Error closing PostgreSQL pool: ${error}`);
-      throw new ConnectionError("Failed to close connection pool", error);
+    if (this.pool) {
+      try {
+        await this.pool.end();
+        this.pool = null;
+        logger.debug("PostgreSQL connection pool closed");
+      } catch (error) {
+        logger.error(`Error closing PostgreSQL pool: ${error}`);
+        throw new ConnectionError("Failed to close connection pool", error);
+      }
     }
   }
 }

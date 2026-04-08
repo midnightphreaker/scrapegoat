@@ -3,10 +3,8 @@
  * Only procedures actually used externally are included to keep surface minimal.
  */
 import { initTRPC } from "@trpc/server";
+import superjson from "superjson";
 import { z } from "zod";
-import { cacheMiddleware } from "../../middleware/cacheMiddleware.js";
-import { getCacheService } from "../../services/CacheService.js";
-import { analytics, TelemetryEvent } from "../../telemetry";
 import type {
   DbVersionWithLibrary,
   FindVersionResult,
@@ -15,16 +13,14 @@ import type {
 } from "../types";
 import type { IDocumentManagement } from "./interfaces";
 
-export function invalidateLibrariesCache(): void {
-  getCacheService().invalidate("libraries:*");
-}
-
 // Context carries the document management API
 export interface DataTrpcContext {
   docService: IDocumentManagement;
 }
 
-const t = initTRPC.context<DataTrpcContext>().create();
+const t = initTRPC.context<DataTrpcContext>().create({
+  transformer: superjson,
+});
 
 // Common schemas
 const nonEmpty = z
@@ -39,36 +35,39 @@ const optionalVersion = z
 
 export function createDataRouter(trpc: unknown) {
   const tt = trpc as typeof t;
-  const cache = getCacheService();
-  const cachedProcedure = tt.procedure.use(
-    cacheMiddleware({
-      cache,
-      cacheKey: "libraries:list",
-      ttl: 300000,
-    }),
-  );
-
   return tt.router({
-    listLibraries: cachedProcedure.query(async (opts) => {
-      return await opts.ctx.docService.listLibraries();
+    ping: tt.procedure.query(async () => ({ status: "ok", ts: Date.now() })),
+
+    listLibraries: tt.procedure.query(async ({ ctx }: { ctx: DataTrpcContext }) => {
+      return await ctx.docService.listLibraries(); // LibrarySummary[]
     }),
 
     findBestVersion: tt.procedure
       .input(z.object({ library: nonEmpty, targetVersion: z.string().optional() }))
-      .query(async (opts) => {
-        const result = await opts.ctx.docService.findBestVersion(
-          opts.input.library,
-          opts.input.targetVersion,
-        );
-        return result as FindVersionResult;
-      }),
+      .query(
+        async ({
+          ctx,
+          input,
+        }: {
+          ctx: DataTrpcContext;
+          input: { library: string; targetVersion?: string };
+        }) => {
+          const result = await ctx.docService.findBestVersion(
+            input.library,
+            input.targetVersion,
+          );
+          return result as FindVersionResult;
+        },
+      ),
 
     validateLibraryExists: tt.procedure
       .input(z.object({ library: nonEmpty }))
-      .mutation(async (opts) => {
-        await opts.ctx.docService.validateLibraryExists(opts.input.library);
-        return { ok: true } as const;
-      }),
+      .mutation(
+        async ({ ctx, input }: { ctx: DataTrpcContext; input: { library: string } }) => {
+          await ctx.docService.validateLibraryExists(input.library);
+          return { ok: true } as const;
+        },
+      ),
 
     search: tt.procedure
       .input(
@@ -79,107 +78,101 @@ export function createDataRouter(trpc: unknown) {
           limit: z.number().int().positive().max(50).optional(),
         }),
       )
-      .query(async (opts) => {
-        const results = await opts.ctx.docService.searchStore(
-          opts.input.library,
-          opts.input.version ?? null,
-          opts.input.query,
-          opts.input.limit ?? 5,
-        );
+      .query(
+        async ({
+          ctx,
+          input,
+        }: {
+          ctx: DataTrpcContext;
+          input: {
+            library: string;
+            version: string | null | undefined;
+            query: string;
+            limit?: number;
+          };
+        }) => {
+          const results = await ctx.docService.searchStore(
+            input.library,
+            input.version ?? null,
+            input.query,
+            input.limit ?? 5,
+          );
 
-        // Track Web UI search
-        analytics.track(TelemetryEvent.WEB_SEARCH_PERFORMED, {
-          library: opts.input.library,
-          version: opts.input.version || undefined,
-          queryLength: opts.input.query.length,
-          resultCount: results.length,
-          limit: opts.input.limit ?? 5,
-        });
-
-        return results as StoreSearchResult[];
-      }),
+          return results as StoreSearchResult[];
+        },
+      ),
 
     removeVersion: tt.procedure
       .input(z.object({ library: nonEmpty, version: optionalVersion }))
-      .mutation(async (opts) => {
-        await opts.ctx.docService.removeVersion(
-          opts.input.library,
-          opts.input.version ?? null,
-        );
-        invalidateLibrariesCache();
-        return { ok: true } as const;
-      }),
-
-    renameVersion: tt.procedure
-      .input(
-        z.object({
-          library: nonEmpty,
-          oldVersion: optionalVersion,
-          newVersion: z.string().min(1, "New version name cannot be empty"),
-        }),
-      )
-      .mutation(async (opts) => {
-        const result = await opts.ctx.docService.renameVersion(
-          opts.input.library,
-          opts.input.oldVersion ?? null,
-          opts.input.newVersion,
-        );
-        invalidateLibrariesCache();
-        return { ok: true, renamed: result } as const;
-      }),
-
-    renameLibrary: tt.procedure
-      .input(
-        z.object({
-          library: nonEmpty,
-          newName: nonEmpty,
-        }),
-      )
-      .mutation(async (opts) => {
-        const result = await opts.ctx.docService.renameLibrary(
-          opts.input.library,
-          opts.input.newName,
-        );
-        invalidateLibrariesCache();
-        return { ok: true, renamed: result } as const;
-      }),
+      .mutation(
+        async ({
+          ctx,
+          input,
+        }: {
+          ctx: DataTrpcContext;
+          input: { library: string; version: string | null | undefined };
+        }) => {
+          await ctx.docService.removeVersion(input.library, input.version ?? null);
+          return { ok: true } as const;
+        },
+      ),
 
     removeAllDocuments: tt.procedure
       .input(z.object({ library: nonEmpty, version: optionalVersion }))
-      .mutation(async (opts) => {
-        await opts.ctx.docService.removeAllDocuments(
-          opts.input.library,
-          opts.input.version ?? null,
-        );
-        invalidateLibrariesCache();
-        return { ok: true } as const;
-      }),
+      .mutation(
+        async ({
+          ctx,
+          input,
+        }: {
+          ctx: DataTrpcContext;
+          input: { library: string; version: string | null | undefined };
+        }) => {
+          await ctx.docService.removeAllDocuments(input.library, input.version ?? null);
+          return { ok: true } as const;
+        },
+      ),
 
     // Status and version helpers
 
     getVersionsByStatus: tt.procedure
       .input(z.object({ statuses: z.array(z.string()) }))
-      .query(async (opts) => {
-        // Cast trusting caller to pass valid VersionStatus strings
-        const statuses = opts.input.statuses as VersionStatus[];
-        return (await opts.ctx.docService.getVersionsByStatus(
-          statuses,
-        )) as DbVersionWithLibrary[];
-      }),
+      .query(
+        async ({
+          ctx,
+          input,
+        }: {
+          ctx: DataTrpcContext;
+          input: { statuses: string[] };
+        }) => {
+          // Cast trusting caller to pass valid VersionStatus strings
+          const statuses = input.statuses as unknown as VersionStatus[];
+          return (await ctx.docService.getVersionsByStatus(
+            statuses,
+          )) as DbVersionWithLibrary[];
+        },
+      ),
 
     findVersionsBySourceUrl: tt.procedure
       .input(z.object({ url: nonEmpty }))
-      .query(async (opts) => {
-        return (await opts.ctx.docService.findVersionsBySourceUrl(
-          opts.input.url,
+      .query(async ({ ctx, input }: { ctx: DataTrpcContext; input: { url: string } }) => {
+        return (await ctx.docService.findVersionsBySourceUrl(
+          input.url,
         )) as DbVersionWithLibrary[];
       }),
 
     getScraperOptions: tt.procedure
       .input(z.object({ versionId: z.number().int().positive() }))
-      .query(async (opts) => {
-        return await opts.ctx.docService.getScraperOptions(opts.input.versionId);
-      }),
+      .query(
+        async ({
+          ctx,
+          input,
+        }: {
+          ctx: DataTrpcContext;
+          input: { versionId: number };
+        }) => {
+          return await ctx.docService.getScraperOptions(input.versionId);
+        },
+      ),
 
     updateVersionStatus: tt.procedure
       .input(
@@ -189,15 +182,22 @@ export function createDataRouter(trpc: unknown) {
           errorMessage: z.string().optional().nullable(),
         }),
       )
-      .mutation(async (opts) => {
-        await opts.ctx.docService.updateVersionStatus(
-          opts.input.versionId,
-          opts.input.status as VersionStatus,
-          opts.input.errorMessage ?? undefined,
-        );
-        invalidateLibrariesCache();
-        return { ok: true } as const;
-      }),
+      .mutation(
+        async ({
+          ctx,
+          input,
+        }: {
+          ctx: DataTrpcContext;
+          input: { versionId: number; status: string; errorMessage?: string | null };
+        }) => {
+          await ctx.docService.updateVersionStatus(
+            input.versionId,
+            input.status as VersionStatus,
+            input.errorMessage ?? undefined,
+          );
+          return { ok: true } as const;
+        },
+      ),
 
     updateVersionProgress: tt.procedure
       .input(
@@ -207,15 +207,22 @@ export function createDataRouter(trpc: unknown) {
           maxPages: z.number().int().positive(),
         }),
       )
-      .mutation(async (opts) => {
-        await opts.ctx.docService.updateVersionProgress(
-          opts.input.versionId,
-          opts.input.pages,
-          opts.input.maxPages,
-        );
-        invalidateLibrariesCache();
-        return { ok: true } as const;
-      }),
+      .mutation(
+        async ({
+          ctx,
+          input,
+        }: {
+          ctx: DataTrpcContext;
+          input: { versionId: number; pages: number; maxPages: number };
+        }) => {
+          await ctx.docService.updateVersionProgress(
+            input.versionId,
+            input.pages,
+            input.maxPages,
+          );
+          return { ok: true } as const;
+        },
+      ),
 
     storeScraperOptions: tt.procedure
       .input(
@@ -224,16 +231,24 @@ export function createDataRouter(trpc: unknown) {
           options: z.unknown(),
         }),
       )
-      .mutation(async (opts) => {
-        // options conforms to ScraperOptions at the caller; keep as unknown here
-        await opts.ctx.docService.storeScraperOptions(
-          opts.input.versionId,
-          opts.input.options as unknown as Parameters<
-            IDocumentManagement["storeScraperOptions"]
-          >[1],
-        );
-        return { ok: true } as const;
-      }),
+      .mutation(
+        async ({
+          ctx,
+          input,
+        }: {
+          ctx: DataTrpcContext;
+          input: { versionId: number; options: unknown };
+        }) => {
+          // options conforms to ScraperOptions at the caller; keep as unknown here
+          await ctx.docService.storeScraperOptions(
+            input.versionId,
+            input.options as unknown as Parameters<
+              IDocumentManagement["storeScraperOptions"]
+            >[1],
+          );
+          return { ok: true } as const;
+        },
+      ),
   });
 }
 

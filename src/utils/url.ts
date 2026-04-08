@@ -25,8 +25,12 @@ export function normalizeUrl(
     const parsedUrl = new URL(url);
     const finalOptions = { ...defaultNormalizerOptions, ...options };
 
-    // Create a new URL to ensure proper structure
-    const normalized = new URL(parsedUrl.origin + parsedUrl.pathname);
+    // Clone the URL to modify it safely
+    const normalized = new URL(url);
+
+    // Reset search and hash for the normalized base
+    normalized.search = "";
+    normalized.hash = "";
 
     // Remove index files first, before handling trailing slashes
     if (finalOptions.removeIndex) {
@@ -45,14 +49,17 @@ export function normalizeUrl(
     const preservedHash = !finalOptions.removeHash ? parsedUrl.hash : "";
     const preservedSearch = !finalOptions.removeQuery ? parsedUrl.search : "";
 
-    // Construct final URL string in correct order (query before hash)
-    let result = normalized.origin + normalized.pathname;
-    if (preservedSearch) {
-      result += preservedSearch;
+    // Construct final URL string
+    // Use href to get the full string, but we need to re-assemble if we want query/hash specific control
+    // Easier: use the modified normalized object
+    if (!finalOptions.removeQuery) {
+      normalized.search = preservedSearch;
     }
-    if (preservedHash) {
-      result += preservedHash;
+    if (!finalOptions.removeHash) {
+      normalized.hash = preservedHash;
     }
+
+    let result = normalized.href;
 
     // Apply case normalization if configured
     if (finalOptions.ignoreCase) {
@@ -75,23 +82,6 @@ export function validateUrl(url: string): void {
   } catch (error) {
     throw new InvalidUrlError(url, error instanceof Error ? error : undefined);
   }
-}
-
-/**
- * Checks if two URLs have the exact same hostname
- */
-export function hasSameHostname(urlA: URL, urlB: URL): boolean {
-  return urlA.hostname.toLowerCase() === urlB.hostname.toLowerCase();
-}
-
-/**
- * Checks if two URLs are on the same domain (including subdomains)
- * Using the public suffix list to properly handle domains like .co.uk
- */
-export function hasSameDomain(urlA: URL, urlB: URL): boolean {
-  const domainA = psl.get(urlA.hostname.toLowerCase());
-  const domainB = psl.get(urlB.hostname.toLowerCase());
-  return domainA !== null && domainA === domainB;
 }
 
 /**
@@ -120,19 +110,6 @@ export function extractPrimaryDomain(hostname: string): string {
   // Use public suffix list for accurate domain extraction
   const domain = psl.get(hostname.toLowerCase());
   return domain || hostname; // Fallback to original hostname if psl fails
-}
-
-/**
- * Checks if a target URL is under the same path as the base URL
- * Example: base = https://example.com/docs/
- *          target = https://example.com/docs/getting-started
- *          result = true
- */
-export function isSubpath(baseUrl: URL, targetUrl: URL): boolean {
-  const basePath = baseUrl.pathname.endsWith("/")
-    ? baseUrl.pathname
-    : `${baseUrl.pathname}/`;
-  return targetUrl.pathname.startsWith(basePath);
 }
 
 export type { UrlNormalizerOptions };

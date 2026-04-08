@@ -90,8 +90,8 @@ export class HtmlLinkExtractorMiddleware implements ContentProcessorMiddleware {
       });
 
       context.links = [...new Set(extractedLinks)];
-      logger.info(
-        `[LINKS] Extracted ${context.links.length} unique, valid links from HTML at ${context.source} (found ${linkElements.length} potential links)`,
+      logger.debug(
+        `Extracted ${context.links.length} unique, valid links from ${context.source}`,
       );
     } catch (error) {
       logger.error(`❌ Error extracting links from ${context.source}: ${error}`);

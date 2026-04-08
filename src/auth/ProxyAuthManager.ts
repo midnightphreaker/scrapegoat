@@ -9,11 +9,6 @@
 import { ProxyOAuthServerProvider } from "@modelcontextprotocol/sdk/server/auth/providers/proxyProvider.js";
 import type { FastifyInstance, FastifyRequest } from "fastify";
 import { createRemoteJWKSet, jwtVerify } from "jose";
-import {
-  AuthenticationError,
-  ConfigurationError,
-  InvalidTokenError,
-} from "../utils/errors";
 import { logger } from "../utils/logger";
 import type { AuthConfig, AuthContext } from "./types";
 
@@ -48,12 +43,7 @@ export class ProxyAuthManager {
     }
 
     if (!this.config.issuerUrl || !this.config.audience) {
-      throw new ConfigurationError(
-        "Issuer URL and Audience are required when auth is enabled",
-        ["issuerUrl", "audience"].filter(
-          (field) => !this.config[field as keyof AuthConfig],
-        ),
-      );
+      throw new Error("Issuer URL and Audience are required when auth is enabled");
     }
 
     try {
@@ -77,7 +67,7 @@ export class ProxyAuthManager {
 
       if (capabilities.length === 0) {
         logger.warn(
-          "⚠️ No token validation mechanisms available - authentication may fail",
+          "⚠️  No token validation mechanisms available - authentication may fail",
         );
       }
 
@@ -97,10 +87,7 @@ export class ProxyAuthManager {
     } catch (error) {
       const message = error instanceof Error ? error.message : "Unknown error";
       logger.error(`❌ Failed to initialize OAuth2 proxy authentication: ${message}`);
-      throw new AuthenticationError(
-        `Proxy authentication initialization failed: ${message}`,
-        error,
-      );
+      throw new Error(`Proxy authentication initialization failed: ${message}`);
     }
   }
 
@@ -110,9 +97,7 @@ export class ProxyAuthManager {
    */
   registerRoutes(server: FastifyInstance, baseUrl: URL): void {
     if (!this.proxyProvider) {
-      throw new AuthenticationError(
-        "Proxy provider not initialized. Call initialize() first",
-      );
+      throw new Error("Proxy provider not initialized");
     }
 
     // OAuth2 Authorization Server Metadata (RFC 8414)
@@ -146,7 +131,7 @@ export class ProxyAuthManager {
         scopes_supported: ["profile", "email"],
         bearer_methods_supported: ["header"],
         resource_name: "Documentation MCP Server",
-        resource_documentation: "https://github.com/arabold/scrapegoat#readme",
+        resource_documentation: "https://github.com/arabold/docs-mcp-server#readme",
         // Enhanced metadata for better discoverability
         resource_server_metadata_url: `${baseUrl}/.well-known/oauth-protected-resource`,
         authorization_server_metadata_url: `${this.config.issuerUrl}/.well-known/openid-configuration`,
@@ -363,7 +348,7 @@ export class ProxyAuthManager {
         );
 
         if (!payload.sub) {
-          throw new InvalidTokenError("JWT payload missing subject claim", "JWT");
+          throw new Error("JWT payload missing subject claim");
         }
 
         return {
@@ -393,9 +378,8 @@ export class ProxyAuthManager {
         });
 
         if (!response.ok) {
-          throw new InvalidTokenError(
+          throw new Error(
             `Userinfo request failed: ${response.status} ${response.statusText}`,
-            "opaque token",
           );
         }
 
@@ -405,10 +389,7 @@ export class ProxyAuthManager {
         );
 
         if (!userinfo.sub) {
-          throw new InvalidTokenError(
-            "Userinfo response missing subject claim",
-            "opaque token",
-          );
+          throw new Error("Userinfo response missing subject");
         }
 
         // Optional: Resource validation if MCP Authorization spec requires it
@@ -432,10 +413,7 @@ export class ProxyAuthManager {
 
     // Both validation strategies failed
     logger.debug("All token validation strategies exhausted");
-    throw new InvalidTokenError(
-      "Invalid access token - all validation strategies failed",
-      "access token",
-    );
+    throw new Error("Invalid access token");
   }
 
   /**
@@ -475,19 +453,10 @@ export class ProxyAuthManager {
       const match = authorization.match(/^Bearer\s+(.+)$/i);
       if (!match) {
         logger.debug("Authorization header does not match Bearer token pattern");
-        throw new InvalidTokenError(
-          "Invalid authorization header format. Expected: Bearer <token>",
-          "Bearer token",
-        );
+        throw new Error("Invalid authorization header format");
       }
 
       const token = match[1];
-      if (!token) {
-        throw new InvalidTokenError(
-          "Invalid authorization header format",
-          "Bearer token",
-        );
-      }
       logger.debug(`Extracted token: ${token.substring(0, 20)}...`);
 
       const authInfo = await this.verifyAccessToken(token, request);

@@ -67,10 +67,10 @@ export class TableContentSplitter implements ContentSplitter {
     const lines = content.trim().split("\n");
     if (lines.length < 3) return null; // Need at least headers, separator, and one data row
 
-    const headers = this.parseRow(lines[0]!);
+    const headers = this.parseRow(lines[0]);
     if (!headers) return null;
 
-    const separator = lines[1]!;
+    const separator = lines[1];
     if (!this.isValidSeparator(separator)) return null;
 
     const rows = lines.slice(2).filter((row) => row.trim() !== "");

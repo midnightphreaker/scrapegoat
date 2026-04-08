@@ -1,5 +1,5 @@
+import type { EventBusService } from "../events/EventBusService";
 import type { DocumentManagementService } from "../store";
-import { rateLimitConfig } from "../utils/config";
 import { logger } from "../utils/logger";
 import { PipelineClient } from "./PipelineClient";
 import { PipelineManager } from "./PipelineManager";
@@ -19,38 +19,43 @@ export namespace PipelineFactory {
   // Overload: Local pipeline (in-process worker)
   export async function createPipeline(
     docService: DocumentManagementService,
-    options?: Omit<PipelineOptions, "serverUrl">,
+    eventBus: EventBusService,
+    options: Omit<PipelineOptions, "serverUrl">,
   ): Promise<PipelineManager>;
   // Overload: Remote pipeline client (out-of-process worker)
   export async function createPipeline(
     docService: undefined,
-    options: Required<Pick<PipelineOptions, "serverUrl">> &
-      Omit<PipelineOptions, "serverUrl">,
+    eventBus: EventBusService,
+    options: PipelineOptions & { serverUrl: string },
   ): Promise<PipelineClient>;
   // Implementation
   export async function createPipeline(
-    docService?: DocumentManagementService,
-    options: PipelineOptions = {},
+    docService: DocumentManagementService | undefined,
+    eventBus: EventBusService | undefined,
+    options: PipelineOptions,
   ): Promise<IPipeline> {
-    const {
-      recoverJobs = false, // Default to false for safety
-      serverUrl,
-      concurrency = rateLimitConfig.pipeline.maxConcurrency,
-    } = options;
+    const { recoverJobs = false, serverUrl, appConfig } = options;
 
     logger.debug(
-      `Creating pipeline: recoverJobs=${recoverJobs}, serverUrl=${serverUrl || "none"}, concurrency=${concurrency}`,
+      `Creating pipeline: recoverJobs=${recoverJobs}, serverUrl=${serverUrl || "none"}`,
     );
 
     if (serverUrl) {
       // External pipeline requested
+      if (!eventBus) {
+        throw new Error("Remote pipeline requires EventBusService");
+      }
       logger.debug(`Creating PipelineClient for external worker at: ${serverUrl}`);
-      return new PipelineClient(serverUrl);
+      return new PipelineClient(serverUrl, eventBus);
     }
 
     // Local embedded pipeline with specified behavior
-    return new PipelineManager(docService as DocumentManagementService, concurrency, {
-      recoverJobs,
-    });
+    if (!docService || !eventBus) {
+      throw new Error(
+        "Local pipeline requires both DocumentManagementService and EventBusService",
+      );
+    }
+
+    return new PipelineManager(docService, eventBus, { recoverJobs, appConfig });
   }
 }

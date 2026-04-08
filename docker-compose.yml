@@ -1,109 +1,146 @@
-# Scrapegoat - MCP Documentation Server
+# Docker Compose configuration for Docs MCP Server
 #
-# Quick Start:
-#   1. cp .env.example .env
-#   2. Edit DATABASE_URL in .env
-#   3. Edit OPENAI_API_KEY (or other provider) in .env
-#   4. docker compose up -d
+# Scaling setup with separate services:
+# - postgres: PostgreSQL database for primary storage
+# - worker: Handles documentation processing
+# - mcp: MCP server endpoint for AI tools
+# - web: Web interface for management
 #
-# For dedicated PostgreSQL: Uncomment the 'postgres' service below
-
 services:
-  scrapegoat:
-    image: git.fenrirsden.org/mcp/scrapegoat:latest
-    container_name: scrapegoat
-    command: ["--protocol", "http"]
-    network_mode: host
+  # PostgreSQL database - primary storage backend
+  postgres:
+    image: pgvector/pgvector:pg16
+    container_name: docs-mcp-postgres
+    restart: unless-stopped
+    ports:
+      - "5432:5432"
     environment:
-      - POSTGRES_USER=${POSTGRES_USER:-scrapegoat}
-      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-scrapegoat}
-      - POSTGRES_DB=${POSTGRES_DB:-scrapegoat}
-      - PORT=${SCRAPEGOAT_PORT:-8080}
-      - DATABASE_URL=${DATABASE_URL:-postgresql://scrapegoat:scrapegoat@localhost:5432/scrapegoat}
-      - CRAWL4AI_SERVICE_URL=${CRAWL4AI_SERVICE_URL:-http://127.0.0.1:8001}
-      - OPENAI_API_BASE=${OPENAI_API_BASE:-https://api.openai.com/v1}
-      - OPENAI_API_KEY=${OPENAI_API_KEY:-sk-your-openai-api-key-here}
-      - DOCS_MCP_EMBEDDING_MODEL=${DOCS_MCP_EMBEDDING_MODEL:-openai:text-embedding-3-small}
-      - VECTOR_DIMENSION=${VECTOR_DIMENSION:-1024}
-      - DOCS_MCP_STORE_PATH=${DOCS_MCP_STORE_PATH:-/data}
-      - NODE_ENV=${NODE_ENV:-production}
-      - RERANK_ENABLED=${RERANK_ENABLED:-false}
-      - RERANK_API_BASE=${RERANK_API_BASE:-https://api.openai.com/v1}
-      - RERANK_MODEL=${RERANK_MODEL:-openai:GPT-4o-mini}
-      - RERANK_TIMEOUT=${RERANK_TIMEOUT:-5000}
+      POSTGRES_USER: docs
+      POSTGRES_PASSWORD: docs
+      POSTGRES_DB: docs
     volumes:
-      - scrapegoat_data:/data
-    depends_on:
-      crawl4ai:
-        condition: service_healthy
-    restart: unless-stopped
+      - docs-pgdata:/var/lib/postgresql/data
     healthcheck:
-#                   Change this port if you change SCRAPEGOAT_PORT
-      test: ["CMD-SHELL", "node -e \"require('http').get('http://localhost:' + (process.env.PORT || '8080') + '/', (r) => process.exit(r.statusCode === 200 ? 0 : 1))\""]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-      start_period: 40s
+      test: ["CMD-SHELL", "pg_isready -U docs"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
 
-  crawl4ai:
-    image: git.fenrirsden.org/mcp/scrapegoat-crawl4ai:latest
-    container_name: scrapegoat-crawl4ai
-    network_mode: host
+  # Worker service - handles the actual documentation processing
+  worker:
+    image: ghcr.io/arabold/docs-mcp-server:latest
+    build:
+      context: .
+      dockerfile: Dockerfile
+    command: ["worker", "--host", "0.0.0.0", "--port", "8080"]
+    container_name: docs-mcp-worker
+    restart: unless-stopped
+    ports:
+      - "8080:8080"
+    env_file:
+      - .env
     environment:
-      - CRAWL4AI_PORT=${CRAWL4AI_PORT:-8001}
-    restart: unless-stopped
+      DATABASE_URL: "postgresql://docs:docs@postgres:5432/docs"
+    volumes:
+      - docs-mcp-data:/data
+      - docs-mcp-config:/config
+    depends_on:
+      postgres:
+        condition: service_healthy
     healthcheck:
-#                   Change this port if you change CRAWL4AI_PORT
-      test: ["CMD-SHELL", "curl -f http://localhost:8001/health"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-      start_period: 20s
+      test: 'node -e ''require("net").connect(8080, "127.0.0.1").on("connect",()=>process.exit(0)).on("error",()=>process.exit(1))'''
+      interval: 5s
+      timeout: 3s
+      retries: 10
+      start_period: 10s
+    deploy:
+      resources:
+        limits:
+          memory: 2G
+        reservations:
+          memory: 1G
 
-# ═══════════════════════════════════════════════════════════════════════════
-# OPTIONAL: Dedicated PostgreSQL Database
-# ═══════════════════════════════════════════════════════════════════════════
-# Uncomment this section and the depends_on lines above to deploy a dedicated
-# PostgreSQL database for Scrapegoat.
-#
-# When using this PostgreSQL:
-#   1. Comment out the DATABASE_URL line in scrapegoat environment
-#   2. Uncomment the DATABASE_URL line below (hardcoded connection)
-#   3. Uncomment depends_on: [postgres] in scrapegoat service
-#   4. Set POSTGRES_* env var or change the default below!
-#
-# postgres:
-#   image: postgres:16-alpine
-#   container_name: scrapegoat-postgres
-#   network_mode: host
-#   environment:
-#     - POSTGRES_USER=${POSTGRES_USER:-scrapegoat}
-#     - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-scrapegoat}
-#     - POSTGRES_DB=${POSTGRES_DATABASE:-scrapegoat}
-#   volumes:
-#     - scrapegoat_pgdata:/var/lib/postgresql/data
-#   restart: unless-stopped
-#   healthcheck:
-#     test: ["CMD-SHELL", "pg_isready -U scrapegoat -d scrapegoat"]
-#     interval: 5s
-#     timeout: 5s
-#     retries: 5
-#
-# Then in the scrapegoat service above, replace:
-#   - DATABASE_URL=${DATABASE_URL:?DATABASE_URL is required}
-# With:
-#   - DATABASE_URL=postgresql://scrapegoat:${POSTGRES_PASSWORD:-CHANGE_ME_IN_PRODUCTION}@postgres:5432/scrapegoat
-# NOTE: Password must match POSTGRES_PASSWORD set in postgres service above
-# And add:
-#   depends_on:
-#     postgres:
-#       condition: service_healthy
-#
+  # MCP server - provides AI tool integration endpoint
+  mcp:
+    image: ghcr.io/arabold/docs-mcp-server:latest
+    build:
+      context: .
+      dockerfile: Dockerfile
+    command:
+      [
+        "mcp",
+        "--protocol",
+        "http",
+        "--host",
+        "0.0.0.0",
+        "--port",
+        "6280",
+        "--server-url",
+        "http://worker:8080/api",
+        "--no-logo",
+      ]
+    container_name: docs-mcp-server
+    restart: unless-stopped
+    ports:
+      - "6280:6280"
+    env_file:
+      - .env
+    environment:
+      DATABASE_URL: "postgresql://docs:docs@postgres:5432/docs"
+    volumes:
+      - docs-mcp-config:/config
+    depends_on:
+      worker:
+        condition: service_healthy
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+        reservations:
+          memory: 256M
+
+  # Web interface - provides browser-based management
+  web:
+    image: ghcr.io/arabold/docs-mcp-server:latest
+    build:
+      context: .
+      dockerfile: Dockerfile
+    command:
+      [
+        "web",
+        "--host",
+        "0.0.0.0",
+        "--port",
+        "6281",
+        "--server-url",
+        "http://worker:8080/api",
+        "--no-logo",
+      ]
+    container_name: docs-mcp-web
+    restart: unless-stopped
+    ports:
+      - "6281:6281"
+    env_file:
+      - .env
+    environment:
+      DATABASE_URL: "postgresql://docs:docs@postgres:5432/docs"
+    volumes:
+      - docs-mcp-config:/config
+    depends_on:
+      worker:
+        condition: service_healthy
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+        reservations:
+          memory: 256M
+
 volumes:
-  scrapegoat_data:
-    name: scrapegoat_data
-## Uncomment below for Dedicated PostgreSQL Database
-#  scrapegoat_pgdata:
-#    name: scrapegoat_pgdata
-
-
+  docs-mcp-data:
+    name: docs-mcp-data
+  docs-mcp-config:
+    name: docs-mcp-config
+  docs-pgdata:
+    name: docs-mcp-pgdata

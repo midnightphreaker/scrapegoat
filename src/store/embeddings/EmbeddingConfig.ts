@@ -1,3 +1,5 @@
+import { normalizeEnvValue } from "../../utils/env";
+
 /**
  * Shared embedding model configuration service.
  * Provides synchronous parsing of embedding model configuration and known dimensions lookup.
@@ -80,6 +82,7 @@ export class EmbeddingConfig {
     // Google Gemini models (with MRL support)
     "text-embedding-preview-0409": 768,
     "embedding-001": 768,
+    "gemini-embedding-2-preview": 3072,
 
     // AWS Bedrock models
     // Amazon Titan models
@@ -105,7 +108,6 @@ export class EmbeddingConfig {
     "Qwen/Qwen3-Embedding-8B": 4096,
     "Qwen/Qwen3-Embedding-4B": 2560,
     "Qwen/Qwen3-Embedding-0.6B": 1024,
-    "qwen3-text-embedding": 1024,
     "Linq-AI-Research/Linq-Embed-Mistral": 4096,
     "Alibaba-NLP/gte-Qwen2-7B-instruct": 3584,
     "intfloat/multilingual-e5-large-instruct": 1024,
@@ -125,7 +127,6 @@ export class EmbeddingConfig {
     "BAAI/bge-m3": 1024,
     "HIT-TMG/KaLM-embedding-multilingual-mini-v1": 896,
     "jinaai/jina-embeddings-v3": 1024,
-    "Jina-Embedding-v3": 1024, // embed.den.lan model name
     "Alibaba-NLP/gte-multilingual-base": 768,
     "Lajavaness/bilingual-embedding-base": 768,
     "HIT-TMG/KaLM-embedding-multilingual-mini-instruct-v1": 896,
@@ -287,7 +288,7 @@ export class EmbeddingConfig {
    * @returns Parsed embedding model configuration
    */
   parse(modelSpec?: string): EmbeddingModelConfig {
-    const spec = modelSpec || "text-embedding-3-small";
+    const spec = normalizeEnvValue(modelSpec || "text-embedding-3-small");
 
     // Parse provider and model from string (e.g., "gemini:embedding-001" or just "text-embedding-3-small")
     // Handle models that contain colons in their names (e.g., "aws:amazon.titan-embed-text-v2:0")

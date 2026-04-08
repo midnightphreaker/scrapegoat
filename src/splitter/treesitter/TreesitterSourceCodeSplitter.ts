@@ -1,24 +1,8 @@
-/**
- * Tree-sitter based source code splitter.
- *
- * Provides semantic parsing and chunking of source code using tree-sitter ASTs.
- * Maintains compatibility with existing chunk patterns and hierarchical structure,
- * while providing robust parsing for JavaScript, TypeScript, JSX, and TSX files.
- */
-
-import { SPLITTER_MAX_CHUNK_SIZE } from "../../utils";
+import { defaults } from "../../utils/config";
 import { TextContentSplitter } from "../splitters/TextContentSplitter";
-import type { ContentChunk, DocumentSplitter } from "../types";
+import type { Chunk, DocumentSplitter, SplitterConfig } from "../types";
 import { LanguageParserRegistry } from "./LanguageParserRegistry";
 import type { CodeBoundary, LanguageParser } from "./parsers/types";
-
-/**
- * Configuration options for tree-sitter source code splitting
- */
-export interface TreesitterSourceCodeSplitterOptions {
-  /** Maximum size for individual chunks before delegating to TextSplitter */
-  maxChunkSize?: number;
-}
 
 /**
  * Tree-sitter based source code splitter that provides semantic parsing
@@ -27,21 +11,21 @@ export interface TreesitterSourceCodeSplitterOptions {
 export class TreesitterSourceCodeSplitter implements DocumentSplitter {
   private readonly textContentSplitter: TextContentSplitter;
   private readonly registry: LanguageParserRegistry;
-  private readonly options: Required<TreesitterSourceCodeSplitterOptions>;
+  private readonly maxChunkSize: number;
 
-  constructor(options: TreesitterSourceCodeSplitterOptions = {}) {
-    this.options = {
-      maxChunkSize: options.maxChunkSize ?? SPLITTER_MAX_CHUNK_SIZE,
-    };
+  constructor(config: SplitterConfig) {
+    this.maxChunkSize = config.maxChunkSize;
+    const treeSitterSizeLimit =
+      config.treeSitterSizeLimit ?? defaults.splitter.treeSitterSizeLimit;
 
     // Initialize registry and text content splitter
-    this.registry = new LanguageParserRegistry();
+    this.registry = new LanguageParserRegistry(treeSitterSizeLimit);
     this.textContentSplitter = new TextContentSplitter({
-      chunkSize: this.options.maxChunkSize,
+      chunkSize: this.maxChunkSize,
     });
   }
 
-  async splitText(content: string, contentType?: string): Promise<ContentChunk[]> {
+  async splitText(content: string, contentType?: string): Promise<Chunk[]> {
     if (!content.trim()) {
       return [];
     }
@@ -89,16 +73,8 @@ export class TreesitterSourceCodeSplitter implements DocumentSplitter {
   /**
    * Helper method to fall back to TextContentSplitter and convert results to ContentChunk[]
    */
-  private async fallbackToTextSplitter(content: string): Promise<ContentChunk[]> {
-    const textChunks = await this.textContentSplitter.split(content);
-    return textChunks.map((chunk) => ({
-      types: ["code"],
-      content: chunk,
-      section: {
-        level: 0,
-        path: [],
-      },
-    }));
+  private async fallbackToTextSplitter(content: string): Promise<Chunk[]> {
+    return this.splitContentIntoChunks(content, [], 0);
   }
 
   /**
@@ -116,7 +92,7 @@ export class TreesitterSourceCodeSplitter implements DocumentSplitter {
     }
 
     // Try to extract file extension from content type
-    const extensionMatch = contentType.match(/\\.([a-zA-Z]+)$/);
+    const extensionMatch = contentType.match(/\.([a-zA-Z]+)$/);
     if (extensionMatch) {
       const extension = `.${extensionMatch[1]}`;
       parser = this.registry.getParserByExtension(extension);
@@ -173,7 +149,7 @@ export class TreesitterSourceCodeSplitter implements DocumentSplitter {
     content: string,
     path: string[],
     level: number,
-  ): Promise<ContentChunk[]> {
+  ): Promise<Chunk[]> {
     // Preserve whitespace-only content if it fits within chunk size (for perfect reconstruction)
     // Only skip if content is completely empty
     if (content.length === 0) {
@@ -181,7 +157,7 @@ export class TreesitterSourceCodeSplitter implements DocumentSplitter {
     }
 
     // Only apply TextContentSplitter if content exceeds max chunk size
-    if (content.length <= this.options.maxChunkSize) {
+    if (content.length <= this.maxChunkSize) {
       // Content is small enough, return as single chunk preserving original formatting
       return [
         {
@@ -205,6 +181,7 @@ export class TreesitterSourceCodeSplitter implements DocumentSplitter {
       section: {
         level,
         path,
+        // Make sure to preserve parent hierarchy for large content chunks too
       },
     }));
   }
@@ -223,14 +200,14 @@ export class TreesitterSourceCodeSplitter implements DocumentSplitter {
     boundaries: CodeBoundary[],
     content: string,
     _contentType?: string,
-  ): Promise<ContentChunk[]> {
+  ): Promise<Chunk[]> {
     const lines = content.split("\n");
     const totalLines = lines.length;
 
     if (boundaries.length === 0) {
       // No boundaries found, use TextContentSplitter on entire content
-      const subChunks = await this.splitContentIntoChunks(content, [], 0);
-      return subChunks;
+      // Note: splitContentIntoChunks will preserve content if small enough
+      return this.splitContentIntoChunks(content, [], 0);
     }
 
     // NOTE: Removed previous adjustment that forcibly shifted the first boundary
@@ -262,9 +239,8 @@ export class TreesitterSourceCodeSplitter implements DocumentSplitter {
     const segments: TextSegment[] = [];
 
     for (let i = 0; i < sortedPoints.length - 1; i++) {
-      const startLine = sortedPoints[i]!;
-      const nextLine = sortedPoints[i + 1]!;
-      const endLine = nextLine - 1; // Convert back to inclusive end
+      const startLine = sortedPoints[i];
+      const endLine = sortedPoints[i + 1] - 1; // Convert back to inclusive end
 
       // Skip empty segments
       if (startLine > endLine || startLine > totalLines) {
@@ -300,7 +276,7 @@ export class TreesitterSourceCodeSplitter implements DocumentSplitter {
     }
 
     // Step 4: Convert segments directly to chunks (whitespace retained verbatim)
-    const chunks: ContentChunk[] = [];
+    const chunks: Chunk[] = [];
 
     // Ensure only ONE structural chunk is emitted per structural boundary.
     const structuralBoundaryFirstChunk = new Set<CodeBoundary>();
@@ -364,7 +340,7 @@ export class TreesitterSourceCodeSplitter implements DocumentSplitter {
 
     // If file ended with whitespace-only content, append it to last chunk (preserve reconstructability)
     if (pendingWhitespace && chunks.length > 0) {
-      chunks[chunks.length - 1]!.content += pendingWhitespace;
+      chunks[chunks.length - 1].content += pendingWhitespace;
     }
 
     return chunks;
@@ -379,14 +355,14 @@ export class TreesitterSourceCodeSplitter implements DocumentSplitter {
 
     // Build parent-child relationships
     for (let i = 0; i < hierarchicalBoundaries.length; i++) {
-      const boundary = hierarchicalBoundaries[i]!;
+      const boundary = hierarchicalBoundaries[i];
       let parent: CodeBoundary | undefined;
       let smallestRange = Infinity;
 
       // Find the smallest containing parent
       for (let j = 0; j < hierarchicalBoundaries.length; j++) {
         if (i === j) continue;
-        const candidate = hierarchicalBoundaries[j]!;
+        const candidate = hierarchicalBoundaries[j];
 
         // Check if candidate contains boundary
         if (

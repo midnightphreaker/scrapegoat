@@ -1,4 +1,5 @@
-import { RecursiveCharacterTextSplitter } from "langchain/text_splitter";
+import { RecursiveCharacterTextSplitter } from "@langchain/textsplitters";
+import matter from "gray-matter";
 import remarkGfm from "remark-gfm";
 import remarkHtml from "remark-html";
 import remarkParse from "remark-parse";
@@ -9,9 +10,10 @@ import { logger } from "../utils/logger";
 import { fullTrim } from "../utils/string";
 import { ContentSplitterError, MinimumChunkSizeError } from "./errors";
 import { CodeContentSplitter } from "./splitters/CodeContentSplitter";
+import { ListContentSplitter } from "./splitters/ListContentSplitter";
 import { TableContentSplitter } from "./splitters/TableContentSplitter";
 import { TextContentSplitter } from "./splitters/TextContentSplitter";
-import type { ContentChunk, DocumentSplitter, SectionContentType } from "./types";
+import type { Chunk, DocumentSplitter, SectionContentType } from "./types";
 
 /**
  * Represents a section of content within a document,
@@ -39,6 +41,7 @@ export class SemanticMarkdownSplitter implements DocumentSplitter {
   public textSplitter: TextContentSplitter;
   public codeSplitter: CodeContentSplitter;
   public tableSplitter: TableContentSplitter;
+  public listSplitter: ListContentSplitter;
 
   constructor(
     private preferredChunkSize: number,
@@ -96,93 +99,63 @@ export class SemanticMarkdownSplitter implements DocumentSplitter {
     this.tableSplitter = new TableContentSplitter({
       chunkSize: this.maxChunkSize,
     });
+    this.listSplitter = new ListContentSplitter({
+      chunkSize: this.preferredChunkSize, // Lists prefer to stay together, so use preferred size
+    });
   }
 
   /**
    * Main entry point for splitting markdown content
    */
-  async splitText(markdown: string, _contentType?: string): Promise<ContentChunk[]> {
+  async splitText(markdown: string, _contentType?: string): Promise<Chunk[]> {
     // Note: JSON content is now handled by dedicated JsonDocumentSplitter in JsonPipeline
     // This splitter focuses on markdown, HTML, and plain text content
 
-    // For markdown, HTML, or plain text, process normally
-    const html = await this.markdownToHtml(markdown);
-    const dom = await this.parseHtml(html);
-    const sections = await this.splitIntoSections(dom);
-    return this.splitSectionContent(sections);
-  }
+    let contentToProcess = markdown;
+    let frontmatterChunk: Chunk | null = null;
 
-  /**
-   * Recursively extracts all elements from a container, flattening nested structures
-   * while preserving document order. This handles cases where content is wrapped
-   * in container elements like <div>, <article>, or <section>.
-   *
-   * This is crucial for handling documentation from CMS platforms, modern web frameworks,
-   * and documentation generators (like Red Hat/Ansible docs) that wrap content in
-   * semantic or generic container elements.
-   *
-   * Example transformation:
-   * <body>
-   *   <div class="content">
-   *     <h1>Title</h1>
-   *     <p>Text</p>
-   *   </div>
-   * </body>
-   *
-   * Returns: [h1, p] (flattened array for processing)
-   *
-   * @param element - The parent element to flatten
-   * @returns Array of semantic elements (headings, paragraphs, code blocks, tables, etc.)
-   */
-  private flattenElements(element: Element): Element[] {
-    const flattened: Element[] = [];
+    try {
+      // Check for frontmatter
+      const file = matter(markdown);
+      if (Object.keys(file.data).length > 0) {
+        // Reconstruct the frontmatter block
+        // file.matter contains the raw content between the delimiters
+        const rawFrontmatter = `---\n${file.matter}\n---`;
 
-    for (const child of Array.from(element.children)) {
-      // If this is a generic container element with no semantic meaning, recurse into it
-      if (this.isGenericContainer(child)) {
-        flattened.push(...this.flattenElements(child));
-      } else {
-        // Keep semantic elements (headings, paragraphs, pre, table, etc.)
-        flattened.push(child);
+        frontmatterChunk = {
+          types: ["frontmatter"],
+          content: rawFrontmatter,
+          section: {
+            level: 0,
+            path: [],
+          },
+        };
+
+        contentToProcess = file.content;
       }
+    } catch (err) {
+      // Log warning but continue with original content if parsing fails
+      logger.warn(
+        `Failed to parse frontmatter in splitter: ${err instanceof Error ? err.message : String(err)}`,
+      );
     }
 
-    return flattened;
-  }
+    // For markdown, HTML, or plain text, process normally
+    const html = await this.markdownToHtml(contentToProcess);
+    const dom = await this.parseHtml(html);
+    const sections = await this.splitIntoSections(dom);
+    const chunks = await this.splitSectionContent(sections);
 
-  /**
-   * Checks if an element is a generic container that should be unwrapped during
-   * DOM traversal. Container elements are structural wrappers that don't carry
-   * semantic meaning for documentation chunking.
-   *
-   * Container tags to unwrap:
-   * - DIV: Generic container
-   * - ARTICLE: HTML5 semantic container (often used as wrapper)
-   * - SECTION: HTML5 semantic container (often used as wrapper)
-   * - MAIN: HTML5 main content container
-   * - ASIDE: HTML5 aside content
-   * - NAV: Navigation container
-   *
-   * Semantic elements that are NOT unwrapped:
-   * - H1-H6: Headings (define sections)
-   * - P: Paragraphs (text content)
-   * - PRE: Code blocks
-   * - TABLE: Tables
-   * - UL/OL/LI: Lists
-   * - BLOCKQUOTE: Quotes
-   * - etc.
-   *
-   * @param element - The element to check
-   * @returns true if element is a generic container that should be unwrapped
-   */
-  private isGenericContainer(element: Element): boolean {
-    const containerTags = ["DIV", "ARTICLE", "SECTION", "MAIN", "ASIDE", "NAV"];
-    return containerTags.includes(element.tagName);
+    if (frontmatterChunk) {
+      chunks.unshift(frontmatterChunk);
+    }
+
+    return chunks;
   }
 
   /**
    * Step 1: Split document into sections based on H1-H6 headings,
-   * as well as code blocks and tables.
+   * as well as code blocks, tables, lists, blockquotes, and media.
    */
   private async splitIntoSections(dom: Document): Promise<DocumentSection[]> {
     const body = dom.querySelector("body");
@@ -194,25 +167,17 @@ export class SemanticMarkdownSplitter implements DocumentSplitter {
     const sections: DocumentSection[] = [];
     const stack: DocumentSection[] = [currentSection];
 
-    // Flatten nested container elements to handle content wrapped in divs, articles, etc.
-    // This allows us to process content that may be wrapped in container elements
-    // (common in CMS-generated content, documentation platforms, etc.)
-    const elements = this.flattenElements(body);
-
-    logger.debug(`Processing ${elements.length} flattened elements from DOM`);
-
-    // Process each element (now works with both flat and nested structures)
-    for (const element of elements) {
+    // Process each child of the body
+    for (const element of Array.from(body.children)) {
       const headingMatch = element.tagName.match(/H([1-6])/);
 
       if (headingMatch) {
         // Create new section for H1-H6 heading
-        const level = Number.parseInt(headingMatch[1]!, 10);
+        const level = Number.parseInt(headingMatch[1], 10);
         const title = fullTrim(element.textContent || "");
 
         // Pop sections from stack until we find the parent level
-        const stackTop = stack[stack.length - 1];
-        while (stack.length > 1 && stackTop && stackTop.level >= level) {
+        while (stack.length > 1 && stack[stack.length - 1].level >= level) {
           stack.pop();
         }
 
@@ -256,20 +221,27 @@ export class SemanticMarkdownSplitter implements DocumentSplitter {
         } satisfies DocumentSection;
         sections.push(currentSection);
       } else if (element.tagName === "TABLE") {
-        // Tables are kept as separate chunks
-        const markdown = fullTrim(this.turndownService.turndown(element.outerHTML));
-
-        currentSection = {
-          level: currentSection.level,
-          path: currentSection.path,
-          content: [
-            {
-              type: "table",
-              text: markdown,
-            },
-          ],
-        } satisfies DocumentSection;
-        sections.push(currentSection);
+        this.addSectionFromElement(element, "table", currentSection, sections);
+      } else if (element.tagName === "UL" || element.tagName === "OL") {
+        this.addSectionFromElement(element, "list", currentSection, sections);
+      } else if (element.tagName === "BLOCKQUOTE") {
+        this.addSectionFromElement(element, "blockquote", currentSection, sections);
+      } else if (element.tagName === "IMG") {
+        this.addSectionFromElement(element, "media", currentSection, sections);
+      } else if (
+        element.tagName === "P" &&
+        element.children.length === 1 &&
+        element.children[0].tagName === "IMG" &&
+        (!element.textContent || element.textContent.trim() === "")
+      ) {
+        // Handle images wrapped in paragraphs
+        this.addSectionFromElement(
+          element.children[0],
+          "media",
+          currentSection,
+          sections,
+        );
+      } else if (element.tagName === "HR") {
       } else {
         const markdown = fullTrim(this.turndownService.turndown(element.innerHTML));
         if (markdown) {
@@ -293,12 +265,33 @@ export class SemanticMarkdownSplitter implements DocumentSplitter {
   }
 
   /**
+   * Helper to create a new section from a specific DOM element type
+   */
+  private addSectionFromElement(
+    element: Element,
+    type: SectionContentType,
+    currentSection: DocumentSection,
+    sections: DocumentSection[],
+  ): void {
+    const markdown = fullTrim(this.turndownService.turndown(element.outerHTML));
+    const newSection = {
+      level: currentSection.level,
+      path: currentSection.path,
+      content: [
+        {
+          type,
+          text: markdown,
+        },
+      ],
+    } satisfies DocumentSection;
+    sections.push(newSection);
+  }
+
+  /**
    * Step 2: Split section content into smaller chunks
    */
-  private async splitSectionContent(
-    sections: DocumentSection[],
-  ): Promise<ContentChunk[]> {
-    const chunks: ContentChunk[] = [];
+  private async splitSectionContent(sections: DocumentSection[]): Promise<Chunk[]> {
+    const chunks: Chunk[] = [];
 
     for (const section of sections) {
       for (const content of section.content) {
@@ -307,7 +300,9 @@ export class SemanticMarkdownSplitter implements DocumentSplitter {
         try {
           switch (content.type) {
             case "heading":
-            case "text": {
+            case "text":
+            case "blockquote":
+            case "media": {
               // Trim markdown content before splitting
               splitContent = await this.textSplitter.split(fullTrim(content.text));
               break;
@@ -319,6 +314,14 @@ export class SemanticMarkdownSplitter implements DocumentSplitter {
             case "table": {
               splitContent = await this.tableSplitter.split(content.text);
               break;
+            }
+            case "list": {
+              splitContent = await this.listSplitter.split(content.text);
+              break;
+            }
+            default: {
+              // Fallback for any unknown type
+              splitContent = await this.textSplitter.split(fullTrim(content.text));
             }
           }
         } catch (err) {
@@ -353,23 +356,12 @@ export class SemanticMarkdownSplitter implements DocumentSplitter {
               ],
             });
 
-            try {
-              const chunks = await splitter.splitText(content.text);
-              if (chunks.length === 0) {
-                // If still no chunks, use the most extreme approach: just truncate
-                logger.warn(
-                  `⚠ RecursiveCharacterTextSplitter returned no chunks for ${content.type}, truncating to ${this.maxChunkSize} bytes`,
-                );
-                splitContent = [content.text.substring(0, this.maxChunkSize)];
-              } else {
-                splitContent = chunks;
-              }
-            } catch (recursiveErr) {
-              // RecursiveCharacterTextSplitter also failed - last resort: truncate
-              logger.warn(
-                `⚠ RecursiveCharacterTextSplitter failed for ${content.type}, truncating to ${this.maxChunkSize} bytes: ${recursiveErr instanceof Error ? recursiveErr.message : String(recursiveErr)}`,
-              );
+            const chunks = await splitter.splitText(content.text);
+            if (chunks.length === 0) {
+              // If still no chunks, use the most extreme approach: just truncate
               splitContent = [content.text.substring(0, this.maxChunkSize)];
+            } else {
+              splitContent = chunks;
             }
           } else {
             // Convert other error message to string, handling non-Error objects
@@ -383,7 +375,7 @@ export class SemanticMarkdownSplitter implements DocumentSplitter {
         // Create chunks from split content
         chunks.push(
           ...splitContent.map(
-            (text): ContentChunk => ({
+            (text): Chunk => ({
               types: [content.type],
               content: text,
               section: {

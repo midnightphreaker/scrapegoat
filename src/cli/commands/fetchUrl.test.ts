@@ -1,6 +1,11 @@
 /** Unit test for fetchUrlAction */
 
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import yargs from "yargs";
+import { FetchUrlTool } from "../../tools";
+import { createFetchUrlCommand } from "./fetchUrl";
+
+const stdoutWriteMock = vi.fn();
 
 vi.mock("../../scraper/fetcher", () => ({
   HttpFetcher: vi.fn().mockImplementation(() => ({})),
@@ -21,19 +26,45 @@ vi.mock("../../tools", () => ({
     .mockImplementation(() => ({ execute: vi.fn(async () => "# md") })),
 }));
 vi.mock("../utils", () => ({ setupLogging: vi.fn(), parseHeaders: () => ({}) }));
+vi.mock("../../utils/config", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("../../utils/config")>();
+  return {
+    ...actual,
+    loadConfig: vi.fn(() => ({
+      scraper: { fetcher: {} },
+    })),
+  };
+});
 
-import { fetchUrlAction } from "./fetchUrl";
+describe("fetch-url command", () => {
+  let stdoutWriteSpy: { mockRestore: () => void };
 
-beforeEach(() => vi.clearAllMocks());
+  beforeEach(() => {
+    vi.clearAllMocks();
+    stdoutWriteMock.mockReset();
+    stdoutWriteSpy = vi
+      .spyOn(process.stdout, "write")
+      .mockImplementation(stdoutWriteMock as any);
+  });
 
-describe("fetchUrlAction", () => {
+  afterEach(() => {
+    stdoutWriteSpy.mockRestore();
+  });
+
   it("executes FetchUrlTool", async () => {
-    await fetchUrlAction("https://example.com", {
-      followRedirects: true,
-      fetcher: "auto",
-      header: [],
-    });
-    const { FetchUrlTool } = await import("../../tools");
+    const parser = yargs().scriptName("test");
+    createFetchUrlCommand(parser);
+
+    await parser.parse("fetch-url https://example.com --scrape-mode auto");
+
     expect(FetchUrlTool).toHaveBeenCalledTimes(1);
+    const mockInstance = (FetchUrlTool as any).mock.results[0].value;
+    expect(mockInstance.execute).toHaveBeenCalledWith(
+      expect.objectContaining({
+        url: "https://example.com",
+        scrapeMode: "auto",
+      }),
+    );
+    expect(stdoutWriteMock).toHaveBeenCalledWith("# md\n");
   });
 });

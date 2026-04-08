@@ -2,7 +2,6 @@ import { VersionNotFoundInStoreError } from "../store";
 import type { IDocumentManagement } from "../store/trpc/interfaces";
 import type { StoreSearchResult } from "../store/types";
 import { logger } from "../utils/logger";
-import { validateNumberRange, validateRequiredString } from "../utils/validation";
 import { ValidationError } from "./errors";
 
 export interface SearchToolOptions {
@@ -30,94 +29,39 @@ export interface SearchToolResult {
 
 /**
  * Tool for searching indexed documentation.
- *
- * @remarks
- * This tool provides semantic search capabilities over indexed documentation.
- * It supports both exact version matches and flexible version range patterns (e.g., '5.x', '5.2.x').
- * When a requested version is not found, the tool returns available versions to help users discover alternatives.
- *
- * @example
- * ```typescript
- * const searchTool = new SearchTool(documentManagementService);
- *
- * // Basic search
- * const results = await searchTool.execute({
- *   library: 'react',
- *   query: 'useEffect hook lifecycle'
- * });
- *
- * // Search with version constraint
- * const results = await searchTool.execute({
- *   library: 'typescript',
- *   version: '5.x',
- *   query: 'utility types',
- *   limit: 10
- * });
- *
- * // Exact version match
- * const results = await searchTool.execute({
- *   library: 'next.js',
- *   version: '14.0.0',
- *   query: 'app router',
- *   exactMatch: true
- * });
- * ```
+ * Supports exact version matches and version range patterns.
+ * Returns available versions when requested version is not found.
  */
 export class SearchTool {
   private docService: IDocumentManagement;
 
-  /**
-   * Creates a new SearchTool instance.
-   *
-   * @param docService - The document management service for accessing indexed documentation
-   */
   constructor(docService: IDocumentManagement) {
     this.docService = docService;
   }
 
-  /**
-   * Executes a search query against indexed documentation.
-   *
-   * @param options - The search options
-   * @param options.library - The library name to search (e.g., 'react', 'typescript')
-   * @param options.query - The search query string
-   * @param options.version - Optional version or version range (e.g., '18.0.0', '5.x'). Defaults to 'latest'
-   * @param options.limit - Maximum number of results to return (1-100). Default: 5
-   * @param options.exactMatch - If true, requires exact version match. Default: false
-   *
-   * @returns Promise resolving to search results with relevant documentation snippets
-   *
-   * @throws {ValidationError} If required parameters are missing or invalid
-   * @throws {VersionNotFoundInStoreError} If the specified version doesn't exist and exactMatch is true
-   * @throws {LibraryNotFoundInStoreError} If the library is not indexed
-   *
-   * @example
-   * ```typescript
-   * const results = await searchTool.execute({
-   *   library: 'react',
-   *   version: '18.x',
-   *   query: 'component lifecycle methods',
-   *   limit: 10
-   * });
-   *
-   * console.log(`Found ${results.results.length} matches`);
-   * results.results.forEach(result => {
-   *   console.log(`- ${result.title}: ${result.snippet}`);
-   * });
-   * ```
-   */
   async execute(options: SearchToolOptions): Promise<SearchToolResult> {
     const { library, version, query, limit = 5, exactMatch = false } = options;
 
     // Validate required inputs
-    try {
-      validateRequiredString(library, "Library name");
-      validateRequiredString(query, "Query");
-      if (limit !== undefined) {
-        validateNumberRange(limit, 1, 100, "Limit");
-      }
-    } catch (error) {
-      throw new ValidationError((error as Error).message, this.constructor.name);
+    if (!library || typeof library !== "string" || library.trim() === "") {
+      throw new ValidationError(
+        "Library name is required and must be a non-empty string.",
+        this.constructor.name,
+      );
+    }
+
+    if (!query || typeof query !== "string" || query.trim() === "") {
+      throw new ValidationError(
+        "Query is required and must be a non-empty string.",
+        this.constructor.name,
+      );
+    }
+
+    if (limit !== undefined && (typeof limit !== "number" || limit < 1 || limit > 100)) {
+      throw new ValidationError(
+        "Limit must be a number between 1 and 100.",
+        this.constructor.name,
+      );
     }
 
     // When exactMatch is true, version must be specified and not 'latest'

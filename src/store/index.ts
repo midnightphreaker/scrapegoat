@@ -1,6 +1,7 @@
+import type { EventBusService } from "../events";
+import type { AppConfig } from "../utils/config";
 import { DocumentManagementClient } from "./DocumentManagementClient";
 import { DocumentManagementService } from "./DocumentManagementService";
-import type { EmbeddingModelConfig } from "./embeddings/EmbeddingConfig";
 import type { IDocumentManagement } from "./trpc/interfaces";
 
 export * from "./DocumentManagementClient";
@@ -10,26 +11,23 @@ export * from "./errors";
 export * from "./trpc/interfaces";
 
 /** Factory to create a document management implementation */
-export async function createDocumentManagement(
-  options: {
-    serverUrl?: string;
-    embeddingConfig?: EmbeddingModelConfig | null;
-    storePath?: string;
-  } = {},
-) {
+export async function createDocumentManagement(options: {
+  eventBus: EventBusService;
+  serverUrl?: string;
+  appConfig: AppConfig;
+}) {
   if (options.serverUrl) {
     const client = new DocumentManagementClient(options.serverUrl);
     await client.initialize();
     return client as IDocumentManagement;
   }
-  if (!options.storePath) {
+
+  const storePath = options.appConfig.app.storePath;
+  if (!storePath) {
     throw new Error("storePath is required when not using a remote server");
   }
-  const service = new DocumentManagementService(
-    options.storePath,
-    options.embeddingConfig,
-    undefined,
-  );
+
+  const service = new DocumentManagementService(options.eventBus, options.appConfig);
   await service.initialize();
   return service as IDocumentManagement;
 }
@@ -39,10 +37,15 @@ export async function createDocumentManagement(
  * Use this only when constructing an in-process PipelineManager (worker path).
  */
 export async function createLocalDocumentManagement(
-  storePath: string,
-  embeddingConfig?: EmbeddingModelConfig | null,
+  eventBus: EventBusService,
+  appConfig: AppConfig,
 ) {
-  const service = new DocumentManagementService(storePath, embeddingConfig, undefined);
+  const storePath = appConfig.app.storePath;
+  if (!storePath) {
+    throw new Error("storePath is required when not using a remote server");
+  }
+
+  const service = new DocumentManagementService(eventBus, appConfig);
   await service.initialize();
   return service;
 }

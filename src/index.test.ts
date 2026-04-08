@@ -3,26 +3,34 @@
  * Tests critical startup behavior and validates against regression bugs.
  */
 
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it, type Mock, vi } from "vitest";
+import { EventBusService } from "./events";
+import { PipelineFactory } from "./pipeline/PipelineFactory";
+import { DocumentManagementService } from "./store/DocumentManagementService";
+import { TelemetryEvent } from "./telemetry";
+import { type AppConfig, loadConfig } from "./utils/config";
+import { sanitizeEnvironment } from "./utils/env";
 
 // Mock external dependencies to prevent actual server startup
-const mockPipelineStart = vi.fn().mockResolvedValue(undefined);
-const mockPipelineStop = vi.fn().mockResolvedValue(undefined);
-const mockPipelineSetCallbacks = vi.fn();
+const mockPipelineStart = vi.hoisted(() => vi.fn().mockResolvedValue(undefined));
+const mockPipelineStop = vi.hoisted(() => vi.fn().mockResolvedValue(undefined));
+const mockPipelineSetCallbacks = vi.hoisted(() => vi.fn());
 
-const mockStartAppServer = vi.fn().mockResolvedValue({
-  stop: vi.fn().mockResolvedValue(undefined),
-});
+const mockStartAppServer = vi.hoisted(() =>
+  vi.fn().mockResolvedValue({
+    stop: vi.fn().mockResolvedValue(undefined),
+  }),
+);
 
-const mockDocServiceInitialize = vi.fn().mockResolvedValue(undefined);
-const mockDocServiceShutdown = vi.fn().mockResolvedValue(undefined);
+const mockDocServiceInitialize = vi.hoisted(() => vi.fn().mockResolvedValue(undefined));
+const mockDocServiceShutdown = vi.hoisted(() => vi.fn().mockResolvedValue(undefined));
 
 vi.mock("./app", () => ({
   startAppServer: mockStartAppServer,
 }));
 
 vi.mock("./store/DocumentManagementService", () => ({
-  DocumentManagementService: vi.fn().mockImplementation(() => ({
+  DocumentManagementService: vi.fn().mockImplementation((_eventBus, _appConfig) => ({
     initialize: mockDocServiceInitialize,
     shutdown: mockDocServiceShutdown,
   })),
@@ -54,27 +62,58 @@ vi.mock("./mcp/tools", () => ({
   initializeTools: vi.fn().mockResolvedValue({}),
 }));
 
-vi.mock("./utils/logger", () => ({
-  logger: {
-    info: vi.fn(),
-    debug: vi.fn(),
-    warn: vi.fn(),
-    error: vi.fn(),
-  },
-  setLogLevel: vi.fn(),
-  LogLevel: { ERROR: 0, WARN: 1, INFO: 2, DEBUG: 3 },
-}));
-
 vi.mock("playwright", () => ({
   chromium: { executablePath: vi.fn().mockReturnValue("/mock/chromium") },
 }));
 
+const mockFsExistsSync = vi.hoisted(() => vi.fn().mockReturnValue(false));
+const mockFsReadFileSync = vi.hoisted(() => vi.fn());
+const mockFsMkdirSync = vi.hoisted(() => vi.fn());
+const mockFsWriteFileSync = vi.hoisted(() => vi.fn());
+
 vi.mock("node:fs", () => ({
-  existsSync: vi.fn().mockReturnValue(true),
+  default: {
+    existsSync: mockFsExistsSync,
+    readFileSync: mockFsReadFileSync,
+    mkdirSync: mockFsMkdirSync,
+    writeFileSync: mockFsWriteFileSync,
+  },
+  existsSync: mockFsExistsSync,
+  readFileSync: mockFsReadFileSync,
+  mkdirSync: mockFsMkdirSync,
+  writeFileSync: mockFsWriteFileSync,
 }));
 
 // Suppress console.error in tests
 vi.spyOn(console, "error").mockImplementation(() => {});
+
+const appConfig: AppConfig = loadConfig();
+
+describe("Bootstrap Environment Sanitization", () => {
+  it("should sanitize quoted runtime environment values before consumers use them", () => {
+    const env = {
+      OPENAI_API_BASE: '"http://localhost:11434/v1"',
+      GITHUB_TOKEN: '"ghp_test_token"',
+      PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH: '  "/usr/bin/chromium"  ',
+      LOG_LEVEL: '"debug"',
+      UNCHANGED: "plain-value",
+    };
+
+    const sanitizedKeys = sanitizeEnvironment(env);
+
+    expect(env.OPENAI_API_BASE).toBe("http://localhost:11434/v1");
+    expect(env.GITHUB_TOKEN).toBe("ghp_test_token");
+    expect(env.PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH).toBe("/usr/bin/chromium");
+    expect(env.LOG_LEVEL).toBe("debug");
+    expect(env.UNCHANGED).toBe("plain-value");
+    expect(sanitizedKeys).toEqual([
+      "OPENAI_API_BASE",
+      "GITHUB_TOKEN",
+      "PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH",
+      "LOG_LEVEL",
+    ]);
+  });
+});
 
 describe("CLI Flag Validation", () => {
   beforeEach(() => {
@@ -94,12 +133,12 @@ describe("CLI Flag Validation", () => {
         }
       };
 
-      expect(() => validateResumeFlag(true, "http://localhost:8181")).toThrow(
+      expect(() => validateResumeFlag(true, "http://localhost:8080")).toThrow(
         "--resume flag is incompatible with --server-url",
       );
 
       // These should NOT throw
-      expect(() => validateResumeFlag(false, "http://localhost:8181")).not.toThrow();
+      expect(() => validateResumeFlag(false, "http://localhost:8080")).not.toThrow();
       expect(() => validateResumeFlag(true, undefined)).not.toThrow();
       expect(() => validateResumeFlag(false, undefined)).not.toThrow();
     });
@@ -120,7 +159,7 @@ describe("CLI Flag Validation", () => {
       expect(() => validatePort("65536")).toThrow("Invalid port number");
 
       // These should work
-      expect(validatePort("8181")).toBe(8181);
+      expect(validatePort("8080")).toBe(8080);
       expect(validatePort("3000")).toBe(3000);
       expect(validatePort("65535")).toBe(65535);
     });
@@ -161,17 +200,17 @@ describe("Double Initialization Prevention", () => {
   });
 
   it("should NOT start pipeline during initialization in worker mode", async () => {
-    const { PipelineFactory } = await import("./pipeline/PipelineFactory");
-
     // This test validates our critical bug fix:
     // ensurePipelineManagerInitialized should create but NOT start the pipeline
     // Only registerWorkerService should call pipeline.start()
 
     // Simulate calling ensurePipelineManagerInitialized (the helper function)
     // In the real code, this gets called before startAppServer
+    const mockEventBus = new EventBusService();
     await PipelineFactory.createPipeline(
       {} as any, // mock docService
-      { recoverJobs: true, concurrency: 3 },
+      mockEventBus,
+      { recoverJobs: true, appConfig: appConfig },
     );
 
     // After createPipeline, the pipeline should NOT have been started yet
@@ -189,37 +228,44 @@ describe("Double Initialization Prevention", () => {
   });
 
   it("should validate pipeline configuration for different modes", async () => {
-    const { PipelineFactory } = await import("./pipeline/PipelineFactory");
-
     // Test that different modes pass correct options to PipelineFactory
+    const mockEventBus = new EventBusService();
 
     // Worker mode configuration
-    await PipelineFactory.createPipeline({} as any, {
+    await PipelineFactory.createPipeline({} as any, mockEventBus, {
       recoverJobs: true,
-      concurrency: 3,
+      appConfig: appConfig,
     });
 
     // CLI mode configuration
-    await PipelineFactory.createPipeline({} as any, {
+    await PipelineFactory.createPipeline({} as any, mockEventBus, {
       recoverJobs: false,
-      concurrency: 1,
+      appConfig: appConfig,
     });
 
-    // External worker mode configuration
-    await PipelineFactory.createPipeline({} as any, {
+    // External worker mode configuration (no eventBus needed for remote)
+    await PipelineFactory.createPipeline(undefined, mockEventBus, {
       recoverJobs: false,
-      serverUrl: "http://localhost:8181/api",
+      serverUrl: "http://localhost:8080/api",
+      appConfig: appConfig,
     });
 
     expect(vi.mocked(PipelineFactory.createPipeline)).toHaveBeenCalledTimes(3);
 
     // Verify different configurations were passed
     const calls = vi.mocked(PipelineFactory.createPipeline).mock.calls;
-    expect(calls[0][1]).toEqual({ recoverJobs: true, concurrency: 3 });
-    expect(calls[1][1]).toEqual({ recoverJobs: false, concurrency: 1 });
-    expect(calls[2][1]).toEqual({
+    expect(calls[0][2]).toEqual({
+      recoverJobs: true,
+      appConfig: appConfig,
+    });
+    expect(calls[1][2]).toEqual({
       recoverJobs: false,
-      serverUrl: "http://localhost:8181/api",
+      appConfig: appConfig,
+    });
+    expect(calls[2][2]).toEqual({
+      recoverJobs: false,
+      serverUrl: "http://localhost:8080/api",
+      appConfig: appConfig,
     });
   });
 });
@@ -236,16 +282,24 @@ describe("Service Configuration Validation", () => {
       enableMcpServer: false,
       enableApiServer: true,
       enableWorker: true,
-      port: 8181,
+      port: 8080,
     };
 
     // Simulate worker command behavior
-    await mockStartAppServer({} as any, {} as any, expectedWorkerConfig);
+    await mockStartAppServer(
+      {} as any,
+      {} as any,
+      {} as any,
+      expectedWorkerConfig,
+      {} as any,
+    );
 
     expect(mockStartAppServer).toHaveBeenCalledWith(
       expect.anything(), // docService
       expect.anything(), // pipeline
+      expect.anything(), // eventBus
       expect.objectContaining(expectedWorkerConfig),
+      expect.anything(), // appConfig
     );
   });
 
@@ -256,19 +310,17 @@ describe("Service Configuration Validation", () => {
     // 3. pipeline.setCallbacks()
     // 4. startAppServer() (which will call pipeline.start() via registerWorkerService)
 
-    const { PipelineFactory } = await import("./pipeline/PipelineFactory");
-    const { DocumentManagementService } = await import(
-      "./store/DocumentManagementService"
-    );
-
     // Simulate the service initialization sequence
-    const docService = new DocumentManagementService("/test/path");
+    const eventBus = new EventBusService();
+    const docService = new DocumentManagementService(eventBus, appConfig);
     await docService.initialize();
 
-    const pipeline = await PipelineFactory.createPipeline(docService, {});
+    const pipeline = await PipelineFactory.createPipeline(docService, eventBus, {
+      appConfig: appConfig,
+    });
     pipeline.setCallbacks({});
 
-    await mockStartAppServer(docService, pipeline, {});
+    await mockStartAppServer(docService, pipeline, eventBus, {}, {} as any);
 
     // Verify initialization was called
     expect(mockDocServiceInitialize).toHaveBeenCalled();
@@ -282,7 +334,7 @@ describe("Service Configuration Validation", () => {
 });
 
 describe("Service Registration for Telemetry", () => {
-  let mockRegisterGlobalServices: ReturnType<typeof vi.fn>;
+  let mockRegisterGlobalServices: Mock;
 
   beforeEach(() => {
     vi.clearAllMocks();
@@ -469,24 +521,24 @@ describe("Service Registration for Telemetry", () => {
 });
 
 describe("CLI Command Telemetry Integration", () => {
-  let mockAnalytics: {
-    setGlobalContext: ReturnType<typeof vi.fn>;
-    track: ReturnType<typeof vi.fn>;
-    shutdown: ReturnType<typeof vi.fn>;
+  let mockTelemetry: {
+    setGlobalContext: Mock;
+    track: Mock;
+    shutdown: Mock;
   };
 
   beforeEach(() => {
     vi.clearAllMocks();
 
-    // Mock analytics instance
-    mockAnalytics = {
+    // Mock telemetry instance
+    mockTelemetry = {
       setGlobalContext: vi.fn(),
       track: vi.fn(),
       shutdown: vi.fn().mockResolvedValue(undefined),
     };
 
     vi.doMock("../telemetry", () => ({
-      analytics: mockAnalytics,
+      telemetry: mockTelemetry,
     }));
   });
 
@@ -499,9 +551,9 @@ describe("CLI Command Telemetry Integration", () => {
     };
 
     // Simulate CLI preAction calling setGlobalContext
-    mockAnalytics.setGlobalContext(expectedContext);
+    mockTelemetry.setGlobalContext(expectedContext);
 
-    expect(mockAnalytics.setGlobalContext).toHaveBeenCalledWith(expectedContext);
+    expect(mockTelemetry.setGlobalContext).toHaveBeenCalledWith(expectedContext);
   });
 
   it("should track CLI_COMMAND events in postAction hook", async () => {
@@ -510,13 +562,13 @@ describe("CLI Command Telemetry Integration", () => {
     const commandEndTime = commandStartTime + 1500; // 1.5 seconds
 
     // Simulate tracking CLI_COMMAND event
-    mockAnalytics.track("CLI_COMMAND", {
+    mockTelemetry.track(TelemetryEvent.CLI_COMMAND, {
       command: "web",
       success: true,
       durationMs: commandEndTime - commandStartTime,
     });
 
-    expect(mockAnalytics.track).toHaveBeenCalledWith("CLI_COMMAND", {
+    expect(mockTelemetry.track).toHaveBeenCalledWith(TelemetryEvent.CLI_COMMAND, {
       command: "web",
       success: true,
       durationMs: 1500,
@@ -525,13 +577,13 @@ describe("CLI Command Telemetry Integration", () => {
 
   it("should track failed CLI commands with success: false", async () => {
     // Mock failed command tracking
-    mockAnalytics.track("CLI_COMMAND", {
+    mockTelemetry.track(TelemetryEvent.CLI_COMMAND, {
       command: "invalid-command",
       success: false,
       durationMs: 100,
     });
 
-    expect(mockAnalytics.track).toHaveBeenCalledWith("CLI_COMMAND", {
+    expect(mockTelemetry.track).toHaveBeenCalledWith(TelemetryEvent.CLI_COMMAND, {
       command: "invalid-command",
       success: false,
       durationMs: 100,
@@ -543,20 +595,20 @@ describe("CLI Command Telemetry Integration", () => {
     const commands = ["web", "mcp", "worker", "fetch-url", "scrape-docs"];
 
     for (const command of commands) {
-      mockAnalytics.track("CLI_COMMAND", {
+      mockTelemetry.track(TelemetryEvent.CLI_COMMAND, {
         command,
         success: true,
         durationMs: 1000,
       });
     }
 
-    expect(mockAnalytics.track).toHaveBeenCalledTimes(commands.length);
+    expect(mockTelemetry.track).toHaveBeenCalledTimes(commands.length);
 
     // Verify each command was tracked correctly
-    const calls = mockAnalytics.track.mock.calls;
+    const calls = mockTelemetry.track.mock.calls;
     for (let i = 0; i < commands.length; i++) {
       expect(calls[i]).toEqual([
-        "CLI_COMMAND",
+        TelemetryEvent.CLI_COMMAND,
         {
           command: commands[i],
           success: true,

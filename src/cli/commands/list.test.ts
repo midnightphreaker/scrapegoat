@@ -1,7 +1,11 @@
 /** Unit test for listAction */
 
-import { Command } from "commander";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import yargs from "yargs";
+import { ListLibrariesTool } from "../../tools";
+import { createListCommand } from "./list";
+
+const stdoutWriteMock = vi.fn();
 
 // Mocks
 vi.mock("../../store", () => ({
@@ -14,21 +18,48 @@ vi.mock("../../tools", () => ({
     .fn()
     .mockImplementation(() => ({ execute: vi.fn(async () => ({ libraries: [] })) })),
 }));
-
-import { listAction } from "./list";
-
-function _cmd() {
-  return new Command();
-}
-
-beforeEach(() => {
-  vi.clearAllMocks();
+vi.mock("../utils", () => ({
+  getGlobalOptions: vi.fn(() => ({ storePath: undefined })),
+  getEventBus: vi.fn(() => ({
+    on: vi.fn(),
+    emit: vi.fn(),
+  })),
+  CliContext: {},
+}));
+vi.mock("../../utils/config", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("../../utils/config")>();
+  return {
+    ...actual,
+    loadConfig: vi.fn(() => ({
+      app: { storePath: "/mock/store" },
+    })),
+  };
 });
 
-describe("listAction", () => {
+describe("list command", () => {
+  let stdoutWriteSpy: { mockRestore: () => void };
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    stdoutWriteMock.mockReset();
+    stdoutWriteSpy = vi
+      .spyOn(process.stdout, "write")
+      .mockImplementation(stdoutWriteMock as any);
+  });
+
+  afterEach(() => {
+    stdoutWriteSpy.mockRestore();
+  });
+
   it("executes ListLibrariesTool", async () => {
-    await expect(listAction({ serverUrl: undefined })).resolves.not.toThrow();
-    const { ListLibrariesTool } = await import("../../tools");
+    const parser = yargs().scriptName("test");
+    createListCommand(parser);
+
+    await parser.parse("list");
+
     expect(ListLibrariesTool).toHaveBeenCalledTimes(1);
+    const mockInstance = (ListLibrariesTool as any).mock.results[0].value;
+    expect(mockInstance.execute).toHaveBeenCalled();
+    expect(stdoutWriteMock).toHaveBeenCalledWith("[]\n");
   });
 });

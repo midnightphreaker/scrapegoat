@@ -1,17 +1,28 @@
 import axios, { type AxiosError, type AxiosRequestConfig } from "axios";
 import { CancellationError } from "../../pipeline/errors";
-import { analytics, extractHostname, extractProtocol } from "../../telemetry";
-import { FETCHER_BASE_DELAY, FETCHER_MAX_RETRIES } from "../../utils/config";
-import { ChallengeError, RedirectError, ScraperError } from "../../utils/errors";
+import type { AppConfig } from "../../utils/config";
+import {
+  ChallengeError,
+  RedirectError,
+  ScraperError,
+  TlsCertificateError,
+} from "../../utils/errors";
 import { logger } from "../../utils/logger";
 import { MimeTypeUtils } from "../../utils/mimeTypeUtils";
 import { FingerprintGenerator } from "./FingerprintGenerator";
-import type { ContentFetcher, FetchOptions, RawContent } from "./types";
+import {
+  type ContentFetcher,
+  type FetchOptions,
+  FetchStatus,
+  type RawContent,
+} from "./types";
 
 /**
  * Fetches content from remote sources using HTTP/HTTPS.
  */
 export class HttpFetcher implements ContentFetcher {
+  private readonly maxRetriesDefault: number;
+  private readonly baseDelayDefaultMs: number;
   private readonly retryableStatusCodes = [
     408, // Request Timeout
     429, // Too Many Requests
@@ -33,9 +44,21 @@ export class HttpFetcher implements ContentFetcher {
     "EPERM", // Operation not permitted
   ];
 
+  private readonly tlsCertificateErrorCodes = [
+    "CERT_HAS_EXPIRED",
+    "DEPTH_ZERO_SELF_SIGNED_CERT",
+    "ERR_TLS_CERT_ALTNAME_INVALID",
+    "SELF_SIGNED_CERT_IN_CHAIN",
+    "UNABLE_TO_GET_ISSUER_CERT",
+    "UNABLE_TO_GET_ISSUER_CERT_LOCALLY",
+    "UNABLE_TO_VERIFY_LEAF_SIGNATURE",
+  ];
+
   private fingerprintGenerator: FingerprintGenerator;
 
-  constructor() {
+  constructor(scraperConfig: AppConfig["scraper"]) {
+    this.maxRetriesDefault = scraperConfig.fetcher.maxRetries;
+    this.baseDelayDefaultMs = scraperConfig.fetcher.baseDelayMs;
     this.fingerprintGenerator = new FingerprintGenerator();
   }
 
@@ -47,79 +70,49 @@ export class HttpFetcher implements ContentFetcher {
     return new Promise((resolve) => setTimeout(resolve, ms));
   }
 
+  private isTlsCertificateError(code?: string): boolean {
+    return code ? this.tlsCertificateErrorCodes.includes(code) : false;
+  }
+
   async fetch(source: string, options?: FetchOptions): Promise<RawContent> {
-    const startTime = performance.now();
-    const maxRetries = options?.maxRetries ?? FETCHER_MAX_RETRIES;
-    const baseDelay = options?.retryDelay ?? FETCHER_BASE_DELAY;
+    const maxRetries = options?.maxRetries ?? this.maxRetriesDefault;
+    const baseDelay = options?.retryDelay ?? this.baseDelayDefaultMs;
     // Default to following redirects if not specified
     const followRedirects = options?.followRedirects ?? true;
 
-    try {
-      const result = await this.performFetch(
-        source,
-        options,
-        maxRetries,
-        baseDelay,
-        followRedirects,
-      );
+    const result = await this.performFetch(
+      source,
+      options,
+      maxRetries,
+      baseDelay,
+      followRedirects,
+    );
 
-      // Track successful HTTP request
-      const duration = performance.now() - startTime;
-      analytics.track("http_request_completed", {
-        success: true,
-        hostname: extractHostname(source),
-        protocol: extractProtocol(source),
-        durationMs: Math.round(duration),
-        contentSizeBytes: result.content.length,
-        mimeType: result.mimeType,
-        hasEncoding: !!result.encoding,
-        followRedirects: followRedirects,
-        hadRedirects: result.source !== source,
-      });
-
-      return result;
-    } catch (error) {
-      // Track failed HTTP request
-      const duration = performance.now() - startTime;
-      const axiosError = error as AxiosError;
-      const status = axiosError.response?.status;
-
-      analytics.track("http_request_completed", {
-        success: false,
-        hostname: extractHostname(source),
-        protocol: extractProtocol(source),
-        durationMs: Math.round(duration),
-        statusCode: status,
-        errorType:
-          error instanceof CancellationError
-            ? "cancellation"
-            : error instanceof RedirectError
-              ? "redirect"
-              : error instanceof ScraperError
-                ? "scraper"
-                : "unknown",
-        errorCode: axiosError.code,
-        followRedirects: followRedirects,
-      });
-
-      throw error;
-    }
+    return result;
   }
 
   private async performFetch(
     source: string,
-    options?: FetchOptions,
-    maxRetries = FETCHER_MAX_RETRIES,
-    baseDelay = FETCHER_BASE_DELAY,
-    followRedirects = true,
+    options: FetchOptions | undefined,
+    maxRetries: number = this.maxRetriesDefault,
+    baseDelay: number = this.baseDelayDefaultMs,
+    followRedirects: boolean = true,
   ): Promise<RawContent> {
     for (let attempt = 0; attempt <= maxRetries; attempt++) {
       try {
         const fingerprint = this.fingerprintGenerator.generateHeaders();
-        const headers = {
+        const headers: Record<string, string> = {
           ...fingerprint,
           ...options?.headers, // User-provided headers override generated ones
         };
+
+        // Add If-None-Match header for conditional requests if ETag is provided
+        if (options?.etag) {
+          headers["If-None-Match"] = options.etag;
+          logger.debug(
+            `Conditional request for ${source} with If-None-Match: ${options.etag}`,
+          );
+        }
 
         const config: AxiosRequestConfig = {
           responseType: "arraybuffer",
@@ -134,9 +127,24 @@ export class HttpFetcher implements ContentFetcher {
           // Axios follows redirects by default, we need to explicitly disable it if needed
           maxRedirects: followRedirects ? 5 : 0,
           decompress: true,
+          // Allow 304 responses to be handled as successful responses
+          validateStatus: (status) => {
+            return (status >= 200 && status < 300) || status === 304;
+          },
         };
 
         const response = await axios.get(source, config);
+
+        // Handle 304 Not Modified responses for conditional requests
+        if (response.status === 304) {
+          logger.debug(`HTTP 304 Not Modified for ${source}`);
+          return {
+            content: Buffer.from(""),
+            mimeType: "text/plain",
+            source: source,
+            status: FetchStatus.NOT_MODIFIED,
+          } satisfies RawContent;
+        }
 
         const contentTypeHeader = response.headers["content-type"];
         const { mimeType, charset } = MimeTypeUtils.parseContentType(contentTypeHeader);
@@ -165,22 +173,49 @@ export class HttpFetcher implements ContentFetcher {
           response.config?.url ||
           source;
 
+        // Extract ETag header for caching
+        const etag = response.headers.etag || response.headers.ETag;
+        if (etag) {
+          logger.debug(`Received ETag for ${source}: ${etag}`);
+        }
+
+        // Extract Last-Modified header for caching
+        const lastModified = response.headers["last-modified"];
+        const lastModifiedISO = lastModified
+          ? new Date(lastModified).toISOString()
+          : undefined;
+
         return {
           content,
           mimeType,
           charset,
           encoding: contentEncoding,
           source: finalUrl,
+          etag,
+          lastModified: lastModifiedISO,
+          status: FetchStatus.SUCCESS,
         } satisfies RawContent;
       } catch (error: unknown) {
         const axiosError = error as AxiosError;
         const status = axiosError.response?.status;
         const code = axiosError.code;
+        const errorCause = error instanceof Error ? error : undefined;
 
         // Handle abort/cancel: do not retry, throw CancellationError
         if (options?.signal?.aborted || code === "ERR_CANCELED") {
           // Throw with isError = false to indicate cancellation is not an error
           throw new CancellationError("HTTP fetch cancelled");
+        }
+
+        // Handle 404 Not Found - return special status for refresh operations
+        if (status === 404) {
+          logger.debug(`Resource not found (404): ${source}`);
+          return {
+            content: Buffer.from(""),
+            mimeType: "text/plain",
+            source: source,
+            status: FetchStatus.NOT_FOUND,
+          } satisfies RawContent;
         }
 
         // Handle redirect errors (status codes 301, 302, 303, 307, 308)
@@ -225,6 +260,10 @@ export class HttpFetcher implements ContentFetcher {
           }
         }
 
+        if (this.isTlsCertificateError(code)) {
+          throw new TlsCertificateError(source, code, errorCause);
+        }
+
         if (
           attempt < maxRetries &&
           (status === undefined || this.retryableStatusCodes.includes(status)) &&
@@ -246,7 +285,7 @@ export class HttpFetcher implements ContentFetcher {
             attempt + 1
           } attempts: ${axiosError.message ?? "Unknown error"}`,
           true,
-          error instanceof Error ? error : undefined,
+          errorCause,
         );
       }
     }

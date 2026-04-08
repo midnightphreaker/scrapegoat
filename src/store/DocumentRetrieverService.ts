@@ -1,17 +1,15 @@
-import type { Document } from "@langchain/core/documents";
-import { logger } from "../utils/logger.js";
+import type { AppConfig } from "../utils/config";
 import { createContentAssemblyStrategy } from "./assembly/ContentAssemblyStrategyFactory";
 import type { DocumentStore } from "./DocumentStore";
-import type { RerankerService } from "./RerankerService.js";
-import type { StoreSearchResult } from "./types";
+import type { DbChunkRank, DbPageChunk, StoreSearchResult } from "./types";
 
 export class DocumentRetrieverService {
   private documentStore: DocumentStore;
-  private reranker?: RerankerService;
+  private config: AppConfig;
 
-  constructor(documentStore: DocumentStore, reranker?: RerankerService) {
+  constructor(documentStore: DocumentStore, config: AppConfig) {
     this.documentStore = documentStore;
-    this.reranker = reranker;
+    this.config = config;
   }
 
   /**
@@ -30,68 +28,16 @@ export class DocumentRetrieverService {
   ): Promise<StoreSearchResult[]> {
     // Normalize version: null/undefined becomes empty string, then lowercase
     const normalizedVersion = (version ?? "").toLowerCase();
-    const requestedLimit = limit ?? 10;
-
-    // Determine retrieval multiplier based on reranker availability
-    const retrieveLimit = this.reranker?.isReady() ? requestedLimit * 3 : requestedLimit;
-
-    logger.info(
-      `Retrieval config: requestedLimit=${requestedLimit}, rerankerReady=${this.reranker?.isReady()}, retrieveLimit=${retrieveLimit}`,
-    );
 
     const initialResults = await this.documentStore.findByContent(
       library,
       normalizedVersion,
       query,
-      retrieveLimit,
-    );
-
-    logger.info(
-      `Retrieval results: got ${initialResults.length} documents, need >${requestedLimit} for reranking`,
+      limit ?? 10,
     );
 
     if (initialResults.length === 0) {
       return [];
-    }
-
-    // Apply reranking if available and we retrieved more documents
-    if (this.reranker?.isReady() && initialResults.length > requestedLimit) {
-      try {
-        logger.info(
-          `Reranking ${initialResults.length} documents for top ${requestedLimit}`,
-        );
-        // Extract document texts for reranking
-        const documents = initialResults.map((result) => result.pageContent);
-
-        // Rerank documents
-        const rerankedResults = await this.reranker.rerank(
-          query,
-          documents,
-          requestedLimit,
-        );
-
-        // Map reranked results back to original documents with updated scores
-        const rerankedDocuments = rerankedResults.map((result) => {
-          const originalDoc = initialResults[result.index];
-          // Update the score with the reranked relevance score
-          return new Document({
-            id: originalDoc.id,
-            pageContent: originalDoc.pageContent,
-            metadata: {
-              ...originalDoc.metadata,
-              score: result.relevanceScore,
-              reranked: true,
-            },
-          });
-        });
-
-        // Replace initialResults with reranked documents
-        initialResults.length = 0;
-        initialResults.push(...rerankedDocuments);
-      } catch (error) {
-        logger.warn("Reranking failed, returning original order", error);
-        // Continue with original results, sliced to requested limit
-      }
     }
 
     // Group initial results by URL
@@ -100,14 +46,25 @@ export class DocumentRetrieverService {
     // Process each URL group with appropriate strategy
     const results: StoreSearchResult[] = [];
     for (const [url, urlResults] of resultsByUrl.entries()) {
-      const result = await this.processUrlGroup(
-        library,
-        normalizedVersion,
-        url,
-        urlResults,
-      );
-      results.push(result);
+      // Cluster chunks based on distance
+      const clusters = this.clusterChunksByDistance(urlResults);
+
+      // Process each cluster as a separate result
+      for (const cluster of clusters) {
+        const result = await this.processUrlGroup(
+          library,
+          normalizedVersion,
+          url,
+          cluster,
+        );
+        results.push(result);
+      }
     }
+
+    // Sort all results by score descending
+    // This ensures that if a highly relevant chunk was split from a less relevant one,
+    // the highly relevant one appears first in the final list.
+    results.sort((a, b) => (b.score ?? 0) - (a.score ?? 0));
 
     return results;
   }
@@ -115,11 +72,13 @@ export class DocumentRetrieverService {
   /**
    * Groups search results by URL.
    */
-  private groupResultsByUrl(results: Document[]): Map<string, Document[]> {
-    const resultsByUrl = new Map<string, Document[]>();
+  private groupResultsByUrl(
+    results: (DbPageChunk & DbChunkRank)[],
+  ): Map<string, (DbPageChunk & DbChunkRank)[]> {
+    const resultsByUrl = new Map<string, (DbPageChunk & DbChunkRank)[]>();
 
     for (const result of results) {
-      const url = result.metadata.url as string;
+      const url = result.url;
       if (!resultsByUrl.has(url)) {
         resultsByUrl.set(url, []);
       }
@@ -139,21 +98,22 @@ export class DocumentRetrieverService {
     library: string,
     version: string,
     url: string,
-    initialChunks: Document[],
+    initialChunks: (DbPageChunk & DbChunkRank)[],
   ): Promise<StoreSearchResult> {
-    // Extract mimeType from the first document's metadata
+    // Extract processed and source MIME types from page-level fields.
+    // Convert null to undefined for consistency.
     const mimeType =
+      initialChunks.length > 0 ? (initialChunks[0].content_type ?? undefined) : undefined;
+    const sourceMimeType =
       initialChunks.length > 0
-        ? (initialChunks[0]?.metadata.mimeType as string | undefined)
+        ? (initialChunks[0].source_content_type ?? undefined)
         : undefined;
 
     // Find the maximum score from the initial results
-    const maxScore = Math.max(
-      ...initialChunks.map((chunk) => chunk.metadata.score as number),
-    );
+    const maxScore = Math.max(...initialChunks.map((chunk) => chunk.score));
 
     // Create appropriate assembly strategy based on content type
-    const strategy = createContentAssemblyStrategy(mimeType);
+    const strategy = createContentAssemblyStrategy(mimeType, this.config);
 
     // Use strategy to select and assemble chunks
     const selectedChunks = await strategy.selectChunks(
@@ -170,6 +130,55 @@ export class DocumentRetrieverService {
       content,
       score: maxScore,
       mimeType,
+      sourceMimeType,
     };
+  }
+
+  /**
+   * Clusters chunks based on their sort_order distance.
+   * Chunks within maxChunkDistance of each other are grouped together.
+   *
+   * @param chunks The list of chunks to cluster (must be from the same URL).
+   * @returns An array of chunk clusters, where each cluster is an array of chunks.
+   */
+  private clusterChunksByDistance(
+    chunks: (DbPageChunk & DbChunkRank)[],
+  ): (DbPageChunk & DbChunkRank)[][] {
+    if (chunks.length === 0) return [];
+    if (chunks.length === 1) return [chunks];
+
+    // Sort chunks by sort_order, then by id for deterministic stability
+    const sortedChunks = [...chunks].sort((a, b) => {
+      const diff = a.sort_order - b.sort_order;
+      if (diff !== 0) return diff;
+      return a.id.localeCompare(b.id);
+    });
+
+    const clusters: (DbPageChunk & DbChunkRank)[][] = [];
+    let currentCluster: (DbPageChunk & DbChunkRank)[] = [sortedChunks[0]];
+    // Ensure maxChunkDistance is non-negative
+    const maxChunkDistance = Math.max(0, this.config.assembly.maxChunkDistance);
+
+    for (let i = 1; i < sortedChunks.length; i++) {
+      const currentChunk = sortedChunks[i];
+      const previousChunk = sortedChunks[i - 1];
+
+      // Check distance between current and previous chunk
+      const distance = currentChunk.sort_order - previousChunk.sort_order;
+
+      if (distance <= maxChunkDistance) {
+        // Close enough - add to current cluster
+        currentCluster.push(currentChunk);
+      } else {
+        // Too far - start new cluster
+        clusters.push(currentCluster);
+        currentCluster = [currentChunk];
+      }
+    }
+
+    // Add the last cluster
+    clusters.push(currentCluster);
+
+    return clusters;
   }
 }

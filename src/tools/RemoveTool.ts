@@ -2,7 +2,6 @@ import type { IPipeline } from "../pipeline/trpc/interfaces";
 import { PipelineJobStatus } from "../pipeline/types";
 import type { IDocumentManagement } from "../store/trpc/interfaces";
 import { logger } from "../utils/logger";
-import { validateRequiredString } from "../utils/validation";
 import { ToolError, ValidationError } from "./errors";
 
 /**
@@ -16,50 +15,9 @@ export interface RemoveToolArgs {
 
 /**
  * Tool to remove indexed documentation for a specific library version.
- *
- * @remarks
- * This tool provides complete removal of indexed documentation, including:
- * - Aborting any active scraping jobs for the specified library/version
- * - Removing all indexed documents
- * - Deleting the version record
- * - Removing the library entry if no other versions exist
- *
- * This is useful for:
- * - Cleaning up failed indexing attempts
- * - Re-indexing documentation from scratch
- * - Removing outdated documentation versions
- * - Freeing storage space
- *
- * @example
- * ```typescript
- * const removeTool = new RemoveTool(documentManagementService, pipeline);
- *
- * // Remove a specific version
- * await removeTool.execute({
- *   library: 'react',
- *   version: '18.0.0'
- * });
- *
- * // Remove all versions (entire library)
- * await removeTool.execute({
- *   library: 'typescript',
- *   version: undefined
- * });
- *
- * // Remove unversioned documentation
- * await removeTool.execute({
- *   library: 'vue',
- *   version: ''
- * });
- * ```
+ * This class provides the core logic, intended to be called by the McpServer.
  */
 export class RemoveTool {
-  /**
-   * Creates a new RemoveTool instance.
-   *
-   * @param documentManagementService - Service for managing document storage
-   * @param pipeline - Pipeline instance for managing active jobs
-   */
   constructor(
     private readonly documentManagementService: IDocumentManagement,
     private readonly pipeline: IPipeline,
@@ -67,75 +25,25 @@ export class RemoveTool {
 
   /**
    * Executes the tool to remove the specified library version completely.
-   *
-   * @remarks
-   * The removal process:
-   * 1. Validates the library and version exist
-   * 2. Aborts any QUEUED or RUNNING jobs for the same library+version
-   * 3. Removes all documents from the vector store
-   * 4. Deletes the version record
-   * 5. Removes the library entry if it was the last version
-   *
-   * @param args - The removal arguments
-   * @param args.library - The library name to remove
-   * @param args.version - Optional version to remove. If undefined, removes all versions
-   *
-   * @returns Promise resolving to a success message
-   *
-   * @throws {ValidationError} If library name is invalid
-   * @throws {ToolError} If the library or version doesn't exist
-   * @throws {Error} If removal fails
-   *
-   * @example
-   * ```typescript
-   * // Remove specific version
-   * const result = await removeTool.execute({
-   *   library: 'nextjs',
-   *   version: '14.0.0'
-   * });
-   * console.log(result.message);
-   *
-   * // Remove entire library
-   * const result = await removeTool.execute({
-   *   library: 'old-library',
-   *   version: undefined
-   * });
-   * ```
+   * Aborts any QUEUED/RUNNING job for the same library+version before deleting.
+   * Removes all documents, the version record, and the library if no other versions exist.
    */
   async execute(args: RemoveToolArgs): Promise<{ message: string }> {
     const { library, version } = args;
 
     // Validate input
-    try {
-      validateRequiredString(library, "Library name");
-    } catch (error) {
-      throw new ValidationError((error as Error).message, this.constructor.name);
+    if (!library || typeof library !== "string" || library.trim() === "") {
+      throw new ValidationError(
+        "Library name is required and must be a non-empty string.",
+        this.constructor.name,
+      );
     }
 
     logger.info(`🗑️ Removing library: ${library}${version ? `@${version}` : ""}`);
 
     try {
-      // This will throw if no matching library or version is found
-      const result = await this.documentManagementService.findBestVersion(
-        library,
-        version,
-      );
-
-      // For removal, we need an exact match of the requested version
-      // Handle the case where version is undefined/empty (unversioned) and bestMatch is null
-      const normalizedVersion = version && version.trim() !== "" ? version : null;
-      const versionExists =
-        result.bestMatch === normalizedVersion ||
-        (result.hasUnversioned && normalizedVersion === null);
-      if (!versionExists) {
-        const versionText = normalizedVersion
-          ? `Version ${normalizedVersion}`
-          : "Version";
-        throw new ToolError(
-          `${versionText} not found for library ${library}. Cannot remove non-existent version.`,
-          this.constructor.name,
-        );
-      }
+      // Validate that the library exists before attempting removal
+      await this.documentManagementService.validateLibraryExists(library);
 
       // Abort any QUEUED or RUNNING job for this library+version
       const allJobs = await this.pipeline.getJobs();
