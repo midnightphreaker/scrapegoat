@@ -671,8 +671,24 @@ export class DocumentStore {
       ]);
       const row = result.rows[0] as DbVersion | undefined;
 
-      if (!row?.source_url) {
+      if (!row) {
         return null;
+      }
+
+      if (!row.source_url) {
+        if (row.scraper_options) {
+          try {
+            const fallback = JSON.parse(row.scraper_options);
+            if (fallback.url) {
+              row.source_url = fallback.url;
+            }
+          } catch {
+            // Invalid JSON, fall through to null return
+          }
+        }
+        if (!row.source_url) {
+          return null;
+        }
       }
 
       let parsed: VersionScraperOptions = {} as VersionScraperOptions;
