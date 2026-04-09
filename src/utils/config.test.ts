@@ -111,6 +111,12 @@ describe("Configuration Loading", () => {
       const config = loadConfig({}, {}); // No args -> Default System Path
 
       expect(config.server.host).toBe("127.0.0.1");
+
+      expect(config.embeddings.stripNewLines).toBe(true);
+      expect(config.embeddings.apiBatchSize).toBe(512);
+      expect(config.embeddings.allowTruncate).toBe(true);
+      expect(config.search.rrfK).toBe(60);
+
       // It should try to save.
       // We can check if `fs.writeFileSync` was called if we spy on it, but we are using real FS.
       // Since it fails to write to `/system/...`, it logs a warning.
@@ -492,6 +498,18 @@ describe("Auto-generated Environment Variable Overrides", () => {
     process.env.DOCS_MCP_EMBEDDINGS_VECTOR_DIMENSION = "-1";
     expect(() =>
       loadConfig({}, { configPath: path.join(tmpDir, "dim-neg.yaml") }),
+    ).toThrow();
+  });
+
+  it("rejects search.rrfK of 0 or negative values", () => {
+    process.env.DOCS_MCP_SEARCH_RRF_K = "0";
+    expect(() =>
+      loadConfig({}, { configPath: path.join(tmpDir, "rrfk-zero.yaml") }),
+    ).toThrow();
+
+    process.env.DOCS_MCP_SEARCH_RRF_K = "-1";
+    expect(() =>
+      loadConfig({}, { configPath: path.join(tmpDir, "rrfk-neg.yaml") }),
     ).toThrow();
   });
 });
