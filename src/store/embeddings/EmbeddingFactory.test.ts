@@ -48,6 +48,8 @@ describe("createEmbeddingModel", () => {
     expect(model).toMatchObject({
       modelName: "text-embedding-3-small",
     });
+    expect((model as any).stripNewLines).toBe(true);
+    expect((model as any).batchSize).toBe(512);
   });
 
   test("should create OpenAI embeddings with explicit provider", () => {
@@ -56,6 +58,8 @@ describe("createEmbeddingModel", () => {
     expect(model).toMatchObject({
       modelName: "text-embedding-3-small",
     });
+    expect((model as any).stripNewLines).toBe(true);
+    expect((model as any).batchSize).toBe(512);
   });
 
   test("should throw MissingCredentialsError for OpenAI without OPENAI_API_KEY", () => {
@@ -98,6 +102,7 @@ describe("createEmbeddingModel", () => {
       runtimeConfig,
     );
     expect(model).toBeInstanceOf(FixedDimensionEmbeddings);
+    expect((model as FixedDimensionEmbeddings).allowTruncate).toBe(true);
 
     // The FixedDimensionEmbeddings should wrap a GoogleGenerativeAIEmbeddings instance
     const embeddingsProp = Object.entries(model).find(
@@ -208,5 +213,33 @@ describe("createEmbeddingModel", () => {
         expect(clientConfig.baseURL).toBe("http://localhost:11434/v1");
       }
     });
+  });
+
+  test("should respect custom stripNewLines and apiBatchSize from runtime config", () => {
+    const customConfig = {
+      ...runtimeConfig,
+      config: {
+        ...runtimeConfig.config,
+        stripNewLines: false,
+        apiBatchSize: 256,
+      },
+    };
+    const model = createEmbeddingModel("text-embedding-3-small", customConfig);
+    expect(model).toBeInstanceOf(OpenAIEmbeddings);
+    expect((model as any).stripNewLines).toBe(false);
+    expect((model as any).batchSize).toBe(256);
+  });
+
+  test("should respect custom allowTruncate from runtime config for Gemini", () => {
+    const customConfig = {
+      ...runtimeConfig,
+      config: {
+        ...runtimeConfig.config,
+        allowTruncate: false,
+      },
+    };
+    const model = createEmbeddingModel("gemini:gemini-embedding-exp-03-07", customConfig);
+    expect(model).toBeInstanceOf(FixedDimensionEmbeddings);
+    expect((model as FixedDimensionEmbeddings).allowTruncate).toBe(false);
   });
 });
