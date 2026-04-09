@@ -140,7 +140,7 @@ export function createEmbeddingModel(
   const model = modelName || providerOrModel;
 
   // Default configuration for each provider
-  const baseConfig = { stripNewLines: true };
+  const baseConfig = { stripNewLines: config?.stripNewLines ?? true };
 
   switch (provider) {
     case "openai": {
@@ -151,7 +151,7 @@ export function createEmbeddingModel(
         {
           ...baseConfig,
           modelName: model,
-          batchSize: 512, // OpenAI supports large batches
+          batchSize: runtime?.config?.apiBatchSize ?? 512, // OpenAI supports large batches
           timeout: requestTimeoutMs,
         };
       // Add custom base URL if specified
@@ -187,7 +187,7 @@ export function createEmbeddingModel(
         baseEmbeddings,
         vectorDimension,
         providerAndModel,
-        true,
+        runtime?.config?.allowTruncate ?? true,
       );
     }
 

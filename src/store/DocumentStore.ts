@@ -62,6 +62,7 @@ export class DocumentStore {
   private readonly dbDimension: number;
   private readonly searchWeightVec: number;
   private readonly searchWeightFts: number;
+  private readonly searchRrfK: number;
   private readonly searchOverfetchFactor: number;
   private readonly vectorSearchMultiplier: number;
   private readonly splitterMaxChunkSize: number;
@@ -86,7 +87,7 @@ export class DocumentStore {
   /**
    * Calculates Reciprocal Rank Fusion score for a result with configurable weights
    */
-  private calculateRRF(vecRank?: number, ftsRank?: number, k = 60): number {
+  private calculateRRF(k: number, vecRank?: number, ftsRank?: number): number {
     let rrf = 0;
     if (vecRank !== undefined) {
       rrf += this.searchWeightVec / (k + vecRank);
@@ -123,6 +124,7 @@ export class DocumentStore {
       vec_rank: vecRanks.get(Number(result.id)),
       fts_rank: ftsRanks.get(Number(result.id)),
       rrf_score: this.calculateRRF(
+        this.searchRrfK,
         vecRanks.get(Number(result.id)),
         ftsRanks.get(Number(result.id)),
       ),
@@ -135,6 +137,7 @@ export class DocumentStore {
     this.dbDimension = this.config.database.vectorDimension;
     this.searchWeightVec = this.config.search.weightVec;
     this.searchWeightFts = this.config.search.weightFts;
+    this.searchRrfK = this.config.search.rrfK;
     this.searchOverfetchFactor = this.config.search.overfetchFactor;
     this.vectorSearchMultiplier = this.config.search.vectorMultiplier;
     this.splitterMaxChunkSize = this.config.splitter.maxChunkSize;
