@@ -83,6 +83,12 @@ export const DEFAULT_CONFIG = {
     requestTimeoutMs: 30_000,
     initTimeoutMs: 30_000,
     vectorDimension: 1536,
+    /** Whether to strip newlines from text before generating embeddings (all providers). Env: `DOCS_MCP_EMBEDDINGS_STRIP_NEW_LINES` */
+    stripNewLines: true,
+    /** SDK-level batch size for provider API calls (currently OpenAI-only). Env: `DOCS_MCP_EMBEDDINGS_API_BATCH_SIZE` */
+    apiBatchSize: 512,
+    /** Whether to allow truncating embeddings to target dimension (currently Gemini-only). Env: `DOCS_MCP_EMBEDDINGS_ALLOW_TRUNCATE` */
+    allowTruncate: true,
   },
   db: {
     migrationMaxRetries: 5,
@@ -103,6 +109,8 @@ export const DEFAULT_CONFIG = {
     weightVec: 1,
     weightFts: 1,
     vectorMultiplier: 10,
+    /** RRF smoothing constant for hybrid search score fusion. Env: `DOCS_MCP_SEARCH_RRF_K` */
+    rrfK: 60,
   },
   sandbox: {
     defaultTimeoutMs: 5000,
@@ -238,6 +246,13 @@ export const AppConfigSchema = z.object({
         .int()
         .min(1, "embedding dimension must be at least 1")
         .default(DEFAULT_CONFIG.embeddings.vectorDimension),
+      stripNewLines: envBoolean.default(DEFAULT_CONFIG.embeddings.stripNewLines),
+      apiBatchSize: z.coerce
+        .number()
+        .int()
+        .positive()
+        .default(DEFAULT_CONFIG.embeddings.apiBatchSize),
+      allowTruncate: envBoolean.default(DEFAULT_CONFIG.embeddings.allowTruncate),
     })
     .default(DEFAULT_CONFIG.embeddings),
   db: z
@@ -285,6 +300,7 @@ export const AppConfigSchema = z.object({
         .number()
         .int()
         .default(DEFAULT_CONFIG.search.vectorMultiplier),
+      rrfK: z.coerce.number().int().min(1).default(DEFAULT_CONFIG.search.rrfK),
     })
     .default(DEFAULT_CONFIG.search),
   sandbox: z
