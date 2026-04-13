@@ -165,4 +165,56 @@ describe("MCP Service", () => {
       await cleanupMcpService(mcpServer);
     });
   });
+
+  describe("CORS", () => {
+    it("should answer MCP preflight requests with wildcard CORS headers", async () => {
+      const mcpServer = await registerMcpService(
+        server,
+        mockDocService,
+        mockPipeline,
+        appConfig,
+      );
+
+      const response = await server.inject({
+        method: "OPTIONS",
+        url: "/mcp",
+        headers: {
+          origin: "https://example.com",
+          "access-control-request-method": "POST",
+          "access-control-request-headers": "content-type,mcp-session-id",
+        },
+      });
+
+      expect(response.statusCode).toBe(204);
+      expect(response.headers["access-control-allow-origin"]).toBe("*");
+      expect(response.headers["access-control-allow-methods"]).toBe("GET,POST,OPTIONS");
+      expect(response.headers["access-control-allow-headers"]).toBe(
+        "content-type,mcp-session-id",
+      );
+
+      await cleanupMcpService(mcpServer);
+    });
+
+    it("should add wildcard CORS headers to MCP responses", async () => {
+      const mcpServer = await registerMcpService(
+        server,
+        mockDocService,
+        mockPipeline,
+        appConfig,
+      );
+
+      const response = await server.inject({
+        method: "GET",
+        url: "/mcp",
+        headers: {
+          origin: "https://example.com",
+        },
+      });
+
+      expect(response.statusCode).toBe(405);
+      expect(response.headers["access-control-allow-origin"]).toBe("*");
+
+      await cleanupMcpService(mcpServer);
+    });
+  });
 });

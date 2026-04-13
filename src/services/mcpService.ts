@@ -17,6 +17,37 @@ import { telemetry } from "../telemetry";
 import type { AppConfig } from "../utils/config";
 import { logger } from "../utils/logger";
 
+const mcpCorsPaths = new Set(["/mcp", "/sse", "/messages"]);
+const defaultAllowedHeaders = "authorization,content-type,mcp-session-id";
+
+function getPathname(requestUrl: string): string {
+  return requestUrl.split("?")[0] ?? requestUrl;
+}
+
+function setMcpCorsHeaders(request: FastifyRequest, reply: FastifyReply): void {
+  const requestedHeaders = request.headers["access-control-request-headers"];
+  const allowedHeaders =
+    typeof requestedHeaders === "string" ? requestedHeaders : defaultAllowedHeaders;
+
+  const headers = {
+    "Access-Control-Allow-Origin": "*",
+    "Access-Control-Allow-Methods": "GET,POST,OPTIONS",
+    "Access-Control-Allow-Headers": allowedHeaders,
+    "Access-Control-Expose-Headers": "mcp-session-id",
+    "Access-Control-Max-Age": "86400",
+  };
+
+  for (const [name, value] of Object.entries(headers)) {
+    reply.raw.setHeader(name, value);
+  }
+
+  reply.header("Access-Control-Allow-Origin", "*");
+  reply.header("Access-Control-Allow-Methods", "GET,POST,OPTIONS");
+  reply.header("Access-Control-Allow-Headers", allowedHeaders);
+  reply.header("Access-Control-Expose-Headers", "mcp-session-id");
+  reply.header("Access-Control-Max-Age", "86400");
+}
+
 /**
  * Register MCP protocol routes on a Fastify server instance.
  * This includes SSE endpoints for persistent connections and HTTP endpoints for stateless requests.
@@ -50,6 +81,18 @@ export async function registerMcpService(
 
   // Track heartbeat intervals for cleanup
   const heartbeatIntervals: Record<string, NodeJS.Timeout> = {};
+
+  server.addHook("onRequest", async (request, reply) => {
+    if (!mcpCorsPaths.has(getPathname(request.url))) {
+      return;
+    }
+
+    setMcpCorsHeaders(request, reply);
+
+    if (request.method === "OPTIONS") {
+      return reply.code(204).send();
+    }
+  });
 
   // SSE endpoint for MCP connections
   server.route({
