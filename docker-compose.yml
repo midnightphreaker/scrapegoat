@@ -25,6 +25,7 @@ services:
     volumes:
       - scrapegoat-data:/data
       - scrapegoat-config:/config
+      - /import:/import
     healthcheck:
       test: 'node -e ''require("net").connect(8080, "127.0.0.1").on("connect",()=>process.exit(0)).on("error",()=>process.exit(1))'''
       interval: 5s
@@ -67,6 +68,7 @@ services:
       DATABASE_URL: ${DATABASE_URL:-postgresql://docs:docs@postgres:5432/docs}
     volumes:
       - scrapegoat-config:/config
+      - /import:/import
     depends_on:
       worker:
         condition: service_healthy
@@ -104,6 +106,7 @@ services:
       DATABASE_URL: ${DATABASE_URL:-postgresql://docs:docs@postgres:5432/docs}
     volumes:
       - scrapegoat-config:/config
+      - /import:/import
     depends_on:
       worker:
         condition: service_healthy
