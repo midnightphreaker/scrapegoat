@@ -3,9 +3,11 @@
  * Provides modular server composition for MCP endpoints.
  */
 
+import { randomUUID } from "node:crypto";
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { SSEServerTransport } from "@modelcontextprotocol/sdk/server/sse.js";
 import { StreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/streamableHttp.js";
+import { isInitializeRequest } from "@modelcontextprotocol/sdk/types.js";
 import type { FastifyInstance, FastifyReply, FastifyRequest } from "fastify";
 import type { ProxyAuthManager } from "../auth";
 import { createAuthMiddleware } from "../auth/middleware";
@@ -81,6 +83,10 @@ export async function registerMcpService(
 
   // Track heartbeat intervals for cleanup
   const heartbeatIntervals: Record<string, NodeJS.Timeout> = {};
+
+  // Track Streamable HTTP sessions for stateful clients
+  const streamableTransports: Record<string, StreamableHTTPServerTransport> = {};
+  const streamableServers: Record<string, McpServer> = {};
 
   server.addHook("onRequest", async (request, reply) => {
     if (!mcpCorsPaths.has(getPathname(request.url))) {
@@ -193,32 +199,53 @@ export async function registerMcpService(
     },
   });
 
-  // Streamable HTTP endpoint for stateless MCP requests
+  // Streamable HTTP endpoint for stateful MCP clients
   server.route({
     method: "POST",
     url: "/mcp",
     preHandler: authMiddleware ? [authMiddleware] : undefined,
     handler: async (request: FastifyRequest, reply: FastifyReply) => {
       try {
-        // In stateless mode, create a new instance of server and transport for each request
-        const requestServer = createMcpServerInstance(mcpTools, config);
-        const requestTransport = new StreamableHTTPServerTransport({
-          sessionIdGenerator: undefined,
-        });
+        const sessionHeader = request.headers["mcp-session-id"];
+        const sessionId = Array.isArray(sessionHeader) ? sessionHeader[0] : sessionHeader;
+        let requestTransport = sessionId ? streamableTransports[sessionId] : undefined;
 
-        const cleanupRequest = () => {
-          logger.debug("Streamable HTTP request closed");
-          requestTransport.close();
-          requestServer.close(); // Close the per-request server instance
-        };
+        if (!requestTransport && !sessionId && isInitializeRequest(request.body)) {
+          let requestServer: McpServer | undefined;
+          requestTransport = new StreamableHTTPServerTransport({
+            sessionIdGenerator: () => randomUUID(),
+            onsessioninitialized: (newSessionId) => {
+              if (requestTransport && requestServer) {
+                streamableTransports[newSessionId] = requestTransport;
+                streamableServers[newSessionId] = requestServer;
+              }
+            },
+            onsessionclosed: async (closedSessionId) => {
+              const serverToClose = streamableServers[closedSessionId];
+              delete streamableTransports[closedSessionId];
+              delete streamableServers[closedSessionId];
+              await serverToClose?.close();
+            },
+          });
 
-        reply.raw.on("close", cleanupRequest);
+          requestServer = createMcpServerInstance(mcpTools, config);
+          await requestServer.connect(requestTransport);
+        } else if (!requestTransport) {
+          reply.code(400).send({
+            jsonrpc: "2.0",
+            error: {
+              code: -32000,
+              message: "Bad Request: No valid session ID provided",
+            },
+            id: null,
+          });
+          return;
+        }
+
         reply.raw.on("error", (error) => {
           logger.debug(`Streamable HTTP connection error: ${error}`);
-          cleanupRequest();
         });
 
-        await requestServer.connect(requestTransport);
         await requestTransport.handleRequest(request.raw, reply.raw, request.body);
       } catch (error) {
         logger.error(`❌ Error in MCP endpoint: ${error}`);

@@ -2,7 +2,7 @@
 systemctl stop scrapegoat.service
 sync
 sleep 1
-git pull
+# git pull  # disabled for local hotfix build
 sync
 sleep 1
 docker system prune --all -f
