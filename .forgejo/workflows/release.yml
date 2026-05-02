@@ -30,7 +30,9 @@ jobs:
 
       - name: Create Release
         run: |
-          curl -X POST \
+          echo "Ref: ${{ github.ref_name }}"
+          echo "Token: ${GITHUB_TOKEN:0:10}..."
+          curl -v -X POST \
             -H "Authorization: Bearer 6765434e2da6214fb260db6c3d192554ae7dc536" \
             -H "Content-Type: application/json" \
             -d "{\"tag_name\": \"${{ github.ref_name }}\", \"name\": \"Release ${{ github.ref_name }}\", \"body\": \"MCP server release\"}" \
