@@ -24,29 +24,16 @@ jobs:
         run: npm run build
 
       - name: Package
-        run: tar -czvf scrapegoat-${{ github.ref_name }}.tar.gz dist
+        run: |
+          mkdir -p dist
+          tar -czf dist/scrapegoat-${{ github.ref_name }}.tar.gz dist
 
-      - name: Upload asset
-        uses: actions/upload-release-asset@v1
-        with:
-          upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_path: scrapegoat-${{ github.ref_name }}.tar.gz
-          asset_name: scrapegoat-${{ github.ref_name }}.tar.gz
-          asset_content_type: application/gzip
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
-  create-release:
-    needs: build
-    runs-on: ubuntu-latest
-    outputs:
-      upload_url: ${{ steps.create_release.outputs.upload_url }}
-    steps:
-      - name: Create Forgejo release
-        uses: actions/softprops/action-gh-release@v2
-        with:
-          draft: false
-          prerelease: false
-          generate_release_notes: true
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - name: Create Release
+        run: |
+          curl -X POST \
+            -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" \
+            -F "tag=${{ github.ref_name }}" \
+            -F "name=Release ${{ github.ref_name }}" \
+            -F "note=MCP server release" \
+            -F "file=@dist/scrapegoat-${{ github.ref_name }}.tar.gz" \
+            https://git.phrk.org/api/v1/repos/pub/scrapegoat/releases
