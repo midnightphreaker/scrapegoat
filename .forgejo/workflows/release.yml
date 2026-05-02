@@ -29,9 +29,11 @@ jobs:
           tar -czf dist/scrapegoat-${{ github.ref_name }}.tar.gz dist
 
       - name: Create Release
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           curl -X POST \
-            -H "Authorization: Bearer ${{ secrets.PHRK_TOKEN }}" \
+            -H "Authorization: Bearer $GITHUB_TOKEN" \
             -F "tag=${{ github.ref_name }}" \
             -F "name=Release ${{ github.ref_name }}" \
             -F "note=MCP server release" \
