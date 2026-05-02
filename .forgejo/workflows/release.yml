@@ -9,6 +9,13 @@ jobs:
   build:
     runs-on: docker
     steps:
+      - name: Debug start
+        run: |
+          echo "Workflow started"
+          echo "Ref: ${{ github.ref_name }}"
+          echo "SHA: ${{ github.sha }}"
+          pwd
+          ls -la
       - name: Checkout
         uses: actions/checkout@v4
 
