@@ -31,7 +31,7 @@ jobs:
       - name: Create Release
         run: |
           curl -X POST \
-            -H "Authorization: Bearer ${{ secrets.PHRK_TOKEN }}" \
+            -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" \
             -F "tag=${{ github.ref_name }}" \
             -F "name=Release ${{ github.ref_name }}" \
             -F "note=MCP server release" \
