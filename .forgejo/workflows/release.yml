@@ -29,11 +29,9 @@ jobs:
           tar -czf dist/scrapegoat-${{ github.ref_name }}.tar.gz dist
 
       - name: Create Release
-        env:
-          GITHUB_TOKEN: ${{ secrets.PHRK_TOKEN }}
         run: |
           curl -X POST \
-            -H "Authorization: Bearer $GITHUB_TOKEN" \
+            -H "Authorization: Bearer 6765434e2da6214fb260db6c3d192554ae7dc536" \
             -H "Content-Type: application/json" \
             -d "{\"tag_name\": \"${{ github.ref_name }}\", \"name\": \"Release ${{ github.ref_name }}\", \"body\": \"MCP server release\"}" \
             https://git.phrk.org/api/v1/repos/pub/scrapegoat/releases
