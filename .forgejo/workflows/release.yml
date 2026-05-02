@@ -34,8 +34,6 @@ jobs:
         run: |
           curl -X POST \
             -H "Authorization: Bearer $GITHUB_TOKEN" \
-            -F "tag=${{ github.ref_name }}" \
-            -F "name=Release ${{ github.ref_name }}" \
-            -F "note=MCP server release" \
-            -F "file=@dist/scrapegoat-${{ github.ref_name }}.tar.gz" \
+            -H "Content-Type: application/json" \
+            -d "{\"tag_name\": \"${{ github.ref_name }}\", \"name\": \"Release ${{ github.ref_name }}\", \"body\": \"MCP server release\"}" \
             https://git.phrk.org/api/v1/repos/pub/scrapegoat/releases
