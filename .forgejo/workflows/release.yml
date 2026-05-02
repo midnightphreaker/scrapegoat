@@ -9,10 +9,31 @@ jobs:
   build:
     runs-on: docker
     steps:
-      - name: Debug
+      - name: Checkout
         run: |
-          echo "Workflow started"
-          echo "Ref: ${{ github.ref_name }}"
-          echo "SHA: ${{ github.sha }}"
-          pwd
-          ls -la
+          git clone https://gitbot:6765434e2da6214fb260db6c3d192554ae7dc536@git.phrk.org/pub/scrapegoat.git .
+          git checkout ${{ github.sha }}
+
+      - name: Setup Node.js
+        run: |
+          curl -fsSL https://deb.nodesource.com/setup_22.x | bash -
+          apt-get install -y nodejs
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build
+        run: npm run build
+
+      - name: Package
+        run: |
+          mkdir -p dist
+          tar -czf dist/scrapegoat-${{ github.ref_name }}.tar.gz dist
+
+      - name: Create Release
+        run: |
+          curl -X POST \
+            -H "Authorization: Bearer ${{ secrets.PHRK_TOKEN }}" \
+            -H "Content-Type: application/json" \
+            -d "{\"tag_name\": \"${{ github.ref_name }}\", \"name\": \"Release ${{ github.ref_name }}\", \"body\": \"MCP server release\"}" \
+            https://git.phrk.org/api/v1/repos/pub/scrapegoat/releases
