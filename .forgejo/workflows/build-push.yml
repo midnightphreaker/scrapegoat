@@ -1,0 +1,115 @@
+name: Build and publish Scrapegoat
+
+on:
+  push:
+    branches:
+      - main
+
+env:
+  REGISTRY: git.phrk.org
+  OWNER: pub
+  IMAGE: scrapegoat
+  IMAGE_REF: git.phrk.org/pub/scrapegoat
+  VERSION_FILE: VERSION
+
+jobs:
+  build-push:
+    runs-on: docker
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Configure git
+        run: |
+          git config user.name "forgejo-actions"
+          git config user.email "forgejo-actions@git.phrk.org"
+
+      - name: Bump patch version
+        run: |
+          set -eu
+
+          if [ ! -f "$VERSION_FILE" ]; then
+            echo "Missing $VERSION_FILE"
+            echo "Create a VERSION file containing something like: 0.20.1"
+            exit 1
+          fi
+
+          OLD_VERSION="$(tr -d '[:space:]' < "$VERSION_FILE")"
+
+          MAJOR="$(echo "$OLD_VERSION" | cut -d. -f1)"
+          MINOR="$(echo "$OLD_VERSION" | cut -d. -f2)"
+          PATCH="$(echo "$OLD_VERSION" | cut -d. -f3)"
+
+          case "$MAJOR:$MINOR:$PATCH" in
+            *[!0-9:]* | "" | *::*)
+              echo "Invalid version in $VERSION_FILE: $OLD_VERSION"
+              echo "Expected semver-like x.y.z, example: 0.20.1"
+              exit 1
+              ;;
+          esac
+
+          NEW_VERSION="${MAJOR}.${MINOR}.$((PATCH + 1))"
+
+          echo "$NEW_VERSION" > "$VERSION_FILE"
+
+          echo "OLD_VERSION=$OLD_VERSION" >> "$GITHUB_ENV"
+          echo "NEW_VERSION=$NEW_VERSION" >> "$GITHUB_ENV"
+
+          echo "Bumped version: $OLD_VERSION -> $NEW_VERSION"
+
+      - name: Build Docker image
+        run: |
+          set -eu
+
+          docker build \
+            --label "org.opencontainers.image.source=https://git.phrk.org/pub/scrapegoat" \
+            -t "$IMAGE_REF:latest" \
+            -t "$IMAGE_REF:$NEW_VERSION" \
+            .
+
+      - name: Login to Forgejo container registry
+        run: |
+          set -eu
+
+          echo "${{ secrets.AUTH_TOKEN }}" \
+            | docker login "$REGISTRY" \
+                -u "gitbot" \
+                --password-stdin
+
+      - name: Push Docker image
+        run: |
+          set -eu
+
+          docker push "$IMAGE_REF:latest"
+          docker push "$IMAGE_REF:$NEW_VERSION"
+
+      - name: Commit version bump
+        run: |
+          set -eu
+
+          git add "$VERSION_FILE"
+
+          if git diff --cached --quiet; then
+            echo "No version change to commit"
+            exit 0
+          fi
+
+          git commit -m "chore: bump Scrapegoat version to $NEW_VERSION [skip ci]"
+          git push origin HEAD:main
+
+      - name: Tag version
+        run: |
+          set -eu
+
+          TAG="v${NEW_VERSION}"
+
+          if git ls-remote --exit-code --tags origin "refs/tags/${TAG}" >/dev/null 2>&1; then
+            echo "Tag already exists: ${TAG}"
+            exit 1
+          fi
+
+          git tag -a "$TAG" -m "Scrapegoat $NEW_VERSION"
+          git push origin "refs/tags/$TAG"
