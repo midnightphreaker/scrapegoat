@@ -1,0 +1,440 @@
+/**
+ * UploadStagingService — manages upload sessions and temporary file storage.
+ *
+ * Responsibilities:
+ *  - Create / track upload sessions (unique ID, library name, version)
+ *  - Stage uploaded files to a temporary directory
+ *  - Support two modes: memory (tmpdir-based) and filesystem (configurable path)
+ *  - Session cleanup with TTL expiry
+ *  - Get session state, list files, remove / rename / move files
+ */
+
+import type {
+  UploadSessionId,
+  UploadSession,
+  UploadConfig,
+  StagedFile,
+  FailedFileEntry,
+  RenamedFileEntry,
+  ImportFolder,
+  ImportTreeNode,
+} from "./types";
+import { UploadSessionStatus, DEFAULT_UPLOAD_CONFIG } from "./types";
+import crypto from "node:crypto";
+import fs from "node:fs/promises";
+import path from "node:path";
+import os from "node:os";
+import mime from "mime";
+import {
+  ensureWithinBase,
+  sanitizeFileName,
+  validateFileSize,
+  validateTotalSize,
+} from "./security";
+import { ImportTreeBuilder } from "./ImportTreeBuilder";
+
+/** Generate a unique session ID */
+function generateSessionId(): UploadSessionId {
+  return `upl_${crypto.randomUUID()}`;
+}
+
+/** Generate a unique file ID */
+function generateFileId(): string {
+  return `file_${crypto.randomUUID()}`;
+}
+
+export class UploadStagingService {
+  private sessions: Map<string, UploadSession>;
+  private config: UploadConfig;
+  private cleanupTimer: ReturnType<typeof setInterval> | null;
+  private treeBuilder: ImportTreeBuilder;
+
+  constructor(config?: Partial<UploadConfig>) {
+    this.config = { ...DEFAULT_UPLOAD_CONFIG, ...config };
+    this.sessions = new Map();
+    this.cleanupTimer = null;
+    this.treeBuilder = new ImportTreeBuilder();
+
+    // Start periodic cleanup if TTL is configured
+    if (this.config.sessionTtlSeconds > 0) {
+      const intervalMs = Math.max(
+        30_000,
+        Math.min(this.config.sessionTtlSeconds * 500, 600_000),
+      );
+      this.cleanupTimer = setInterval(() => {
+        this.cleanupExpiredSessions().catch(() => {
+          /* swallow — timer callback */
+        });
+      }, intervalMs);
+
+      // Allow the process to exit even if the timer is still running
+      if (this.cleanupTimer && typeof this.cleanupTimer === "object") {
+        if ("unref" in this.cleanupTimer) {
+          this.cleanupTimer.unref();
+        }
+      }
+    }
+  }
+
+  // ---------------------------------------------------------------------------
+  // Session lifecycle
+  // ---------------------------------------------------------------------------
+
+  /** Create a new upload session for a library + version. */
+  async createSession(
+    library: string,
+    version: string,
+  ): Promise<UploadSession> {
+    const id = generateSessionId();
+    const stagingPath =
+      this.config.stagingMode === "filesystem" && this.config.stagingPath
+        ? path.resolve(this.config.stagingPath, id)
+        : path.join(os.tmpdir(), "scrapegoat-upload", id);
+
+    // Ensure staging directory exists
+    await fs.mkdir(stagingPath, { recursive: true });
+
+    const now = new Date();
+    const session: UploadSession = {
+      id,
+      status: UploadSessionStatus.ACTIVE,
+      library,
+      version,
+      createdAt: now,
+      updatedAt: now,
+      files: new Map(),
+      stagingPath,
+      failedFiles: [],
+      renamedFiles: [],
+    };
+
+    this.sessions.set(id, session);
+    return session;
+  }
+
+  /** Retrieve an existing session by ID. */
+  getSession(sessionId: UploadSessionId): UploadSession | undefined {
+    return this.sessions.get(sessionId);
+  }
+
+  // ---------------------------------------------------------------------------
+  // File operations
+  // ---------------------------------------------------------------------------
+
+  /**
+   * Stage a single file into the session.
+   * The file content is written to the session's staging directory.
+   */
+  async stageFile(
+    sessionId: UploadSessionId,
+    fileName: string,
+    content: Buffer,
+    fromArchive = false,
+    archiveSource?: string,
+  ): Promise<StagedFile> {
+    const session = this.requireActiveSession(sessionId);
+
+    // Validate sizes
+    validateFileSize(content.length, this.config.maxFileSizeBytes, fileName);
+    const currentTotal = this.totalSessionSize(session);
+    validateTotalSize(
+      currentTotal,
+      content.length,
+      this.config.maxTotalSizeBytes,
+    );
+
+    // Enforce max files
+    if (session.files.size >= this.config.maxFiles) {
+      throw new Error(
+        `Maximum file count reached (${this.config.maxFiles}) for session ${sessionId}`,
+      );
+    }
+
+    const safeName = sanitizeFileName(fileName);
+    const fileId = generateFileId();
+    const relativePath = safeName;
+    const absolutePath = path.resolve(session.stagingPath, relativePath);
+
+    // Security: ensure we stay inside the staging directory
+    ensureWithinBase(absolutePath, session.stagingPath);
+
+    // Ensure parent dir exists
+    await fs.mkdir(path.dirname(absolutePath), { recursive: true });
+
+    // Write the file
+    await fs.writeFile(absolutePath, content);
+
+    // Detect MIME type
+    const mimeType = mime.getType(safeName) ?? "application/octet-stream";
+
+    const staged: StagedFile = {
+      id: fileId,
+      originalName: fileName,
+      displayName: safeName,
+      relativePath,
+      absolutePath,
+      size: content.length,
+      mimeType,
+      fromArchive,
+      archiveSource,
+      ingestible: true,
+    };
+
+    // Check for rename
+    if (safeName !== fileName) {
+      session.renamedFiles.push({
+        originalName: fileName,
+        newName: safeName,
+        relativePath,
+        reason: "normalization",
+        timestamp: new Date(),
+      });
+    }
+
+    session.files.set(fileId, staged);
+    session.updatedAt = new Date();
+
+    return staged;
+  }
+
+  /** Remove a staged file from the session. */
+  async removeFile(
+    sessionId: UploadSessionId,
+    fileId: string,
+  ): Promise<void> {
+    const session = this.requireActiveSession(sessionId);
+    const file = session.files.get(fileId);
+    if (!file) {
+      throw new Error(`File ${fileId} not found in session ${sessionId}`);
+    }
+
+    // Remove from disk
+    try {
+      await fs.unlink(file.absolutePath);
+    } catch (err: unknown) {
+      // File may already have been removed; ignore ENOENT
+      if (
+        err instanceof Error &&
+        "code" in err &&
+        (err as NodeJS.ErrnoException).code !== "ENOENT"
+      ) {
+        throw err;
+      }
+    }
+
+    session.files.delete(fileId);
+    session.updatedAt = new Date();
+  }
+
+  /** Rename a staged file (updates display name and relative path). */
+  async renameFile(
+    sessionId: UploadSessionId,
+    fileId: string,
+    newName: string,
+  ): Promise<void> {
+    const session = this.requireActiveSession(sessionId);
+    const file = session.files.get(fileId);
+    if (!file) {
+      throw new Error(`File ${fileId} not found in session ${sessionId}`);
+    }
+
+    const safeName = sanitizeFileName(newName);
+    const newAbsolutePath = path.resolve(
+      path.dirname(file.absolutePath),
+      safeName,
+    );
+    ensureWithinBase(newAbsolutePath, session.stagingPath);
+
+    await fs.rename(file.absolutePath, newAbsolutePath);
+
+    const oldName = file.displayName;
+    file.displayName = safeName;
+    file.relativePath = path.relative(session.stagingPath, newAbsolutePath);
+    file.absolutePath = newAbsolutePath;
+
+    if (oldName !== safeName) {
+      session.renamedFiles.push({
+        originalName: oldName,
+        newName: safeName,
+        relativePath: file.relativePath,
+        reason: "user",
+        timestamp: new Date(),
+      });
+    }
+
+    session.updatedAt = new Date();
+  }
+
+  /** Move a file to a new relative path within the session. */
+  async moveFile(
+    sessionId: UploadSessionId,
+    fileId: string,
+    newRelativePath: string,
+  ): Promise<void> {
+    const session = this.requireActiveSession(sessionId);
+    const file = session.files.get(fileId);
+    if (!file) {
+      throw new Error(`File ${fileId} not found in session ${sessionId}`);
+    }
+
+    const sanitizedSegments = newRelativePath
+      .split("/")
+      .map((s) => sanitizeFileName(s))
+      .join("/");
+    const newAbsolutePath = path.resolve(
+      session.stagingPath,
+      sanitizedSegments,
+    );
+    ensureWithinBase(newAbsolutePath, session.stagingPath);
+
+    // Ensure target directory exists
+    await fs.mkdir(path.dirname(newAbsolutePath), { recursive: true });
+    await fs.rename(file.absolutePath, newAbsolutePath);
+
+    file.relativePath = sanitizedSegments;
+    file.absolutePath = newAbsolutePath;
+    session.updatedAt = new Date();
+  }
+
+  // ---------------------------------------------------------------------------
+  // Session commit / cancel / destroy
+  // ---------------------------------------------------------------------------
+
+  /**
+   * Commit the session — marks it as committed.
+   * At this point files are ready for the ingestion pipeline.
+   */
+  async commitSession(sessionId: UploadSessionId): Promise<void> {
+    const session = this.requireActiveSession(sessionId);
+    session.status = UploadSessionStatus.COMMITTED;
+    session.updatedAt = new Date();
+  }
+
+  /** Cancel a session and remove all staged files from disk. */
+  async cancelSession(sessionId: UploadSessionId): Promise<void> {
+    const session = this.sessions.get(sessionId);
+    if (!session) return;
+
+    session.status = UploadSessionStatus.CANCELLED;
+    session.updatedAt = new Date();
+
+    await this.removeStagingDir(session);
+  }
+
+  /**
+   * Destroy a session — cancels if active, removes all state.
+   * Unlike cancel, this also removes the session from the map.
+   */
+  async destroySession(sessionId: UploadSessionId): Promise<void> {
+    const session = this.sessions.get(sessionId);
+    if (!session) return;
+
+    if (
+      session.status === UploadSessionStatus.ACTIVE ||
+      session.status === UploadSessionStatus.COMMITTED
+    ) {
+      await this.removeStagingDir(session);
+    }
+
+    this.sessions.delete(sessionId);
+  }
+
+  // ---------------------------------------------------------------------------
+  // Cleanup
+  // ---------------------------------------------------------------------------
+
+  /** Remove all sessions whose TTL has expired. Returns the number cleaned. */
+  async cleanupExpiredSessions(): Promise<number> {
+    const now = Date.now();
+    let cleaned = 0;
+
+    for (const [id, session] of this.sessions) {
+      if (session.status !== UploadSessionStatus.ACTIVE) continue;
+
+      const ageMs = now - session.updatedAt.getTime();
+      if (ageMs > this.config.sessionTtlSeconds * 1000) {
+        session.status = UploadSessionStatus.EXPIRED;
+        await this.removeStagingDir(session);
+        this.sessions.delete(id);
+        cleaned++;
+      }
+    }
+
+    return cleaned;
+  }
+
+  // ---------------------------------------------------------------------------
+  // Tree / stats
+  // ---------------------------------------------------------------------------
+
+  /** Build the import tree for a session. */
+  getImportTree(sessionId: UploadSessionId): ImportTreeNode[] {
+    const session = this.requireSession(sessionId);
+    const files = Array.from(session.files.values());
+    return this.treeBuilder.buildTree(files, []);
+  }
+
+  /** Get aggregate stats for a session. */
+  getSessionStats(
+    sessionId: UploadSessionId,
+  ): { totalFiles: number; totalSize: number; failedFiles: number; renamedFiles: number } {
+    const session = this.requireSession(sessionId);
+    const files = Array.from(session.files.values());
+    return {
+      totalFiles: files.length,
+      totalSize: files.reduce((sum, f) => sum + f.size, 0),
+      failedFiles: session.failedFiles.length,
+      renamedFiles: session.renamedFiles.length,
+    };
+  }
+
+  // ---------------------------------------------------------------------------
+  // Lifecycle
+  // ---------------------------------------------------------------------------
+
+  /** Stop the cleanup timer. Call when shutting down. */
+  dispose(): void {
+    if (this.cleanupTimer) {
+      clearInterval(this.cleanupTimer);
+      this.cleanupTimer = null;
+    }
+  }
+
+  // ---------------------------------------------------------------------------
+  // Internal helpers
+  // ---------------------------------------------------------------------------
+
+  private requireSession(sessionId: UploadSessionId): UploadSession {
+    const session = this.sessions.get(sessionId);
+    if (!session) {
+      throw new Error(`Upload session not found: ${sessionId}`);
+    }
+    return session;
+  }
+
+  private requireActiveSession(sessionId: UploadSessionId): UploadSession {
+    const session = this.requireSession(sessionId);
+    if (session.status !== UploadSessionStatus.ACTIVE) {
+      throw new Error(
+        `Upload session ${sessionId} is not active (status: ${session.status})`,
+      );
+    }
+    return session;
+  }
+
+  private totalSessionSize(session: UploadSession): number {
+    let total = 0;
+    for (const file of session.files.values()) {
+      total += file.size;
+    }
+    return total;
+  }
+
+  private async removeStagingDir(session: UploadSession): Promise<void> {
+    try {
+      await fs.rm(session.stagingPath, { recursive: true, force: true });
+    } catch {
+      // Best-effort cleanup — don't throw on failure
+    }
+  }
+}
