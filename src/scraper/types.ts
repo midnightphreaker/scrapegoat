@@ -9,6 +9,7 @@ export type QueueItem = {
   depth: number;
   pageId?: number; // Database page ID for efficient deletion during refresh
   etag?: string | null; // Last known ETag for conditional requests during refresh
+  fromLlmsTxt?: boolean; // Whether this URL was discovered from an llms.txt file
 };
 
 /**
@@ -118,7 +119,12 @@ export interface ScraperOptions {
    * If false, appends to the existing documents.
    * @default true
    */
-  clean?: boolean;
+  clear?: boolean;
+  /**
+   * When true, preserves hash fragments from the original URL through redirects.
+   * @default false
+   */
+  preserveHashes?: boolean;
 }
 
 /**

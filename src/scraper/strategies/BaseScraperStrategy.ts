@@ -45,6 +45,10 @@ export interface ProcessItemResult {
   links?: string[];
   /** Any non-critical errors encountered during processing. This may be an empty array if no errors were encountered or if the content was not processed. */
   status: FetchStatus;
+  /** Additional queue items to add to the processing queue (e.g., from llms.txt seed URLs). */
+  queueItems?: QueueItem[];
+  /** Allowed file roots for local file strategy (e.g., temp files from archive extraction). */
+  internalAllowedFileRoots?: string[];
 }
 
 export abstract class BaseScraperStrategy implements ScraperStrategy {
@@ -113,7 +117,7 @@ export abstract class BaseScraperStrategy implements ScraperStrategy {
     baseUrl: URL,
     options: ScraperOptions,
     progressCallback: ProgressCallback<ScraperProgressEvent>,
-    signal?: AbortSignal, // Add signal
+    signal?: AbortSignal,
   ): Promise<QueueItem[]> {
     const maxPages = options.maxPages ?? this.config.scraper.maxPages;
     const results = await Promise.all(
@@ -144,7 +148,7 @@ export abstract class BaseScraperStrategy implements ScraperStrategy {
 
             // Log progress for all counted items
             logger.info(
-              `🌐 Scraping page ${currentPageCount}/${this.effectiveTotal} (depth ${item.depth}/${maxDepth}): ${item.url}`,
+              `📄 Scraping page ${currentPageCount}/${this.effectiveTotal} (depth ${item.depth}/${maxDepth}): ${item.url}`,
             );
           }
 
@@ -163,7 +167,7 @@ export abstract class BaseScraperStrategy implements ScraperStrategy {
                 pageId: item.pageId,
               });
             }
-            return [];
+            return result.queueItems ?? [];
           }
 
           if (result.status === FetchStatus.NOT_FOUND) {
@@ -182,12 +186,12 @@ export abstract class BaseScraperStrategy implements ScraperStrategy {
                 deleted: true,
               });
             }
-            return [];
+            return result.queueItems ?? [];
           }
 
           if (result.status !== FetchStatus.SUCCESS) {
             logger.error(`❌ Unknown fetch status: ${result.status}`);
-            return [];
+            return result.queueItems ?? [];
           }
 
           // Handle successful processing - report result with content
