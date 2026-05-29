@@ -1,0 +1,240 @@
+/**
+ * Alpine.js localUpload data component for the upload panel.
+ *
+ * This script is loaded client-side and provides the Alpine.data('localUpload')
+ * component used by LocalUploadPanel.tsx.
+ *
+ * Manages: session creation, file upload via fetch, import tree operations,
+ * rename/delete/move, commit, and cancel.
+ */
+
+/* eslint-disable */
+// @ts-nocheck
+
+document.addEventListener("alpine:init", () => {
+  Alpine.data("localUpload", (library, version) => ({
+    library,
+    version: version || "latest",
+    sessionId: null,
+    uploading: false,
+    uploadProgress: 0,
+    uploadErrors: [],
+    stagedFiles: [],
+    tree: null,
+    flatNodes: [],
+    stats: null,
+    showTree: false,
+    committing: false,
+    dragover: false,
+
+    async init() {
+      // Create a new upload session
+      try {
+        const resp = await fetch("/web/upload/start", {
+          method: "POST",
+          headers: { "Content-Type": "application/x-www-form-urlencoded" },
+          body: `library=${encodeURIComponent(this.library)}&version=${encodeURIComponent(this.version)}`,
+        });
+        if (!resp.ok) {
+          const err = await resp.json().catch(() => ({ error: "Failed to create session" }));
+          this.uploadErrors = [{ path: "session", error: err.error || "Unknown error" }];
+          return;
+        }
+        const data = await resp.json();
+        this.sessionId = data.sessionId;
+      } catch (e) {
+        this.uploadErrors = [{ path: "session", error: e.message || "Network error" }];
+      }
+    },
+
+    async handleFiles(fileList) {
+      if (!this.sessionId || fileList.length === 0) return;
+      this.uploading = true;
+      this.uploadProgress = 0;
+      this.uploadErrors = [];
+
+      const formData = new FormData();
+      for (const file of fileList) {
+        formData.append("files", file);
+      }
+
+      try {
+        const xhr = new XMLHttpRequest();
+        xhr.open("POST", `/web/upload/files?sessionId=${encodeURIComponent(this.sessionId)}`);
+
+        xhr.upload.onprogress = (e) => {
+          if (e.lengthComputable) {
+            this.uploadProgress = Math.round((e.loaded / e.total) * 100);
+          }
+        };
+
+        const result = await new Promise((resolve, reject) => {
+          xhr.onload = () => {
+            if (xhr.status >= 200 && xhr.status < 300) {
+              resolve(JSON.parse(xhr.responseText));
+            } else {
+              reject(new Error(xhr.responseText));
+            }
+          };
+          xhr.onerror = () => reject(new Error("Upload failed"));
+          xhr.send(formData);
+        });
+
+        if (result.stagedFiles) {
+          this.stagedFiles = [...this.stagedFiles, ...result.stagedFiles];
+        }
+        if (result.errors && result.errors.length > 0) {
+          this.uploadErrors = result.errors;
+        }
+
+        await this.refreshTree();
+      } catch (e) {
+        this.uploadErrors = [{ path: "upload", error: e.message || "Upload failed" }];
+      } finally {
+        this.uploading = false;
+        this.uploadProgress = 0;
+      }
+    },
+
+    handleDrop(event) {
+      this.dragover = false;
+      const files = event.dataTransfer?.files;
+      if (files && files.length > 0) {
+        this.handleFiles(files);
+      }
+    },
+
+    async refreshTree() {
+      if (!this.sessionId) return;
+      try {
+        const resp = await fetch(`/web/upload/tree?sessionId=${encodeURIComponent(this.sessionId)}`);
+        if (resp.ok) {
+          const data = await resp.json();
+          this.tree = data.tree;
+          this.stats = data.stats;
+          this.flatNodes = this.flattenTree(data.tree, 0);
+        }
+      } catch (e) {
+        console.error("Failed to refresh tree:", e);
+      }
+    },
+
+    flattenTree(nodes, depth) {
+      if (!nodes || !Array.isArray(nodes)) return [];
+      const result = [];
+      for (const node of nodes) {
+        result.push({ ...node, depth });
+        if (node.children && node.children.length > 0) {
+          result.push(...this.flattenTree(node.children, depth + 1));
+        }
+      }
+      return result;
+    },
+
+    async startRename(node) {
+      const newName = prompt("Enter new name:", node.name);
+      if (!newName || newName === node.name) return;
+      try {
+        const resp = await fetch("/web/upload/tree/rename", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            sessionId: this.sessionId,
+            fileId: node.id,
+            newName,
+          }),
+        });
+        if (resp.ok) await this.refreshTree();
+      } catch (e) {
+        console.error("Rename failed:", e);
+      }
+    },
+
+    async removeNode(node) {
+      if (!confirm(`Remove "${node.name}"?`)) return;
+      try {
+        const resp = await fetch("/web/upload/tree/delete", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            sessionId: this.sessionId,
+            fileId: node.id,
+          }),
+        });
+        if (resp.ok) await this.refreshTree();
+      } catch (e) {
+        console.error("Remove failed:", e);
+      }
+    },
+
+    async commitImport() {
+      if (!this.sessionId) return;
+      this.committing = true;
+      try {
+        const resp = await fetch("/web/upload/commit", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ sessionId: this.sessionId }),
+        });
+        if (resp.ok) {
+          const result = await resp.json();
+          // Trigger toast notification
+          document.dispatchEvent(
+            new CustomEvent("toast", {
+              detail: {
+                message: `Successfully imported ${result.library}@${result.version}`,
+                type: "success",
+              },
+            }),
+          );
+          // Close the upload panel or redirect
+          this.sessionId = null;
+          this.stagedFiles = [];
+          this.tree = null;
+          this.flatNodes = [];
+          this.stats = null;
+          this.showTree = false;
+        } else {
+          const err = await resp.json().catch(() => ({ error: "Commit failed" }));
+          this.uploadErrors = [{ path: "commit", error: err.error }];
+        }
+      } catch (e) {
+        this.uploadErrors = [{ path: "commit", error: e.message || "Commit failed" }];
+      } finally {
+        this.committing = false;
+      }
+    },
+
+    async cancelImport() {
+      if (!this.sessionId) return;
+      try {
+        await fetch("/web/upload/cancel", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ sessionId: this.sessionId }),
+        });
+      } catch (e) {
+        console.error("Cancel failed:", e);
+      }
+      this.sessionId = null;
+      this.stagedFiles = [];
+      this.tree = null;
+      this.flatNodes = [];
+      this.stats = null;
+      this.showTree = false;
+      this.uploadErrors = [];
+    },
+
+    formatSize(bytes) {
+      if (!bytes) return "0 B";
+      const units = ["B", "KB", "MB", "GB"];
+      let i = 0;
+      let size = bytes;
+      while (size >= 1024 && i < units.length - 1) {
+        size /= 1024;
+        i++;
+      }
+      return `${size.toFixed(i === 0 ? 0 : 1)} ${units[i]}`;
+    },
+  }));
+});
