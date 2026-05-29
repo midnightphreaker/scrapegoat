@@ -1,16 +1,16 @@
 {
-  "name": "@arabold/docs-mcp-server",
+  "name": "@midnightphreaker/scrapegoat",
   "version": "2.2.1",
   "description": "MCP server for fetching and searching documentation",
   "type": "module",
   "bin": {
-    "docs-mcp-server": "dist/index.js"
+    "scrapegoat": "dist/index.js"
   },
   "license": "MIT",
-  "author": "grounded.tools",
+  "author": "phrk.org",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/arabold/docs-mcp-server.git"
+    "url": "git+https://git.phrk.org/pub/scrapegoat.git"
   },
   "files": [
     "dist",

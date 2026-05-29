@@ -1,19 +1,19 @@
-# Grounded Docs: Your AI's Up-to-Date Documentation Expert
+# PHRK ScrapeGoat: Your AI's Up-to-Date Documentation Expert
 
-**Docs MCP Server** solves the problem of AI hallucinations and outdated knowledge by providing a personal, always-current documentation index for your AI coding assistant. It fetches official docs from websites, GitHub, npm, PyPI, and local files, allowing your AI to query the exact version you are using.
+**ScrapeGoat** solves the problem of AI hallucinations and outdated knowledge by providing a personal, always-current documentation index for your AI coding assistant. It fetches official docs from websites, GitHub, npm, PyPI, and local files, allowing your AI to query the exact version you are using.
 
-![Docs MCP Server Web Interface](docs/docs-mcp-server.png)
+![ScrapeGoat Web Interface](docs/docs-mcp-server.png)
 
-## ✨ Why Grounded Docs MCP Server?
+## ❄️ Why ScrapeGoat?
 
-The open-source alternative to **Context7**, **Nia**, and **Ref.Tools**.
+The open-source alternative to **Context7**, **NiA**, and **Ref.Tools**.
 
--   ✅ **Up-to-Date Context:** Fetches documentation directly from official sources on demand.
--   🎯 **Version-Specific:** Queries target the exact library versions in your project.
--   💡 **Reduces Hallucinations:** Grounds LLMs in real documentation.
+-   ❄️ **Up-to-Date Context:** Fetches documentation directly from official sources on demand.
+-   📦 **Version-Specific:** Queries target the exact library versions in your project.
+-   🔥 **Reduces Hallucinations:** Grounds LLMs in real documentation.
 -   🔒 **Private & Local:** Runs entirely on your machine; your code never leaves your network.
--   🧩 **Broad Compatibility:** Works with any MCP-compatible client (Claude, Cline, etc.).
--   📁 **Multiple Sources:** Index websites, GitHub repositories, local folders, and zip archives.
+-   🐐 **Broad Compatibility:** Works with any MCP-compatible client (Claude, Cline, etc.).
+-   📚 **Multiple Sources:** Index websites, GitHub repositories, local folders, and zip archives.
 -   📄 **Rich File Support:** Processes HTML, Markdown, PDF, Office documents (Word, Excel, PowerPoint), OpenDocument, RTF, EPUB, Jupyter Notebooks, and [90+ source code languages](docs/concepts/supported-formats.md).
 
 ---
@@ -34,28 +34,28 @@ See **[Supported Formats](docs/concepts/supported-formats.md)** for the complete
 
 ---
 
-## 🚀 Quick Start
+## 🐐 Quick Start
 
 ### CLI First
 
-For agents and scripts, the CLI is usually the simplest way to use Grounded Docs.
+For agents and scripts, the CLI is usually the simplest way to use ScrapeGoat.
 
 **1. Index documentation** (requires Node.js 22+):
 
 ```bash
-npx @arabold/docs-mcp-server@latest scrape react https://react.dev/reference/react
+npx @midnightphreaker/scrapegoat@latest scrape react https://react.dev/reference/react
 ```
 
 **2. Query the index:**
 
 ```bash
-npx @arabold/docs-mcp-server@latest search react "useEffect cleanup" --output yaml
+npx @midnightphreaker/scrapegoat@latest search react "useEffect cleanup" --output yaml
 ```
 
 **3. Fetch a single page as Markdown:**
 
 ```bash
-npx @arabold/docs-mcp-server@latest fetch-url https://react.dev/reference/react/useEffect
+npx @midnightphreaker/scrapegoat@latest fetch-url https://react.dev/reference/react/useEffect
 ```
 
 ### Output Behavior
@@ -77,7 +77,7 @@ If you want a long-running MCP endpoint for Claude, Cline, Copilot, Gemini CLI, 
 **1. Start the server:**
 
 ```bash
-npx @arabold/docs-mcp-server@latest
+npx @midnightphreaker/scrapegoat@latest
 ```
 
 **2. Open the Web UI** at **[http://localhost:6280](http://localhost:6280)** to add documentation.
@@ -87,7 +87,7 @@ npx @arabold/docs-mcp-server@latest
 ```json
 {
   "mcpServers": {
-    "docs-mcp-server": {
+    "scrapegoat": {
       "type": "sse",
       "url": "http://localhost:6280/sse"
     }
@@ -102,10 +102,10 @@ See **[Connecting Clients](docs/guides/mcp-clients.md)** for VS Code (Cline, Roo
 
 ```bash
 docker run --rm \
-  -v docs-mcp-data:/data \
-  -v docs-mcp-config:/config \
+  -v scrapegoat-data:/data \
+  -v scrapegoat-config:/config \
   -p 6280:6280 \
-  ghcr.io/arabold/docs-mcp-server:latest \
+  ghcr.io/midnightphreaker/scrapegoat:latest \
   --protocol http --host 0.0.0.0 --port 6280
 ```
 
@@ -118,17 +118,17 @@ Using an embedding model is **optional** but dramatically improves search qualit
 **Example: Enable OpenAI Embeddings**
 
 ```bash
-OPENAI_API_KEY="sk-proj-..." npx @arabold/docs-mcp-server@latest
+OPENAI_API_KEY="sk-proj-..." npx @midnightphreaker/scrapegoat@latest
 ```
 
 See **[Embedding Models](docs/guides/embedding-models.md)** for configuring **Ollama**, **Gemini**, **Azure**, and others.
 
 ---
 
-## 📚 Documentation
+## 📜 Documentation
 
 ### Getting Started
--   **[Installation](docs/setup/installation.md)**: Detailed setup guides for Docker, Node.js (npx), and Embedded mode.
+-   **[Installation](docs/setup/installation.md)**: Detailed setup guides for Docker, Node.js (npm), and Embedded mode.
 -   **[Connecting Clients](docs/guides/mcp-clients.md)**: How to connect Claude, VS Code (Cline/Roo), and other MCP clients.
 -   **[Basic Usage](docs/guides/basic-usage.md)**: Using the Web UI, CLI, and scraping local files.
 -   **[Configuration](docs/setup/configuration.md)**: Full reference for config files and environment variables.
@@ -143,7 +143,7 @@ See **[Embedding Models](docs/guides/embedding-models.md)** for configuring **Ol
 
 ---
 
-## 🤝 Contributing
+## ❤️ Contributing
 
 We welcome contributions! Please see **[CONTRIBUTING.md](CONTRIBUTING.md)** for development guidelines and setup instructions.
 

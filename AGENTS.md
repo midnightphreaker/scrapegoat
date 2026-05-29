@@ -1,15 +1,15 @@
 
-# Agent Instructions for docs-mcp-server
+# Agent Instructions for scrapegoat
 
 ## Repository Context
 
-- **Repository**: `arabold/docs-mcp-server`
+- **Repository**: `midnightphreaker/scrapegoat`
 - **Core Stack**: Node.js 22.x, TypeScript, Vite, AlpineJS, TailwindCSS, SQLite (better-sqlite3)
   - **Node Version**: Always use **Node.js v22** for local development and builds, even if `package.json` allows older versions.
 - **Tooling**: Biome (lint/format), Vitest (test), Husky (pre-commit)
 - **Critical Documentation**:
   - 📖 **Read `README.md`** first for project structure, setup, and configuration details.
-  - 🏗️ **Read `ARCHITECTURE.md`** before making changes to understand system design and service interactions.
+  - 🗺️ **Read `ARCHITECTURE.md`** before making changes to understand system design and service interactions.
 
 ## Development Workflow
 
@@ -59,12 +59,12 @@ Strictly enforced by `commitlint`. Commits will fail if format is incorrect.
 
 ### Error Handling
 - **Boundaries**: Use `try/catch` at API/CLI boundaries.
-- **Logging**: Log errors via `logger.error` with `❌` prefix.
+- **Logging**: Log errors via `logger.error` with `✗` prefix.
 - **Response**: Return standard HTTP codes (e.g., 500) for API errors.
 - **Safety**: Sanitize binary content from error logs.
 
 ### Web UI (AlpineJS + HTMX)
-- **Components**: AlpineJS with TSX (`kitajs`).
+- **Components**: AlpineJS with TSX (`kitajsn`).
 - **Conditionals**: Use ternary `foo ? <Bar/> : null` (avoid `foo && <Bar/>`).
 - **Styling**: TailwindCSS utility classes.
 
@@ -83,9 +83,9 @@ Strictly enforced by `commitlint`. Commits will fail if format is incorrect.
 ## Logging Strategy
 
 - **User Output**: `console.*` (CLI results).
-- **App Events**: `logger.info` (meaningful state changes).
+- **App Events**: `logger.info`  (meaningful state changes).
 - **Debugging**: `logger.debug` (granular flow, disabled by default).
-- **Formats**: Prefix meaningful logs with emojis (e.g., `🔗`, `❌`, `✅`). **Never** use emojis in `debug` logs.
+- **Formats**: Prefix meaningful logs with emoji (e.g., `📦`, `✗`, `❄`). **Never** use emoji in `debug` logs.
 
 ## Testing Approach
 

@@ -1,4 +1,4 @@
-# Docker Compose configuration for Docs MCP Server
+# Docker Compose configuration for ScrapeGoat
 #
 # Scaling setup with separate services:
 # - postgres: PostgreSQL database for primary storage
@@ -10,7 +10,7 @@ services:
   # PostgreSQL database - primary storage backend
   postgres:
     image: pgvector/pgvector:pg16
-    container_name: docs-mcp-postgres
+    container_name: scrapegoat-postgres
     restart: unless-stopped
     ports:
       - "5432:5432"
@@ -19,7 +19,7 @@ services:
       POSTGRES_PASSWORD: docs
       POSTGRES_DB: docs
     volumes:
-      - docs-pgdata:/var/lib/postgresql/data
+      - scrapegoat-pgdata:/var/lib/postgresql/data
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U docs"]
       interval: 5s
@@ -29,12 +29,12 @@ services:
 
   # Worker service - handles the actual documentation processing
   worker:
-    image: ghcr.io/arabold/docs-mcp-server:latest
+    image: ghcr.io/midnightphreaker/scrapegoat:latest
     build:
       context: .
       dockerfile: Dockerfile
     command: ["worker", "--host", "0.0.0.0", "--port", "8080"]
-    container_name: docs-mcp-worker
+    container_name: scrapegoat-worker
     restart: unless-stopped
     ports:
       - "8080:8080"
@@ -43,8 +43,8 @@ services:
     environment:
       DATABASE_URL: "postgresql://docs:docs@postgres:5432/docs"
     volumes:
-      - docs-mcp-data:/data
-      - docs-mcp-config:/config
+      - scrapegoat-data:/data
+      - scrapegoat-config:/config
     depends_on:
       postgres:
         condition: service_healthy
@@ -63,7 +63,7 @@ services:
 
   # MCP server - provides AI tool integration endpoint
   mcp:
-    image: ghcr.io/arabold/docs-mcp-server:latest
+    image: ghcr.io/midnightphreaker/scrapegoat:latest
     build:
       context: .
       dockerfile: Dockerfile
@@ -80,7 +80,7 @@ services:
         "http://worker:8080/api",
         "--no-logo",
       ]
-    container_name: docs-mcp-server
+    container_name: scrapegoat-mcp
     restart: unless-stopped
     ports:
       - "6280:6280"
@@ -89,7 +89,7 @@ services:
     environment:
       DATABASE_URL: "postgresql://docs:docs@postgres:5432/docs"
     volumes:
-      - docs-mcp-config:/config
+      - scrapegoat-config:/config
     depends_on:
       worker:
         condition: service_healthy
@@ -102,7 +102,7 @@ services:
 
   # Web interface - provides browser-based management
   web:
-    image: ghcr.io/arabold/docs-mcp-server:latest
+    image: ghcr.io/midnightphreaker/scrapegoat:latest
     build:
       context: .
       dockerfile: Dockerfile
@@ -117,7 +117,7 @@ services:
         "http://worker:8080/api",
         "--no-logo",
       ]
-    container_name: docs-mcp-web
+    container_name: scrapegoat-web
     restart: unless-stopped
     ports:
       - "6281:6281"
@@ -126,7 +126,7 @@ services:
     environment:
       DATABASE_URL: "postgresql://docs:docs@postgres:5432/docs"
     volumes:
-      - docs-mcp-config:/config
+      - scrapegoat-config:/config
     depends_on:
       worker:
         condition: service_healthy
@@ -138,9 +138,9 @@ services:
           memory: 256M
 
 volumes:
-  docs-mcp-data:
-    name: docs-mcp-data
-  docs-mcp-config:
-    name: docs-mcp-config
-  docs-pgdata:
-    name: docs-mcp-pgdata
+  scrapegoat-data:
+    name: scrapegoat-data
+  scrapegoat-config:
+    name: scrapegoat-config
+  scrapegoat-pgdata:
+    name: scrapegoat-pgdata
