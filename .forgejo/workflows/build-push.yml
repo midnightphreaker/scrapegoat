@@ -47,6 +47,7 @@ jobs:
 
           apt-get update
           apt-get install -y docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
+          systemctl enable --now docker
 
       - name: Checkout repo
         uses: actions/checkout@v4
