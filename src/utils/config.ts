@@ -448,22 +448,8 @@ export interface LoadConfigOptions {
   searchDir?: string; // Search directory (store path)
 }
 
-// System-specific paths (with backward compat for old app name)
-const newSystemPaths = envPaths("scrapegoat", { suffix: "" });
-const oldSystemPaths = envPaths("docs-mcp-server", { suffix: "" });
-
-const systemPaths = (() => {
-  const newConfigDir = newSystemPaths.config;
-  const oldConfigDir = oldSystemPaths.config;
-  // If old path exists but new path doesn't, use old path for backward compat
-  if (fs.existsSync(oldConfigDir) && !fs.existsSync(newConfigDir)) {
-    logger.warn(
-      `⚠ Using legacy config directory "${oldConfigDir}". Please migrate to "${newConfigDir}".`,
-    );
-    return oldSystemPaths;
-  }
-  return newSystemPaths;
-})();
+// System-specific paths
+const systemPaths = envPaths("scrapegoat", { suffix: "" });
 
 export function loadConfig(
   cliArgs: Record<string, unknown> = {},
