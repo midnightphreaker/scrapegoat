@@ -51,3 +51,14 @@ export function isInScope(
       return false;
   }
 }
+
+/**
+ * Returns true if childPath is equal to or a descendant of parentPath.
+ * Used to detect sibling-wise redirects where the scope anchor (user-provided
+ * path) doesn't contain the redirected-to path.
+ */
+export function isPathDescendant(parentPath: string, childPath: string): boolean {
+  if (parentPath === childPath) return true;
+  const normalizedParent = parentPath.endsWith("/") ? parentPath : `${parentPath}/`;
+  return childPath.startsWith(normalizedParent);
+}

@@ -51,8 +51,8 @@ export class PipelineWorker {
 
     try {
       // Clear existing documents for this library/version before scraping
-      // Skip this step for refresh operations or if clean is explicitly false
-      if (!scraperOptions.isRefresh && scraperOptions.clean !== false) {
+      // Skip this step for refresh operations or if clear is explicitly false
+      if (!scraperOptions.isRefresh && scraperOptions.clear !== false) {
         await this.store.removeAllDocuments(library, version);
         logger.info(
           `💾 Cleared store for ${library}@${version || "latest"} before scraping.`,

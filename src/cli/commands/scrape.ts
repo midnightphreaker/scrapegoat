@@ -246,7 +246,7 @@ export function createScrapeCommand(cli: Argv) {
                 ? (argv.excludePattern as string[])
                 : undefined,
             headers: Object.keys(headers).length > 0 ? headers : undefined,
-            clean: argv.clean as boolean,
+            clear: argv.clean as boolean,
           },
         });
 

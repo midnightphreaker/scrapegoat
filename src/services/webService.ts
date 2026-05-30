@@ -24,8 +24,8 @@ import { registerJobListRoutes } from "../web/routes/jobs/list";
 import { registerNewJobRoutes } from "../web/routes/jobs/new";
 import { registerLibraryDetailRoutes } from "../web/routes/libraries/detail";
 import { registerLibrariesRoutes } from "../web/routes/libraries/list";
-import { registerUploadRoutes } from "../web/routes/upload";
 import { registerStatsRoute } from "../web/routes/stats";
+import { registerUploadRoutes } from "../web/routes/upload";
 
 /**
  * Register web interface routes on a Fastify server instance.

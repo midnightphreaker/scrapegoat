@@ -37,9 +37,9 @@ const LocalUploadPanel = ({ library, version }: LocalUploadPanelProps) => {
         {/* Drop zone */}
         <div
           x-ref="dropzone"
-          x-on:dragover.prevent="dragover = true"
-          x-on:dragleave.prevent="dragover = false"
-          x-on:drop.prevent="handleDrop($event)"
+          x-on:dragover="$event.preventDefault(); dragover = true"
+          x-on:dragleave="$event.preventDefault(); dragover = false"
+          x-on:drop="$event.preventDefault(); handleDrop($event)"
           x-bind:class="dragover ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20' : 'border-gray-300 dark:border-gray-600'"
           class="flex flex-col items-center justify-center w-full px-6 py-8 border-2 border-dashed rounded-lg cursor-pointer transition-colors"
           x-on:click="$refs.fileInput.click()"
@@ -103,7 +103,7 @@ const LocalUploadPanel = ({ library, version }: LocalUploadPanelProps) => {
               Some files failed to upload:
             </h4>
             <ul class="text-sm text-red-700 dark:text-red-300 list-disc list-inside">
-              <template x-for="err in uploadErrors" :key="err.path">
+              <template x-for="err in uploadErrors" x-bind:key="err.path">
                 <li>
                   <span x-text="err.path" /> — <span x-text="err.error" />
                 </li>
@@ -152,7 +152,7 @@ const LocalUploadPanel = ({ library, version }: LocalUploadPanelProps) => {
               id="import-tree"
               class="border border-gray-200 rounded-lg dark:border-gray-700 overflow-auto max-h-80"
             >
-              <template x-for="node in flatNodes" :key="node.id">
+              <template x-for="node in flatNodes" x-bind:key="node.id">
                 <div
                   class="flex items-center gap-2 px-3 py-2 border-b border-gray-100 last:border-0 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700/50"
                   x-bind:style="'padding-left: ' + (node.depth * 20 + 12) + 'px'"

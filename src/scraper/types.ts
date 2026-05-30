@@ -10,6 +10,8 @@ export type QueueItem = {
   pageId?: number; // Database page ID for efficient deletion during refresh
   etag?: string | null; // Last known ETag for conditional requests during refresh
   fromLlmsTxt?: boolean; // Whether this URL was discovered from an llms.txt file
+  /** Allowed root paths for resolving local file references */
+  internalAllowedFileRoots?: string[];
 };
 
 /**
@@ -125,6 +127,11 @@ export interface ScraperOptions {
    * @default false
    */
   preserveHashes?: boolean;
+  /**
+   * Allowed root paths for resolving local file references during scraping.
+   * Used internally by strategies that handle local file content.
+   */
+  internalAllowedFileRoots?: string[];
 }
 
 /**

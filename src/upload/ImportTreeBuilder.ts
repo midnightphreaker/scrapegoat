@@ -9,12 +9,7 @@
  *  - Generate canonical source URIs: file:///import/<library>/<version>/<path>
  */
 
-import type {
-  ImportTreeNode,
-  StagedFile,
-  ImportFolder,
-  RenamedFileEntry,
-} from "./types";
+import type { ImportFolder, ImportTreeNode, RenamedFileEntry, StagedFile } from "./types";
 
 // ---------------------------------------------------------------------------
 // ImportTreeBuilder
@@ -47,9 +42,7 @@ export class ImportTreeBuilder {
       let current: ImportTreeNode[] = root;
       for (let i = 0; i < segments.length - 1; i++) {
         const dirName = segments[i];
-        let existing = current.find(
-          (n) => n.type === "folder" && n.name === dirName,
-        );
+        let existing = current.find((n) => n.type === "folder" && n.name === dirName);
         if (!existing) {
           existing = {
             id: `dir_${dirName}_${i}`,
@@ -60,9 +53,11 @@ export class ImportTreeBuilder {
           };
           current.push(existing);
         }
+        // biome-ignore lint/style/noNonNullAssertion: existing is guaranteed to have children after creation above
         current = existing.children!;
       }
 
+      // biome-ignore lint/style/noNonNullAssertion: segments is non-empty (checked above), so last element exists
       return { parent: current, childName: segments[segments.length - 1]! };
     };
 
@@ -73,10 +68,9 @@ export class ImportTreeBuilder {
 
       let current: ImportTreeNode[] = root;
       for (let i = 0; i < segments.length; i++) {
+        // biome-ignore lint/style/noNonNullAssertion: loop index i is within bounds of segments
         const seg = segments[i]!;
-        let existing = current.find(
-          (n) => n.type === "folder" && n.name === seg,
-        );
+        let existing = current.find((n) => n.type === "folder" && n.name === seg);
         if (!existing) {
           existing = {
             id: folder.id,
@@ -87,6 +81,7 @@ export class ImportTreeBuilder {
           };
           current.push(existing);
         }
+        // biome-ignore lint/style/noNonNullAssertion: existing is guaranteed to have children after creation above
         current = existing.children!;
       }
     }
@@ -252,6 +247,7 @@ export class ImportTreeBuilder {
     }
 
     // Clone the source node (deep)
+    // biome-ignore lint/style/noNonNullAssertion: deepClone returns a cloned array with the same element we passed in
     const movedNode = this.deepClone([sourceNode])[0]!;
 
     // Remove from original location
@@ -260,9 +256,7 @@ export class ImportTreeBuilder {
     // Update paths
     const nodeName = movedNode.name;
     const newRelativePath =
-      toPath === "" || toPath === "/"
-        ? nodeName
-        : `${toPath}/${nodeName}`;
+      toPath === "" || toPath === "/" ? nodeName : `${toPath}/${nodeName}`;
 
     movedNode.relativePath = newRelativePath;
     this.rebuildChildPaths(movedNode);
@@ -320,9 +314,7 @@ export class ImportTreeBuilder {
       if (count > 0) {
         // Generate a unique path by inserting a suffix before the extension
         const ext = this.getExtension(currentPath);
-        const base = ext
-          ? currentPath.slice(0, -ext.length - 1)
-          : currentPath;
+        const base = ext ? currentPath.slice(0, -ext.length - 1) : currentPath;
         currentPath = ext ? `${base}_${count}.${ext}` : `${currentPath}_${count}`;
       }
 
@@ -353,26 +345,15 @@ export class ImportTreeBuilder {
   // ---------------------------------------------------------------------------
 
   /** Generate canonical source URI for a file. */
-  generateSourceUri(
-    library: string,
-    version: string,
-    relativePath: string,
-  ): string {
+  generateSourceUri(library: string, version: string, relativePath: string): string {
     const encodedLib = encodeURIComponent(library);
     const encodedVer = encodeURIComponent(version);
-    const encodedPath = relativePath
-      .split("/")
-      .map(encodeURIComponent)
-      .join("/");
+    const encodedPath = relativePath.split("/").map(encodeURIComponent).join("/");
     return `file:///import/${encodedLib}/${encodedVer}/${encodedPath}`;
   }
 
   /** Generate a human-readable display string for the source. */
-  generateSourceDisplay(
-    library: string,
-    version: string,
-    relativePath: string,
-  ): string {
+  generateSourceDisplay(library: string, version: string, relativePath: string): string {
     return `${library}/${version}/${relativePath}`;
   }
 
@@ -384,9 +365,7 @@ export class ImportTreeBuilder {
    * Flatten the tree into a flat list of `{ relativePath, fileId }`.
    * Only includes file nodes (not folders).
    */
-  flattenTree(
-    tree: ImportTreeNode[],
-  ): Array<{ relativePath: string; fileId: string }> {
+  flattenTree(tree: ImportTreeNode[]): Array<{ relativePath: string; fileId: string }> {
     const result: Array<{ relativePath: string; fileId: string }> = [];
 
     const walk = (nodes: ImportTreeNode[]) => {
@@ -454,9 +433,7 @@ export class ImportTreeBuilder {
     const segments = oldPath.split("/");
     const parentSegments = segments.slice(0, -1);
     node.relativePath =
-      parentSegments.length > 0
-        ? `${parentSegments.join("/")}/${newName}`
-        : newName;
+      parentSegments.length > 0 ? `${parentSegments.join("/")}/${newName}` : newName;
 
     // Rebuild children paths
     this.rebuildChildPaths(node);

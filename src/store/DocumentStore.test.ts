@@ -1694,7 +1694,7 @@ describe("DocumentStore - Embedding Model Change Safety", () => {
   describe("getEmbeddingMetadata", () => {
     it("should return null for both fields on first run before any embedding init", async () => {
       // Create store in FTS-only mode so initializeEmbeddings skips metadata write
-      const { store: s, connection: conn } = await createStore("");
+      const { store: s } = await createStore("");
       try {
         const metadata = await s.getEmbeddingMetadata();
         expect(metadata.model).toBeNull();
@@ -1708,7 +1708,7 @@ describe("DocumentStore - Embedding Model Change Safety", () => {
   // 9.3 Test setEmbeddingMetadata writes and reads correctly
   describe("setEmbeddingMetadata", () => {
     it("should write and read model and dimension correctly", async () => {
-      const { store: s, connection: conn } = await createStore("");
+      const { store: s } = await createStore("");
       try {
         await s.setEmbeddingMetadata("openai:text-embedding-3-small", 1536);
 
@@ -1721,7 +1721,7 @@ describe("DocumentStore - Embedding Model Change Safety", () => {
     });
 
     it("should overwrite existing metadata on subsequent calls", async () => {
-      const { store: s, connection: conn } = await createStore("");
+      const { store: s } = await createStore("");
       try {
         await s.setEmbeddingMetadata("openai:text-embedding-3-small", 1536);
         await s.setEmbeddingMetadata("openai:text-embedding-ada-002", 768);
@@ -1743,9 +1743,7 @@ describe("DocumentStore - Embedding Model Change Safety", () => {
       await first.store.shutdown();
 
       // Create a fresh store on the same database
-      const { store: s, connection: conn } = await createStore(
-        "openai:text-embedding-3-small",
-      );
+      const { store: s } = await createStore("openai:text-embedding-3-small");
 
       // Manually set stored metadata to a different model
       await s.setEmbeddingMetadata("openai:text-embedding-ada-002", 1536);
@@ -1759,9 +1757,7 @@ describe("DocumentStore - Embedding Model Change Safety", () => {
 
     // 9.5 Test checkEmbeddingModelChange throws when dimension differs
     it("should throw EmbeddingModelChangedError when dimension differs", async () => {
-      const { store: s, connection: conn } = await createStore(
-        "openai:text-embedding-3-small",
-      );
+      const { store: s } = await createStore("openai:text-embedding-3-small");
 
       // Set stored metadata with same model but different dimension
       await s.setEmbeddingMetadata("openai:text-embedding-3-small", 768);
@@ -1774,9 +1770,7 @@ describe("DocumentStore - Embedding Model Change Safety", () => {
 
     // 9.6 Test checkEmbeddingModelChange does not throw when model and dimension match
     it("should not throw when model and dimension match", async () => {
-      const { store: s, connection: conn } = await createStore(
-        "openai:text-embedding-3-small",
-      );
+      const { store: s } = await createStore("openai:text-embedding-3-small");
 
       // Metadata was persisted by initializeEmbeddings — check should pass
       await expect(s.checkEmbeddingModelChange()).resolves.not.toThrow();
@@ -1799,7 +1793,7 @@ describe("DocumentStore - Embedding Model Change Safety", () => {
 
     // 9.8 Test checkEmbeddingModelChange does not throw in FTS-only mode
     it("should not throw when in FTS-only mode (no embedding model)", async () => {
-      const { store: s, connection: conn } = await createStore("");
+      const { store: s } = await createStore("");
 
       // Even if metadata exists from a prior run, FTS-only skips the check
       await s.setEmbeddingMetadata("openai:text-embedding-3-small", 1536);
@@ -1890,9 +1884,7 @@ describe("DocumentStore - Embedding Model Change Safety", () => {
     });
 
     it("should update metadata with new model and dimension", async () => {
-      const { store: s, connection: conn } = await createStore(
-        "openai:text-embedding-3-small",
-      );
+      const { store: s } = await createStore("openai:text-embedding-3-small");
 
       await s.invalidateAllVectors("openai:text-embedding-ada-002", 768);
 

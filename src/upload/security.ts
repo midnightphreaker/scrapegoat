@@ -71,7 +71,7 @@ export function validateArchiveEntryPath(entryPath: string): string {
   // Normalize and check for traversal
   const normalized = path.normalize(entryPath);
 
-  if (normalized.startsWith("..") || normalized.includes(path.sep + "..")) {
+  if (normalized.startsWith("..") || normalized.includes(`${path.sep}..`)) {
     throw new Error(`Zip-slip detected in archive entry: ${entryPath}`);
   }
 
@@ -86,11 +86,7 @@ export function validateArchiveEntryPath(entryPath: string): string {
 /**
  * Checks if a file size is within acceptable limits.
  */
-export function validateFileSize(
-  size: number,
-  maxSize: number,
-  fileName: string,
-): void {
+export function validateFileSize(size: number, maxSize: number, fileName: string): void {
   if (size > maxSize) {
     throw new Error(
       `File "${fileName}" exceeds maximum size limit (${formatBytes(maxSize)}): ${formatBytes(size)}`,
@@ -107,9 +103,7 @@ export function validateTotalSize(
   maxTotal: number,
 ): void {
   if (currentTotal + additionalBytes > maxTotal) {
-    throw new Error(
-      `Total upload size would exceed limit (${formatBytes(maxTotal)})`,
-    );
+    throw new Error(`Total upload size would exceed limit (${formatBytes(maxTotal)})`);
   }
 }
 

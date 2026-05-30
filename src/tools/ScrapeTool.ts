@@ -57,7 +57,7 @@ export interface ScrapeToolOptions {
      * If false, appends to the existing documents.
      * @default true
      */
-    clean?: boolean;
+    clear?: boolean;
   };
   /** If false, returns jobId immediately without waiting. Defaults to true. */
   waitForCompletion?: boolean;
@@ -150,7 +150,7 @@ export class ScrapeTool {
       includePatterns: scraperOptions?.includePatterns,
       excludePatterns: scraperOptions?.excludePatterns,
       headers: scraperOptions?.headers, // <-- propagate headers
-      clean: scraperOptions?.clean, // <-- propagate clean option
+      clear: scraperOptions?.clear, // <-- propagate clear option
     });
 
     // Conditionally wait for completion

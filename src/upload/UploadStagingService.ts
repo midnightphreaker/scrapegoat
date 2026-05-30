@@ -9,29 +9,27 @@
  *  - Get session state, list files, remove / rename / move files
  */
 
-import type {
-  UploadSessionId,
-  UploadSession,
-  UploadConfig,
-  StagedFile,
-  FailedFileEntry,
-  RenamedFileEntry,
-  ImportFolder,
-  ImportTreeNode,
-} from "./types";
-import { UploadSessionStatus, DEFAULT_UPLOAD_CONFIG } from "./types";
 import crypto from "node:crypto";
 import fs from "node:fs/promises";
-import path from "node:path";
 import os from "node:os";
+import path from "node:path";
 import mime from "mime";
+import { ImportTreeBuilder } from "./ImportTreeBuilder";
 import {
   ensureWithinBase,
   sanitizeFileName,
   validateFileSize,
   validateTotalSize,
 } from "./security";
-import { ImportTreeBuilder } from "./ImportTreeBuilder";
+import type {
+  FailedFileEntry,
+  ImportTreeNode,
+  StagedFile,
+  UploadConfig,
+  UploadSession,
+  UploadSessionId,
+} from "./types";
+import { DEFAULT_UPLOAD_CONFIG, UploadSessionStatus } from "./types";
 
 /** Generate a unique session ID */
 function generateSessionId(): UploadSessionId {
@@ -81,10 +79,7 @@ export class UploadStagingService {
   // ---------------------------------------------------------------------------
 
   /** Create a new upload session for a library + version. */
-  async createSession(
-    library: string,
-    version: string,
-  ): Promise<UploadSession> {
+  async createSession(library: string, version: string): Promise<UploadSession> {
     const id = generateSessionId();
     const stagingPath =
       this.config.stagingMode === "filesystem" && this.config.stagingPath
@@ -137,11 +132,7 @@ export class UploadStagingService {
     // Validate sizes
     validateFileSize(content.length, this.config.maxFileSizeBytes, fileName);
     const currentTotal = this.totalSessionSize(session);
-    validateTotalSize(
-      currentTotal,
-      content.length,
-      this.config.maxTotalSizeBytes,
-    );
+    validateTotalSize(currentTotal, content.length, this.config.maxTotalSizeBytes);
 
     // Enforce max files
     if (session.files.size >= this.config.maxFiles) {
@@ -198,10 +189,7 @@ export class UploadStagingService {
   }
 
   /** Remove a staged file from the session. */
-  async removeFile(
-    sessionId: UploadSessionId,
-    fileId: string,
-  ): Promise<void> {
+  async removeFile(sessionId: UploadSessionId, fileId: string): Promise<void> {
     const session = this.requireActiveSession(sessionId);
     const file = session.files.get(fileId);
     if (!file) {
@@ -226,6 +214,22 @@ export class UploadStagingService {
     session.updatedAt = new Date();
   }
 
+  /** Record a file that failed during upload processing. */
+  recordFailedFile(
+    sessionId: UploadSessionId,
+    entry: { originalName: string; relativePath: string; error: string },
+  ): void {
+    const session = this.requireSession(sessionId);
+    const failedEntry: FailedFileEntry = {
+      originalName: entry.originalName,
+      relativePath: entry.relativePath,
+      error: entry.error,
+      timestamp: new Date(),
+    };
+    session.failedFiles.push(failedEntry);
+    session.updatedAt = new Date();
+  }
+
   /** Rename a staged file (updates display name and relative path). */
   async renameFile(
     sessionId: UploadSessionId,
@@ -239,10 +243,7 @@ export class UploadStagingService {
     }
 
     const safeName = sanitizeFileName(newName);
-    const newAbsolutePath = path.resolve(
-      path.dirname(file.absolutePath),
-      safeName,
-    );
+    const newAbsolutePath = path.resolve(path.dirname(file.absolutePath), safeName);
     ensureWithinBase(newAbsolutePath, session.stagingPath);
 
     await fs.rename(file.absolutePath, newAbsolutePath);
@@ -281,10 +282,7 @@ export class UploadStagingService {
       .split("/")
       .map((s) => sanitizeFileName(s))
       .join("/");
-    const newAbsolutePath = path.resolve(
-      session.stagingPath,
-      sanitizedSegments,
-    );
+    const newAbsolutePath = path.resolve(session.stagingPath, sanitizedSegments);
     ensureWithinBase(newAbsolutePath, session.stagingPath);
 
     // Ensure target directory exists
@@ -375,9 +373,12 @@ export class UploadStagingService {
   }
 
   /** Get aggregate stats for a session. */
-  getSessionStats(
-    sessionId: UploadSessionId,
-  ): { totalFiles: number; totalSize: number; failedFiles: number; renamedFiles: number } {
+  getSessionStats(sessionId: UploadSessionId): {
+    totalFiles: number;
+    totalSize: number;
+    failedFiles: number;
+    renamedFiles: number;
+  } {
     const session = this.requireSession(sessionId);
     const files = Array.from(session.files.values());
     return {

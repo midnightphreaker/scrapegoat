@@ -21,7 +21,7 @@ services:
     env_file:
       - .env
     environment:
-      DATABASE_URL: ${DATABASE_URL:-postgresql://docs:docs@postgres:5432/docs}
+      DATABASE_URL: ${DATABASE_URL:-pgsql://docs:docs@pgsql:5432/docs}
     volumes:
       - scrapegoat-data:/data
       - scrapegoat-config:/config
@@ -65,7 +65,7 @@ services:
     env_file:
       - .env
     environment:
-      DATABASE_URL: ${DATABASE_URL:-postgresql://docs:docs@postgres:5432/docs}
+      DATABASE_URL: ${DATABASE_URL:-pgsql://docs:docs@pgsql:5432/docs}
     volumes:
       - scrapegoat-config:/config
       - /import:/import
@@ -103,7 +103,7 @@ services:
     env_file:
       - .env
     environment:
-      DATABASE_URL: ${DATABASE_URL:-postgresql://docs:docs@postgres:5432/docs}
+      DATABASE_URL: ${DATABASE_URL:-pgsql://docs:docs@pgsql:5432/docs}
     volumes:
       - scrapegoat-config:/config
       - /import:/import

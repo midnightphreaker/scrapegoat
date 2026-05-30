@@ -22,8 +22,8 @@ ENV POSTHOG_API_KEY=$POSTHOG_API_KEY
 COPY package*.json ./
 
 # Install all dependencies (including dev dependencies for building)
-
-RUN npm install && npm ci
+# Note: npm install handles peer-dep lockfile sync across npm versions
+RUN npm install
 
 # Copy source code
 COPY . .

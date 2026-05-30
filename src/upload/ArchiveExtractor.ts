@@ -11,14 +11,13 @@
 
 import fs from "node:fs/promises";
 import path from "node:path";
-import { Readable } from "node:stream";
+import * as tar from "tar";
 import yauzl from "yauzl";
-import tar from "tar";
 import {
-  validateArchiveEntryPath,
   ensureWithinBase,
-  validateFileSize,
   validateArchiveEntryCount,
+  validateArchiveEntryPath,
+  validateFileSize,
   validateUncompressedSize,
 } from "./security";
 
@@ -84,9 +83,7 @@ export class ArchiveExtractor {
   async extract(buffer: Buffer, targetDir: string): Promise<ExtractionResult> {
     const archiveType = this.detectArchiveType(buffer);
     if (!archiveType) {
-      throw new Error(
-        "Unrecognized archive format. Supported: ZIP, TAR, TAR.GZ/TGZ",
-      );
+      throw new Error("Unrecognized archive format. Supported: ZIP, TAR, TAR.GZ/TGZ");
     }
 
     // Ensure target dir exists
@@ -106,15 +103,9 @@ export class ArchiveExtractor {
    * Detect archive type from content magic bytes.
    * Returns `"zip"`, `"tar"`, `"tar.gz"`, or `null`.
    */
-  detectArchiveType(
-    buffer: Buffer,
-  ): "zip" | "tar" | "tar.gz" | null {
+  detectArchiveType(buffer: Buffer): "zip" | "tar" | "tar.gz" | null {
     // Check gzip first (tar.gz is a subset of gzip)
-    if (
-      buffer.length >= 2 &&
-      buffer[0] === GZ_MAGIC[0] &&
-      buffer[1] === GZ_MAGIC[1]
-    ) {
+    if (buffer.length >= 2 && buffer[0] === GZ_MAGIC[0] && buffer[1] === GZ_MAGIC[1]) {
       return "tar.gz";
     }
 
@@ -162,10 +153,7 @@ export class ArchiveExtractor {
   // ZIP extraction (yauzl — callback-based, promisified)
   // ---------------------------------------------------------------------------
 
-  private extractZip(
-    buffer: Buffer,
-    targetDir: string,
-  ): Promise<ExtractionResult> {
+  private extractZip(buffer: Buffer, targetDir: string): Promise<ExtractionResult> {
     return new Promise((resolve) => {
       const files: ExtractedFile[] = [];
       const errors: Array<{ path: string; error: string }> = [];
@@ -326,10 +314,7 @@ export class ArchiveExtractor {
     targetDir: string,
   ): Promise<ExtractionResult> {
     // Write the buffer to a temporary .tar.gz so the `tar` module can read it
-    const tmpFile = path.join(
-      targetDir,
-      `.tmp_archive_${Date.now()}.tar.gz`,
-    );
+    const tmpFile = path.join(targetDir, `.tmp_archive_${Date.now()}.tar.gz`);
     await fs.writeFile(tmpFile, buffer);
 
     try {
@@ -348,15 +333,9 @@ export class ArchiveExtractor {
   // TAR extraction (tar module)
   // ---------------------------------------------------------------------------
 
-  private async extractTar(
-    buffer: Buffer,
-    targetDir: string,
-  ): Promise<ExtractionResult> {
+  private async extractTar(buffer: Buffer, targetDir: string): Promise<ExtractionResult> {
     // Write buffer to a temp .tar
-    const tmpFile = path.join(
-      targetDir,
-      `.tmp_archive_${Date.now()}.tar`,
-    );
+    const tmpFile = path.join(targetDir, `.tmp_archive_${Date.now()}.tar`);
     await fs.writeFile(tmpFile, buffer);
 
     try {
@@ -456,8 +435,7 @@ export class ArchiveExtractor {
       } catch (readErr: unknown) {
         errors.push({
           path: entry.path,
-          error:
-            readErr instanceof Error ? readErr.message : String(readErr),
+          error: readErr instanceof Error ? readErr.message : String(readErr),
         });
         continue;
       }
