@@ -26,7 +26,7 @@ This document compares ScrapeGoat (a fork of `arabold/docs-mcp-server`) against 
 | Upstream version | 2.4.0 |
 | ScrapeGoat branch reviewed | main |
 | ScrapeGoat HEAD | `eeacb8dc6a7c930778db02ceedff96f84b16c779` |
-| ScrapeGoat version | 2.2.1 |
+| ScrapeGoat version | 2.4.0 |
 | Merge base / divergence commit | **Cannot be determined via git merge-base** |
 | Divergence method | Structural comparison (no shared git history) |
 
@@ -35,7 +35,7 @@ This document compares ScrapeGoat (a fork of `arabold/docs-mcp-server`) against 
 ScrapeGoat's git history contains only commits by `gitbot` and `mp` starting from 2026-03-25. There is no shared git ancestry with the upstream `arabold/docs-mcp-server` repository. The code was imported (not forked via git) and the fork's initial state corresponds approximately to upstream v2.2.1 or slightly before.
 
 The divergence point was determined by:
-1. Comparing `package.json` version numbers (ScrapeGoat: 2.2.1, upstream: 2.4.0)
+1. Comparing `package.json` version numbers (ScrapeGoat: 2.4.0, upstream: 2.4.0)
 2. SHA comparison of files in both repos to identify identical vs diverged content
 3. Dependency analysis to identify architectural differences
 
