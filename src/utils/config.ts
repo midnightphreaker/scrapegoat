@@ -458,7 +458,7 @@ const systemPaths = (() => {
   // If old path exists but new path doesn't, use old path for backward compat
   if (fs.existsSync(oldConfigDir) && !fs.existsSync(newConfigDir)) {
     logger.warn(
-      `⚠ Using legacy config directory ${oldConfigDir}. This is deprecated; please migrate to ${newConfigDir}.`,
+      `⚠ Using legacy config directory "${oldConfigDir}". Please migrate to "${newConfigDir}".`,
     );
     return oldSystemPaths;
   }
