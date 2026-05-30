@@ -426,15 +426,15 @@ const configMappings: ConfigMapping[] = [
   },
   {
     path: ["database", "url"],
-    env: ["DATABASE_URL", "SCRAPEGOAT_DATABASE_URL", "DOCS_MCP_DATABASE_URL"],
+    env: ["SCRAPEGOAT_DB_URL", "DATABASE_URL", "SCRAPEGOAT_DATABASE_URL"],
     cli: "databaseUrl",
   },
   {
     path: ["database", "vectorDimension"],
     env: [
+      "SCRAPEGOAT_DB_VECTOR_SIZE",
       "VECTOR_DIMENSION",
       "SCRAPEGOAT_DATABASE_VECTOR_DIMENSION",
-      "DOCS_MCP_DATABASE_VECTOR_DIMENSION",
     ],
     cli: "vectorDimension",
   },

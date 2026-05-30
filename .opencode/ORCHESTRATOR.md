@@ -1,14 +1,13 @@
-# Orchestrator Journal — ScrapeGoat Docker Setup
+# Orchestrator Journal — ScrapeGoat
 
-## Objective
+## Session 1: Docker Setup — ✅ COMPLETE
+
+### Objective
 Set up scrapegoat using `docker-compose.postgres.yml` on this server with:
 - Embedding endpoint: `http://10.9.9.11:8080/v1` (no API key, model: `text-embedding`, OpenAI-compatible)
 - Bind all services to IP `10.9.9.20`
-- Avoid conflicts with existing postgres containers
 
-## Status: ✅ COMPLETE — All 4 services running and verified
-
-### Service Endpoints
+### Service Endpoints (all running)
 | Service | Container | URL | Status |
 |---------|-----------|-----|--------|
 | PostgreSQL | `scrapegoat-postgres` | `10.9.9.20:5432` | healthy |
@@ -16,38 +15,58 @@ Set up scrapegoat using `docker-compose.postgres.yml` on this server with:
 | MCP SSE | `scrapegoat-mcp` | `http://10.9.9.20:6280/sse` | HTTP 200 |
 | Web UI | `scrapegoat-web` | `http://10.9.9.20:6281` | HTTP 200 |
 
-### Embedding Config
-- Endpoint: `http://10.9.9.11:8080/v1` (OpenAI-compatible)
-- Model: `openai:text-embedding`
-- No API key needed (`OPENAI_API_KEY=not-needed` placeholder)
-
 ### Files Modified
 - `.env` — Created with embedding config
-- `docker-compose.postgres.yml` — Port bindings changed to `10.9.9.20:port:port` for all services; web service command changed; `DOCS_MCP_HOST` env var added to web service; `scrapegoat-data:/data` volume added to web service
+- `docker-compose.postgres.yml` — Port bindings to `10.9.9.20`, web service command fixed
 
 ---
 
-## Issues Found During Setup — Track for Source Fixes
+## Session 2: Issue #15 Rebrand — ✅ PR CREATED
 
-### 1. Web `--server-url` causes silent hang (BUG)
-- **Symptom**: Web container with `--server-url http://worker:8080/api` silently hangs — app binds to `127.0.0.1:random_port` instead of `0.0.0.0:6281`. Zero logs.
-- **Root cause**: `PipelineClient` (used when `--server-url` is provided) creates a `createWSClient` WebSocket connection. When the worker's tRPC API doesn't support WebSocket transport, the connection hangs silently and the web server never starts properly.
-- **Fix applied in compose**: Removed `--server-url` from web service command. Web service now uses embedded local worker with direct PostgreSQL access instead of connecting to the worker via WebSocket.
-- **Source fix needed**: The web command's `--server-url` mode should either:
-  - Use HTTP transport instead of WebSocket for tRPC client
-  - Properly error/handle when WebSocket connection fails
-  - Log something instead of silently hanging
-- **Files**: `src/cli/commands/web.ts`, likely `src/tRPC/PipelineClient.ts` or similar
+### Objective
+Complete the full ScrapeGoat rebrand per https://git.phrk.org/pub/scrapegoat/issues/15
 
-### 2. `npm warn deprecated boolean@3.2.0` during Docker build
-- **Symptom**: `npm warn deprecated boolean@3.2.0: Package no longer supported` appears during `npm install` in Dockerfile build step
-- **Impact**: Non-blocking warning, build succeeds. But the deprecated package should be removed or replaced.
-- **Source fix needed**: Find which dependency transitively depends on `boolean@3.2.0` and either update the parent or find an alternative.
-- **How to reproduce**: `docker compose -f docker-compose.postgres.yml build --no-cache`
+### PR
+- **URL**: https://git.phrk.org/pub/scrapegoat/pulls/20
+- **Branch**: `chore/15-rebrand-references-to-scrapegoat`
+- **Base**: `main`
 
-### 3. `DOCS_MCP_HOST=0.0.0.0` needed despite `--host 0.0.0.0` CLI arg
-- **Symptom**: The web service ignores `--host 0.0.0.0` CLI argument and defaults to `127.0.0.1`
-- **Workaround**: Added `DOCS_MCP_HOST=0.0.0.0` environment variable to the web service
-- **Note**: The MCP command (`mcp --host 0.0.0.0`) works fine — issue is specific to the web command
-- **Source fix needed**: The web subcommand should respect `--host` the same way the MCP subcommand does
-- **Files**: `src/cli/commands/web.ts`, `src/server/AppServer.ts`, `src/utils/config.ts`
+### What Changed
+- **`DOCS_MCP_*` → `SCRAPEGOAT_*`** env vars (with backward-compat aliases + deprecation warnings)
+- Config paths: `~/.config/scrapegoat/` (falls back to old `~/.config/docs-mcp-server/`)
+- All source strings, CLI help, web UI branding
+- All documentation, skills, openspec files
+- Docker/compose files, package.json
+- Assets renamed (`docs-mcp-server.png` → `scrapegoat.png`)
+
+### Verification
+- ✅ Lint (0 issues)
+- ✅ Typecheck (0 errors)
+- ✅ Tests (all pass)
+- ✅ Build (success)
+
+### Intentionally Retained References
+- **CHANGELOG.md**: ~427 historical `github.com/arabold` URLs (factual commit records)
+- **UPSTREAM_CHANGES.md**: Fork history preserved
+- **config.test.ts**: `DOCS_MCP_*` env var tests for backward-compat fallback path
+
+### Issue NOT closed — requires MidnightPhreaker permission
+
+---
+
+## Bugs Found — Track for Source Fixes
+
+### 1. Web `--server-url` causes silent hang
+- Web container with `--server-url` silently hangs (WebSocket tRPC client fails)
+- Workaround: removed `--server-url` from compose; web uses embedded local worker
+- Source fix needed: use HTTP transport or handle WS failure gracefully
+- Files: `src/cli/commands/web.ts`, `src/tRPC/PipelineClient.ts`
+
+### 2. `npm warn deprecated boolean@3.2.0`
+- Non-blocking during Docker build `npm install`
+- Reproduce: `docker compose -f docker-compose.postgres.yml build --no-cache`
+
+### 3. Web `--host` CLI arg ignored
+- Web subcommand doesn't respect `--host 0.0.0.0` (MCP command does)
+- Workaround: `DOCS_MCP_HOST=0.0.0.0` env var (now `SCRAPEGOAT_HOST=0.0.0.0` after rebrand)
+- Files: `src/cli/commands/web.ts`, `src/server/AppServer.ts`
