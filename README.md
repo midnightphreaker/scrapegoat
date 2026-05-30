@@ -2,7 +2,7 @@
 
 **ScrapeGoat** solves the problem of AI hallucinations and outdated knowledge by providing a personal, always-current documentation index for your AI coding assistant. It fetches official docs from websites, GitHub, npm, PyPI, and local files, allowing your AI to query the exact version you are using.
 
-![ScrapeGoat Web Interface](docs/docs-mcp-server.png)
+![ScrapeGoat Web Interface](docs/scrapegoat.png)
 
 ## ❄️ Why ScrapeGoat?
 

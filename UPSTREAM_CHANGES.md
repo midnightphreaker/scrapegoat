@@ -250,7 +250,7 @@ Changes between upstream v2.2.1 and v2.4.0 (2026-05-19 release), organized by ar
 - **Upstream files:** `src/scraper/` (Defuddle integration), `package.json`
 - **Why:** Provides an alternative HTML content extractor that may improve content quality for some sites.
 - **ScrapeGoat compatibility:** Requires adding `defuddle` dependency. Lazy-loaded so default path is unaffected.
-- **Implementation notes:** Add `defuddle` as optional dependency. Integrate into ScrapeGoat's scraper pipeline with `DOCS_MCP_SCRAPER_HTML_EXTRACTOR` env var support.
+- **Implementation notes:** Add `defuddle` as optional dependency. Integrate into ScrapeGoat's scraper pipeline with `SCRAPEGOAT_SCRAPER_HTML_EXTRACTOR` env var support.
 - **Expected conflicts:** ScrapeGoat's scraper has diverged. Manual integration needed.
 - **Tests:** Compare content quality with/without Defuddle on test documentation sites.
 

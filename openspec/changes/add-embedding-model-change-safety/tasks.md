@@ -33,7 +33,7 @@
 ## 6. Configuration Validation
 
 - [x] 6.1 Add `.min(1, "embedding dimension must be at least 1")` to the `vectorDimension` Zod schema in `src/utils/config.ts` (from PR 330, already present)
-- [x] 6.2 Verify that `DOCS_MCP_EMBEDDINGS_VECTOR_DIMENSION` env var is correctly auto-mapped via `mapEnvToConfig()`
+- [x] 6.2 Verify that `SCRAPEGOAT_EMBEDDINGS_VECTOR_DIMENSION` env var is correctly auto-mapped via `mapEnvToConfig()`
 
 ## 7. CLI Interactive Confirmation Flow
 

@@ -10,7 +10,7 @@ The current configuration system has several limitations:
 ## What Changes
 
 - **BREAKING**: Move `document.maxSize` to `scraper.document.maxSize`
-- Add generic environment variable support: any config path can be overridden via `DOCS_MCP_<PATH_IN_UPPER_SNAKE_CASE>` (e.g., `DOCS_MCP_SCRAPER_DOCUMENT_MAX_SIZE`)
+- Add generic environment variable support: any config path can be overridden via `SCRAPEGOAT_<PATH_IN_UPPER_SNAKE_CASE>` (e.g., `SCRAPEGOAT_SCRAPER_DOCUMENT_MAX_SIZE`)
 - Add `config get <path>` CLI subcommand to retrieve individual config values
 - Add `config set <path> <value>` CLI subcommand to persist config changes to file
 - Existing `config` command (no subcommand) continues to print the full config

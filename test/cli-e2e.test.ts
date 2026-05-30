@@ -39,7 +39,7 @@ describe("CLI E2E", () => {
   it("should show help with --help", async () => {
     const { code, stdout } = await runCli(["--help"]);
     expect(code).toBe(0);
-    expect(stdout).toContain("Usage: docs-mcp-server <command> [options]");
+    expect(stdout).toContain("Usage: scrapegoat <command> [options]");
     expect(stdout).toContain("Commands:");
     expect(stdout).toContain("list");
   });

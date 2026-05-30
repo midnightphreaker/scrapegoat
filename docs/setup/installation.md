@@ -1,6 +1,6 @@
 # Installation
 
-This guide covers the various ways to install and run the Docs MCP Server.
+This guide covers the various ways to install and run ScrapeGoat.
 
 ## 🚀 Quick Start (Recommended)
 
@@ -11,7 +11,7 @@ The easiest way to get started is using the standalone server, which includes bo
 If you have Node.js 22.x installed (recommended for local development), you can run the server directly with a single command. Use `nvm use 22` and run `npm rebuild` if you recently changed Node versions:
 
 ```bash
-npx @arabold/docs-mcp-server@latest
+npx @midnightphreaker/scrapegoat@latest
 ```
 
 This runs the server on port 6280 by default. Open **[http://localhost:6280](http://localhost:6280)** to access the web interface.
@@ -24,14 +24,14 @@ Running via Docker ensures you have all dependencies without polluting your host
 
 ```bash
 docker run --rm \
-  -v docs-mcp-data:/data \
-  -v docs-mcp-config:/config \
+  -v scrapegoat-data:/data \
+  -v scrapegoat-config:/config \
   -p 6280:6280 \
-  ghcr.io/arabold/docs-mcp-server:latest \
+  ghcr.io/midnightphreaker/scrapegoat:latest \
   --protocol http --host 0.0.0.0 --port 6280
 ```
 
-**Configuration:** The server writes its configuration to `/config/docs-mcp-server/config.yaml`. Mounting the `/config` volume ensures your settings persist across restarts.
+**Configuration:** The server writes its configuration to `/config/scrapegoat/config.yaml`. Mounting the `/config` volume ensures your settings persist across restarts.
 
 **Optional:** Add `-e OPENAI_API_KEY="your-openai-api-key"` to enable vector search for improved results.
 
@@ -46,7 +46,7 @@ Add this to your MCP settings:
 ```json
 {
   "mcpServers": {
-    "docs-mcp-server": {
+    "scrapegoat": {
       "type": "streamableHttp",
       "url": "http://localhost:6280/mcp"
     }
@@ -69,9 +69,9 @@ Add this to your MCP settings (VS Code, Claude Desktop, etc.):
 ```json
 {
   "mcpServers": {
-    "docs-mcp-server": {
+    "scrapegoat": {
       "command": "npx",
-      "args": ["@arabold/docs-mcp-server@latest"],
+      "args": ["@midnightphreaker/scrapegoat@latest"],
       "disabled": false,
       "autoApprove": []
     }
@@ -84,9 +84,9 @@ Add this to your MCP settings (VS Code, Claude Desktop, etc.):
 ```json
 {
   "mcpServers": {
-    "docs-mcp-server": {
+    "scrapegoat": {
       "command": "npx",
-      "args": ["@arabold/docs-mcp-server@latest"],
+      "args": ["@midnightphreaker/scrapegoat@latest"],
       "env": {
         "OPENAI_API_KEY": "sk-proj-..."
       },
@@ -103,17 +103,17 @@ Add this to your MCP settings (VS Code, Claude Desktop, etc.):
 
 ## 💻 CLI Usage
 
-For agents and scripts, the CLI is the simplest way to use Grounded Docs — no running server required.
+For agents and scripts, the CLI is the simplest way to use ScrapeGoat — no running server required.
 
 ```bash
 # Index documentation
-npx @arabold/docs-mcp-server@latest scrape react https://react.dev/reference/react
+npx @midnightphreaker/scrapegoat@latest scrape react https://react.dev/reference/react
 
 # Query the index
-npx @arabold/docs-mcp-server@latest search react "useEffect cleanup" --output yaml
+npx @midnightphreaker/scrapegoat@latest search react "useEffect cleanup" --output yaml
 
 # Fetch a single page as Markdown
-npx @arabold/docs-mcp-server@latest fetch-url https://react.dev/reference/react/useEffect
+npx @midnightphreaker/scrapegoat@latest fetch-url https://react.dev/reference/react/useEffect
 ```
 
 The server and CLI share the same local database. Start the server without arguments to run the MCP endpoint and web interface, then use the CLI in parallel to query from an agent or script.
@@ -124,7 +124,7 @@ See **[Basic Usage](../guides/basic-usage.md#-cli-usage)** for the full command 
 
 ## 🤖 Agent Skills
 
-The repository includes ready-made [Agent Skills](https://agentskills.io) in the [`skills/`](https://github.com/arabold/docs-mcp-server/tree/main/skills) directory. These are structured instruction files (`SKILL.md`) that teach AI coding agents how to use the CLI — covering documentation search, index management, and URL fetching.
+The repository includes ready-made [Agent Skills](https://agentskills.io) in the [`skills/`](https://git.phrk.org/pub/scrapegoat/tree/main/skills) directory. These are structured instruction files (`SKILL.md`) that teach AI coding agents how to use the CLI — covering documentation search, index management, and URL fetching.
 
 To install them, copy the skill folders into the appropriate location for your agent. Consult your agent's documentation for the correct path — for example, [Claude Code](https://code.claude.com/docs/en/skills), [Gemini CLI](https://geminicli.com/docs/cli/skills/), or [Cursor](https://cursor.com/docs/context/skills).
 
@@ -139,8 +139,8 @@ For production deployments or when you need to scale processing, use Docker Comp
 1.  **Clone the repository:**
 
     ```bash
-    git clone https://github.com/arabold/docs-mcp-server.git
-    cd docs-mcp-server
+    git clone https://git.phrk.org/pub/scrapegoat.git
+    cd scrapegoat
     ```
 
 2.  **Set your environment variables:**

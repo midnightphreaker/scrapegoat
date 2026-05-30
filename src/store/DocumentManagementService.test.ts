@@ -8,7 +8,7 @@ vi.mock("node:fs", () => ({
   existsSync: vi.fn(vol.existsSync),
 }));
 vi.mock("../utils/paths", () => ({
-  getProjectRoot: vi.fn(() => "/docs-mcp-server"),
+  getProjectRoot: vi.fn(() => "/scrapegoat"),
 }));
 
 // Mock env-paths using mockImplementation

@@ -22,7 +22,7 @@ export function createMcpServerInstance(
   const readOnly = config.app.readOnly;
   const server = new McpServer(
     {
-      name: "docs-mcp-server",
+      name: "scrapegoat",
       version: "0.1.0",
     },
     {

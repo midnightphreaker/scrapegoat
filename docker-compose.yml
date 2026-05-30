@@ -1,4 +1,4 @@
-# Docker Compose configuration for Docs MCP Server
+# Docker Compose configuration for ScrapeGoat
 #
 # Scaling setup with separate services:
 # - postgres: PostgreSQL database for primary storage

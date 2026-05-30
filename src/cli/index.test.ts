@@ -202,12 +202,12 @@ describe("Global option propagation", () => {
     // No need to wait for it to complete
   }, 10000);
 
-  it("should handle DOCS_MCP_STORE_PATH environment variable through preAction hook", async () => {
+  it("should handle SCRAPEGOAT_STORE_PATH environment variable through preAction hook", async () => {
     const envStorePath = "/env/data/path";
     const resolvedStorePath = "/resolved/env/path";
 
     // Set environment variable
-    process.env.DOCS_MCP_STORE_PATH = envStorePath;
+    process.env.SCRAPEGOAT_STORE_PATH = envStorePath;
 
     // Mock the path resolution
     mockResolveStorePath.mockReturnValue(resolvedStorePath);
@@ -235,7 +235,7 @@ describe("Global option propagation", () => {
     );
 
     // Clean up
-    delete process.env.DOCS_MCP_STORE_PATH;
+    delete process.env.SCRAPEGOAT_STORE_PATH;
   }, 10000);
 
   it("should pass --embedding-model through to document management", async () => {
@@ -266,10 +266,10 @@ describe("Global option propagation", () => {
     );
   }, 10000);
 
-  it("should pick up DOCS_MCP_EMBEDDING_MODEL environment variable", async () => {
+  it("should pick up SCRAPEGOAT_EMBEDDING_MODEL environment variable", async () => {
     const envModel = "openai:text-embedding-ada-002";
     const resolvedStorePath = "/mocked/resolved/path";
-    process.env.DOCS_MCP_EMBEDDING_MODEL = envModel;
+    process.env.SCRAPEGOAT_EMBEDDING_MODEL = envModel;
     mockResolveStorePath.mockReturnValue(resolvedStorePath);
 
     const program = createCli([]);
@@ -289,7 +289,7 @@ describe("Global option propagation", () => {
       }),
     );
 
-    delete process.env.DOCS_MCP_EMBEDDING_MODEL;
+    delete process.env.SCRAPEGOAT_EMBEDDING_MODEL;
   }, 10000);
 });
 

@@ -74,9 +74,18 @@ export function resolveStorePath(storePath?: string): string {
     if (oldDbExists) {
       dbDir = oldDbDir;
     } else {
-      // 3. Use Standard Path
-      const standardPaths = envPaths("docs-mcp-server", { suffix: "" });
-      dbDir = standardPaths.data;
+      // 3. Use Standard Path (with backward compat for legacy app name)
+      const newStandardPaths = envPaths("scrapegoat", { suffix: "" });
+      const oldStandardPaths = envPaths("docs-mcp-server", { suffix: "" });
+
+      if (fs.existsSync(oldStandardPaths.data) && !fs.existsSync(newStandardPaths.data)) {
+        logger.warn(
+          `⚠ Using legacy data directory ${oldStandardPaths.data}. This is deprecated; please migrate to ${newStandardPaths.data}.`,
+        );
+        dbDir = oldStandardPaths.data;
+      } else {
+        dbDir = newStandardPaths.data;
+      }
     }
   }
 

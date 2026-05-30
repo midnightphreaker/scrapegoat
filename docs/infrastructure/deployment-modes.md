@@ -84,7 +84,7 @@ Protocol can be explicitly set via `--protocol stdio|http` flag, bypassing auto-
 
 ## Configuration
 
-Deployment mode, ports, and embedding settings are resolved through the shared configuration loader (defaults → `docs-mcp.config.yaml` or `DOCS_MCP_CONFIG` → legacy envs → generic env `DOCS_MCP_<KEY>` → CLI flags for the current run). Override with YAML or env keys such as `DOCS_MCP_PROTOCOL`, `DOCS_MCP_PORT`, and `DOCS_MCP_EMBEDDING_MODEL`; use CLI flags like `--protocol`, `--port`, `--server-url`, or `--resume` when you need per-invocation changes.
+Deployment mode, ports, and embedding settings are resolved through the shared configuration loader (defaults → `scrapegoat.config.yaml` or `SCRAPEGOAT_CONFIG` → legacy envs → generic env `SCRAPEGOAT_<KEY>` → CLI flags for the current run). Override with YAML or env keys such as `SCRAPEGOAT_PROTOCOL`, `SCRAPEGOAT_PORT`, and `SCRAPEGOAT_EMBEDDING_MODEL`; use CLI flags like `--protocol`, `--port`, `--server-url`, or `--resume` when you need per-invocation changes.
 
 ## Job Recovery
 
@@ -113,7 +113,7 @@ Job recovery behavior depends on deployment mode:
 ### Single Container
 
 ```dockerfile
-FROM ghcr.io/arabold/docs-mcp-server:latest
+FROM ghcr.io/midnightphreaker/scrapegoat:latest
 EXPOSE 6280
 CMD ["--protocol", "http", "--port", "6280"]
 ```
@@ -123,12 +123,12 @@ CMD ["--protocol", "http", "--port", "6280"]
 ```yaml
 services:
   coordinator:
-    image: ghcr.io/arabold/docs-mcp-server:latest
+    image: ghcr.io/midnightphreaker/scrapegoat:latest
     ports: ["6280:6280"]
   command: ["mcp", "--server-url", "http://worker:8080/api"]
 
   worker:
-    image: ghcr.io/arabold/docs-mcp-server:latest
+    image: ghcr.io/midnightphreaker/scrapegoat:latest
     ports: ["8080:8080"]
     command: ["worker", "--port", "8080"]
 ```

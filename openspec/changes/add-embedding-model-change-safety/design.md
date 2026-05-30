@@ -61,7 +61,7 @@ and follow the prompts.
 ```
 
 **Alternative considered**:
-- *Escape hatch env var (`DOCS_MCP_CONFIRM_MODEL_CHANGE=true`)*: Not adopted initially to keep the surface area small. Can be added later if automated deployments need it.
+- *Escape hatch env var (`SCRAPEGOAT_CONFIRM_MODEL_CHANGE=true`)*: Not adopted initially to keep the surface area small. Can be added later if automated deployments need it.
 
 ### Decision 3: Interactive Confirmation Flow
 
@@ -117,7 +117,7 @@ The original PR 330 backfill (`INSERT OR REPLACE ... FROM documents WHERE embedd
 
 ## Risks / Trade-offs
 
-**[Risk] Non-interactive failure blocks automated deployments that intentionally change models** → Mitigation: The error message clearly explains how to resolve it (interactive startup). A future enhancement could add a `DOCS_MCP_CONFIRM_MODEL_CHANGE=true` env var escape hatch if demand warrants it.
+**[Risk] Non-interactive failure blocks automated deployments that intentionally change models** → Mitigation: The error message clearly explains how to resolve it (interactive startup). A future enhancement could add a `SCRAPEGOAT_CONFIRM_MODEL_CHANGE=true` env var escape hatch if demand warrants it.
 
 **[Risk] First-run silent initialization stores wrong baseline if config is misconfigured** → Mitigation: The baseline is only stored after successful embedding initialization. If the model fails to initialize (bad credentials, invalid model), no metadata is stored, so the next attempt with correct config becomes the new "first run."
 

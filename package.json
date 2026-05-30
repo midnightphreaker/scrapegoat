@@ -1,7 +1,7 @@
 {
   "name": "@midnightphreaker/scrapegoat",
   "version": "2.2.1",
-  "description": "MCP server for fetching and searching documentation",
+  "description": "ScrapeGoat - MCP server for fetching, indexing, and searching documentation",
   "type": "module",
   "bin": {
     "scrapegoat": "dist/index.js"

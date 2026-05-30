@@ -61,12 +61,12 @@ async function main() {
 
   // 4. Initialize System
   // We use default config path logic (system path or env vars)
-  // Ensure DOCS_MCP_STORE_PATH is set if running in a specific environment
+  // Ensure SCRAPEGOAT_STORE_PATH is set if running in a specific environment
   const appConfig = loadConfig();
 
   // Fallback to default system path if storePath is not set
   if (!appConfig.app.storePath) {
-    const paths = envPaths("docs-mcp-server", { suffix: "" });
+    const paths = envPaths("scrapegoat", { suffix: "" });
     appConfig.app.storePath = paths.data;
     // console.error(`DEBUG: Using default store path: ${appConfig.app.storePath}`);
   }

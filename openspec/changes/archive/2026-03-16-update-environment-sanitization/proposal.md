@@ -7,7 +7,7 @@ Quoted environment variables from Docker Compose, shell exports, and other host-
 ## What Changes
 
 - Add a generic environment sanitization step during application bootstrap so runtime modules read normalized `process.env` values
-- Preserve configuration-layer sanitization for `DOCS_MCP_*` overrides as defense in depth
+- Preserve configuration-layer sanitization for `SCRAPEGOAT_*` overrides as defense in depth
 - Define bootstrap ordering requirements so sanitization runs after `.env` loading and before application modules consume environment variables
 - Add tests that validate quoted environment variables from non-`.env` sources are handled consistently
 

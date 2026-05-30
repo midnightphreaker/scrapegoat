@@ -24,19 +24,19 @@ The system SHALL resolve the embedding model from multiple configuration sources
 
 1. Built-in defaults (lowest priority)
 2. Configuration file (`config.yaml`, key `app.embeddingModel`)
-3. Environment variable (`DOCS_MCP_EMBEDDING_MODEL`)
+3. Environment variable (`SCRAPEGOAT_EMBEDDING_MODEL`)
 4. CLI flag (`--embedding-model`) (highest priority)
 
 **Code reference:** `src/utils/config.ts:396-410`
 
 #### Scenario: CLI flag overrides environment variable
-- **WHEN** `DOCS_MCP_EMBEDDING_MODEL` is set to `text-embedding-3-small`
+- **WHEN** `SCRAPEGOAT_EMBEDDING_MODEL` is set to `text-embedding-3-small`
 - **AND** the CLI flag `--embedding-model gemini:embedding-001` is provided
 - **THEN** the system SHALL use `gemini:embedding-001` as the embedding model
 
 #### Scenario: Environment variable overrides config file
 - **WHEN** `config.yaml` sets `app.embeddingModel` to `text-embedding-3-small`
-- **AND** `DOCS_MCP_EMBEDDING_MODEL` is set to `vertex:text-embedding-004`
+- **AND** `SCRAPEGOAT_EMBEDDING_MODEL` is set to `vertex:text-embedding-004`
 - **THEN** the system SHALL use `vertex:text-embedding-004` as the embedding model
 
 #### Scenario: Config file overrides defaults
@@ -109,15 +109,15 @@ The system SHALL normalize environment variable values by stripping surrounding 
 **Code reference:** `src/utils/env.ts:5-14`
 
 #### Scenario: Double-quoted environment value
-- **WHEN** `DOCS_MCP_EMBEDDING_MODEL` is set to `"text-embedding-3-small"` (with literal quotes)
+- **WHEN** `SCRAPEGOAT_EMBEDDING_MODEL` is set to `"text-embedding-3-small"` (with literal quotes)
 - **THEN** the system SHALL normalize the value to `text-embedding-3-small`
 
 #### Scenario: Single-quoted environment value
-- **WHEN** `DOCS_MCP_EMBEDDING_MODEL` is set to `'gemini:embedding-001'` (with literal single quotes)
+- **WHEN** `SCRAPEGOAT_EMBEDDING_MODEL` is set to `'gemini:embedding-001'` (with literal single quotes)
 - **THEN** the system SHALL normalize the value to `gemini:embedding-001`
 
 #### Scenario: Value with surrounding whitespace
-- **WHEN** `DOCS_MCP_EMBEDDING_MODEL` is set to `  text-embedding-3-small  ` (with spaces)
+- **WHEN** `SCRAPEGOAT_EMBEDDING_MODEL` is set to `  text-embedding-3-small  ` (with spaces)
 - **THEN** the system SHALL trim the value to `text-embedding-3-small`
 
 ### Requirement: Known Dimensions Lookup

@@ -1,6 +1,6 @@
 # Connecting MCP Clients
 
-The Docs MCP Server is compatible with any client that supports the [Model Context Protocol (MCP)](https://modelcontextprotocol.io/). Below are configuration instructions for popular AI assistants and IDEs.
+ScrapeGoat is compatible with any client that supports the [Model Context Protocol (MCP)](https://modelcontextprotocol.io/). Below are configuration instructions for popular AI assistants and IDEs.
 
 ## General Configuration
 
@@ -10,7 +10,7 @@ Most clients support two connection modes:
     *   **HTTP URL**: `http://localhost:6280/mcp` (Streamable HTTP)
 2.  **Local/Stdio**: Spawns the server process directly.
     *   **Command**: `npx`
-    *   **Args**: `["-y", "@arabold/docs-mcp-server@latest"]`
+    *   **Args**: `["-y", "@midnightphreaker/scrapegoat@latest"]`
 
 ---
 
@@ -25,7 +25,7 @@ Edit your configuration file:
 ```json
 {
   "mcpServers": {
-    "docs-mcp-server": {
+    "scrapegoat": {
       "type": "sse",
       "url": "http://localhost:6280/sse"
     }
@@ -37,9 +37,9 @@ Edit your configuration file:
 ```json
 {
   "mcpServers": {
-    "docs-mcp-server": {
+    "scrapegoat": {
       "command": "npx",
-      "args": ["-y", "@arabold/docs-mcp-server@latest"]
+      "args": ["-y", "@midnightphreaker/scrapegoat@latest"]
     }
   }
 }
@@ -55,7 +55,7 @@ Edit your configuration file:
 
 **Local:**
 *   **Type**: stdio
-*   **Command**: `npx -y @arabold/docs-mcp-server@latest`
+*   **Command**: `npx -y @midnightphreaker/scrapegoat@latest`
 
 ### Windsurf
 Open your Windsurf MCP configuration:
@@ -65,9 +65,9 @@ Open your Windsurf MCP configuration:
 ```json
 {
   "mcpServers": {
-    "docs-mcp-server": {
+    "scrapegoat": {
       "command": "npx",
-      "args": ["-y", "@arabold/docs-mcp-server@latest"]
+      "args": ["-y", "@midnightphreaker/scrapegoat@latest"]
     }
   }
 }
@@ -79,9 +79,9 @@ Add to your Zed `settings.json`:
 ```json
 {
   "context_servers": {
-    "docs-mcp-server": {
+    "scrapegoat": {
       "command": "npx",
-      "args": ["-y", "@arabold/docs-mcp-server@latest"]
+      "args": ["-y", "@midnightphreaker/scrapegoat@latest"]
     }
   }
 }
@@ -93,9 +93,9 @@ Go to **Program** → **Install** → **Edit mcp.json**:
 ```json
 {
   "mcpServers": {
-    "docs-mcp-server": {
+    "scrapegoat": {
       "command": "npx",
-      "args": ["-y", "@arabold/docs-mcp-server@latest"]
+      "args": ["-y", "@midnightphreaker/scrapegoat@latest"]
     }
   }
 }
@@ -114,7 +114,7 @@ Go to **Program** → **Install** → **Edit mcp.json**:
 ```json
 {
   "mcpServers": {
-    "docs-mcp-server": {
+    "scrapegoat": {
       "url": "http://localhost:6280/mcp",
       "type": "streamableHttp"
     }
@@ -126,9 +126,9 @@ Go to **Program** → **Install** → **Edit mcp.json**:
 ```json
 {
   "mcpServers": {
-    "docs-mcp-server": {
+    "scrapegoat": {
       "command": "npx",
-      "args": ["-y", "@arabold/docs-mcp-server@latest"]
+      "args": ["-y", "@midnightphreaker/scrapegoat@latest"]
     }
   }
 }
@@ -140,9 +140,9 @@ Edit your Roo Code MCP config:
 ```json
 {
   "mcpServers": {
-    "docs-mcp-server": {
+    "scrapegoat": {
       "command": "npx",
-      "args": ["-y", "@arabold/docs-mcp-server@latest"]
+      "args": ["-y", "@midnightphreaker/scrapegoat@latest"]
     }
   }
 }
@@ -155,9 +155,9 @@ Edit `~/.continue/config.json`:
 {
   "mcpServers": [
     {
-      "name": "docs-mcp-server",
+      "name": "scrapegoat",
       "command": "npx",
-      "args": ["-y", "@arabold/docs-mcp-server@latest"]
+      "args": ["-y", "@midnightphreaker/scrapegoat@latest"]
     }
   ]
 }
@@ -169,9 +169,9 @@ See [Trae documentation](https://docs.trae.ai/ide/model-context-protocol) for de
 ```json
 {
   "mcpServers": {
-    "docs-mcp-server": {
+    "scrapegoat": {
       "command": "npx",
-      "args": ["-y", "@arabold/docs-mcp-server@latest"]
+      "args": ["-y", "@midnightphreaker/scrapegoat@latest"]
     }
   }
 }
@@ -184,19 +184,19 @@ See [Trae documentation](https://docs.trae.ai/ide/model-context-protocol) for de
 ### Claude Code
 ```bash
 # Current project
-claude mcp add docs-mcp-server -- npx -y @arabold/docs-mcp-server@latest
+claude mcp add scrapegoat -- npx -y @midnightphreaker/scrapegoat@latest
 
 # Global (all projects)
-claude mcp add --scope user docs-mcp-server -- npx -y @arabold/docs-mcp-server@latest
+claude mcp add --scope user scrapegoat -- npx -y @midnightphreaker/scrapegoat@latest
 ```
 
 ### Opencode
 ```json
 {
   "mcp": {
-    "docs-mcp-server": {
+    "scrapegoat": {
       "type": "local",
-      "command": ["npx", "-y", "@arabold/docs-mcp-server@latest"],
+      "command": ["npx", "-y", "@midnightphreaker/scrapegoat@latest"],
       "enabled": true
     }
   }
@@ -209,9 +209,9 @@ Open `~/.gemini/settings.json`:
 ```json
 {
   "mcpServers": {
-    "docs-mcp-server": {
+    "scrapegoat": {
       "command": "npx",
-      "args": ["-y", "@arabold/docs-mcp-server@latest"]
+      "args": ["-y", "@midnightphreaker/scrapegoat@latest"]
     }
   }
 }
@@ -223,9 +223,9 @@ See [Amazon Q Developer docs](https://docs.aws.amazon.com/amazonq/latest/qdevelo
 ```json
 {
   "mcpServers": {
-    "docs-mcp-server": {
+    "scrapegoat": {
       "command": "npx",
-      "args": ["-y", "@arabold/docs-mcp-server@latest"]
+      "args": ["-y", "@midnightphreaker/scrapegoat@latest"]
     }
   }
 }
@@ -237,10 +237,10 @@ Open `~/.copilot/mcp-config.json`:
 ```json
 {
   "mcpServers": {
-    "docs-mcp-server": {
+    "scrapegoat": {
       "type": "local",
       "command": "npx",
-      "args": ["-y", "@arabold/docs-mcp-server@latest"]
+      "args": ["-y", "@midnightphreaker/scrapegoat@latest"]
     }
   }
 }
@@ -258,9 +258,9 @@ Open `~/.copilot/mcp-config.json`:
 ```json
 {
   "mcpServers": {
-    "docs-mcp-server": {
+    "scrapegoat": {
       "command": "npx",
-      "args": ["-y", "@arabold/docs-mcp-server@latest"]
+      "args": ["-y", "@midnightphreaker/scrapegoat@latest"]
     }
   }
 }
@@ -272,10 +272,10 @@ See [Microsoft Docs](https://learn.microsoft.com/visualstudio/ide/mcp-servers).
 ```json
 {
   "servers": {
-    "docs-mcp-server": {
+    "scrapegoat": {
       "type": "stdio",
       "command": "npx",
-      "args": ["-y", "@arabold/docs-mcp-server@latest"]
+      "args": ["-y", "@midnightphreaker/scrapegoat@latest"]
     }
   }
 }
@@ -285,7 +285,7 @@ See [Microsoft Docs](https://learn.microsoft.com/visualstudio/ide/mcp-servers).
 To install via Smithery:
 
 ```bash
-npx -y @smithery/cli@latest install @arabold/docs-mcp-server --client <CLIENT_NAME>
+npx -y @smithery/cli@latest install @midnightphreaker/scrapegoat --client <CLIENT_NAME>
 ```
 
 ---
@@ -297,12 +297,12 @@ If you prefer using Docker for the client connection:
 ```json
 {
   "mcpServers": {
-    "docs-mcp-server": {
+    "scrapegoat": {
       "command": "docker",
       "args": [
         "run", "-i", "--rm",
         "-v", "docs-mcp-data:/data",
-        "ghcr.io/arabold/docs-mcp-server:latest"
+        "ghcr.io/midnightphreaker/scrapegoat:latest"
       ]
     }
   }

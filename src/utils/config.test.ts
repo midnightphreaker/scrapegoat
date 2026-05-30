@@ -228,18 +228,18 @@ describe("Environment Variable Helpers", () => {
 
   describe("pathToEnvVar", () => {
     it("converts simple path", () => {
-      expect(pathToEnvVar(["scraper", "maxPages"])).toBe("DOCS_MCP_SCRAPER_MAX_PAGES");
+      expect(pathToEnvVar(["scraper", "maxPages"])).toBe("SCRAPEGOAT_SCRAPER_MAX_PAGES");
     });
 
     it("converts deeply nested path", () => {
       expect(pathToEnvVar(["scraper", "document", "maxSize"])).toBe(
-        "DOCS_MCP_SCRAPER_DOCUMENT_MAX_SIZE",
+        "SCRAPEGOAT_SCRAPER_DOCUMENT_MAX_SIZE",
       );
     });
 
     it("converts path with camelCase segments", () => {
       expect(pathToEnvVar(["splitter", "json", "maxNestingDepth"])).toBe(
-        "DOCS_MCP_SPLITTER_JSON_MAX_NESTING_DEPTH",
+        "SCRAPEGOAT_SPLITTER_JSON_MAX_NESTING_DEPTH",
       );
     });
   });

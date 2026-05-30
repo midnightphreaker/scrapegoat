@@ -13,7 +13,7 @@ services:
     container_name: scrapegoat-postgres
     restart: unless-stopped
     ports:
-      - "5432:5432"
+      - "10.9.9.20:5432:5432"
     environment:
       POSTGRES_USER: docs
       POSTGRES_PASSWORD: docs
@@ -37,7 +37,7 @@ services:
     container_name: scrapegoat-worker
     restart: unless-stopped
     ports:
-      - "8080:8080"
+      - "10.9.9.20:8080:8080"
     env_file:
       - .env
     environment:
@@ -83,7 +83,7 @@ services:
     container_name: scrapegoat-mcp
     restart: unless-stopped
     ports:
-      - "6280:6280"
+      - "10.9.9.20:6280:6280"
     env_file:
       - .env
     environment:
@@ -107,29 +107,19 @@ services:
       context: .
       dockerfile: Dockerfile
     command:
-      [
-        "web",
-        "--host",
-        "0.0.0.0",
-        "--port",
-        "6281",
-        "--server-url",
-        "http://worker:8080/api",
-        "--no-logo",
-      ]
+      ["web", "--host", "0.0.0.0", "--port", "6281", "--no-logo"]
     container_name: scrapegoat-web
     restart: unless-stopped
     ports:
-      - "6281:6281"
+      - "10.9.9.20:6281:6281"
     env_file:
       - .env
     environment:
       DATABASE_URL: "postgresql://docs:docs@postgres:5432/docs"
+      SCRAPEGOAT_HOST: "0.0.0.0"
     volumes:
       - scrapegoat-config:/config
-    depends_on:
-      worker:
-        condition: service_healthy
+      - scrapegoat-data:/data
     deploy:
       resources:
         limits:

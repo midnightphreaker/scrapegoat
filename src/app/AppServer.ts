@@ -541,7 +541,7 @@ export class AppServer {
     } else if (isMcpOnly) {
       logger.info(`🚀 MCP server available at ${address}`);
     } else {
-      logger.info(`🚀 Grounded Docs available at ${address}`);
+      logger.info(`🚀 ScrapeGoat available at ${address}`);
     }
 
     const isCombined = !isWorkerOnly && !isWebOnly && !isMcpOnly;

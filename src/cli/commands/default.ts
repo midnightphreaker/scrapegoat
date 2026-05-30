@@ -29,7 +29,7 @@ import {
 export function createDefaultAction(cli: Argv) {
   cli.command(
     ["$0", "server"],
-    "Starts the Docs MCP server (Unified Mode)",
+    "Starts the ScrapeGoat server (Unified Mode)",
     (yargs) => {
       return (
         yargs
