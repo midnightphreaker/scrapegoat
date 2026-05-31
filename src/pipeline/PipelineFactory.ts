@@ -46,7 +46,9 @@ export namespace PipelineFactory {
         throw new Error("Remote pipeline requires EventBusService");
       }
       logger.debug(`Creating PipelineClient for external worker at: ${serverUrl}`);
-      return new PipelineClient(serverUrl, eventBus);
+      const client = new PipelineClient(serverUrl, eventBus);
+      await client.start();
+      return client;
     }
 
     // Local embedded pipeline with specified behavior

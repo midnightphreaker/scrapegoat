@@ -23,7 +23,7 @@ COPY package*.json ./
 
 # Install all dependencies (including dev dependencies for building)
 # Note: npm install handles peer-dep lockfile sync across npm versions
-RUN npm install
+RUN npm install --loglevel=error
 
 # Copy source code
 COPY . .

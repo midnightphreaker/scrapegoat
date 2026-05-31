@@ -43,6 +43,16 @@ export class PipelineClient implements IPipeline {
     // Create WebSocket client for subscriptions
     this.wsClient = createWSClient({
       url: this.wsUrl,
+      onError: (evt) => {
+        logger.error(
+          `❌ WebSocket connection error to ${this.wsUrl}: ${evt ? "connection refused or unavailable" : "unknown error"}`,
+        );
+      },
+      onClose: (cause) => {
+        logger.debug(
+          `WebSocket connection to ${this.wsUrl} closed (code: ${cause?.code ?? "unknown"})`,
+        );
+      },
     });
 
     // Create tRPC client with split link:

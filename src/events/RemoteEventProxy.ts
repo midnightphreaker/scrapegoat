@@ -53,6 +53,16 @@ export class RemoteEventProxy {
       // Create WebSocket client for subscriptions
       this.wsClient = createWSClient({
         url: wsUrl,
+        onError: (evt) => {
+          logger.error(
+            `❌ Remote event WebSocket error (${wsUrl}): ${evt ? "connection refused or unavailable" : "unknown error"}`,
+          );
+        },
+        onClose: (cause) => {
+          logger.debug(
+            `Remote event WebSocket closed (${wsUrl}, code: ${cause?.code ?? "unknown"})`,
+          );
+        },
       });
 
       // Create tRPC client with split link:

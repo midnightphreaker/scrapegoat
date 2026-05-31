@@ -46,7 +46,7 @@ describe("PipelineFactory", () => {
       expect(pipeline).toBe(ManagerMock.mock.instances[0]);
     });
 
-    it("should create PipelineClient when serverUrl provided", async () => {
+    it("should create PipelineClient and call start() when serverUrl provided", async () => {
       const options = {
         serverUrl: "http://localhost:8080",
         appConfig: appConfig,
@@ -63,6 +63,11 @@ describe("PipelineFactory", () => {
       // Behavior: returned instance is the one constructed by PipelineClient
       const ClientMock = PipelineClient as unknown as { mock: { instances: any[] } };
       expect(pipeline).toBe(ClientMock.mock.instances[0]);
+      // Verify start() was called on the created instance to validate connectivity
+      const instance = ClientMock.mock.instances[0] as {
+        start: ReturnType<typeof vi.fn>;
+      };
+      expect(instance.start).toHaveBeenCalled();
     });
 
     it("should use default options when none provided", async () => {
@@ -105,6 +110,24 @@ describe("PipelineFactory", () => {
         // @ts-expect-error - Testing error case where eventBus is missing
         PipelineFactory.createPipeline(undefined, undefined, options),
       ).rejects.toThrow("Remote pipeline requires EventBusService");
+    });
+
+    it("should propagate start() failure when external worker is unreachable", async () => {
+      // Make the auto-mocked start() reject
+      vi.mocked(PipelineClient).mockImplementation(
+        () =>
+          ({
+            start: vi
+              .fn()
+              .mockRejectedValue(new Error("Failed to connect to external worker")),
+          }) as unknown as PipelineClient,
+      );
+
+      const options = { serverUrl: "http://unreachable:9999", appConfig: appConfig };
+
+      await expect(
+        PipelineFactory.createPipeline(undefined, mockEventBus, options),
+      ).rejects.toThrow("Failed to connect to external worker");
     });
   });
 });
