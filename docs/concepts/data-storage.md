@@ -199,7 +199,7 @@ Database location determined by priority:
 
 ### Default Storage Location
 
-On macOS: `~/Library/Application Support/docs-mcp-server/`
+On macOS: `~/Library/Application Support/scrapegoat/`
 
 **Code Reference:** `src/utils/paths.ts` - `resolveStorePath()` function
 

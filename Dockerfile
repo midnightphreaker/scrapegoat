@@ -23,7 +23,7 @@ COPY package*.json ./
 
 # Install all dependencies (including dev dependencies for building)
 # Note: npm install handles peer-dep lockfile sync across npm versions
-RUN npm install
+RUN npm install --loglevel=error
 
 # Copy source code
 COPY . .
@@ -54,7 +54,7 @@ COPY --from=builder /app/public ./public
 COPY --from=builder /app/dist ./dist
 
 # Set data directory for the container
-ENV DOCS_MCP_STORE_PATH=/data
+ENV SCRAPEGOAT_STORE_PATH=/data
 ENV XDG_CONFIG_HOME=/config
 
 # Define volumes

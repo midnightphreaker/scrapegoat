@@ -1,6 +1,6 @@
 # Telemetry Architecture
 
-The MCP Documentation Server implements privacy-first telemetry to understand usage patterns, monitor performance, and improve user experience. The system is designed with user privacy as the primary concern while providing valuable insights for product development.
+The ScrapeGoat server implements privacy-first telemetry to understand usage patterns, monitor performance, and improve user experience. The system is designed with user privacy as the primary concern while providing valuable insights for product development.
 
 ## Core Principles
 
@@ -95,8 +95,8 @@ The system uses a persistent installation identifier for consistent analytics:
 **Installation ID Generation** (`src/telemetry/TelemetryConfig.ts`)
 
 - Creates UUID-based installation identifier stored in `installation.id`
-- Uses `envPaths` standard for cross-platform directory location (`~/.local/share/docs-mcp-server/`)
-- Reads the store path from the shared configuration (YAML/env/CLI), including `DOCS_MCP_STORE_PATH` for containerized deployments
+- Uses `envPaths` standard for cross-platform directory location (`~/.local/share/scrapegoat/`)
+- Reads the store path from the shared configuration (YAML/env/CLI), including `SCRAPEGOAT_STORE_PATH` for containerized deployments
 - Provides consistent identification across application runs without user tracking
 - Falls back to new UUID generation if file is corrupted or missing
 
@@ -268,7 +268,7 @@ The system ensures privacy through essential data sanitization:
 
 ### User Control Mechanisms
 
-Telemetry opt-in/out is part of `appConfig.app.telemetryEnabled` with precedence: defaults → `docs-mcp.config.yaml` (or `DOCS_MCP_CONFIG`) → legacy envs → generic env `DOCS_MCP_<KEY>` → CLI flags for the current run.
+Telemetry opt-in/out is part of `appConfig.app.telemetryEnabled` with precedence: defaults → `scrapegoat.config.yaml` (or `SCRAPEGOAT_CONFIG`) → legacy envs → generic env `SCRAPEGOAT_<KEY>` → CLI flags for the current run.
 
 **CLI Flags**
 
@@ -276,8 +276,8 @@ Telemetry opt-in/out is part of `appConfig.app.telemetryEnabled` with precedence
 
 **Environment Variables**
 
-- `DOCS_MCP_TELEMETRY=false`: Global disable telemetry collection
-- `DOCS_MCP_STORE_PATH=/custom/path`: Override installation ID storage location (useful for Docker volumes)
+- `SCRAPEGOAT_TELEMETRY=false`: Global disable telemetry collection
+- `SCRAPEGOAT_STORE_PATH=/custom/path`: Override installation ID storage location (useful for Docker volumes)
 - YAML equivalents: `app.telemetryEnabled: false`, `app.storePath: /custom/path`
 
 **Configuration Integration**

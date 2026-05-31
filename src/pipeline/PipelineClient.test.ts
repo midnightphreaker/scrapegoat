@@ -1,3 +1,4 @@
+import { createWSClient } from "@trpc/client";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { EventBusService } from "../events/EventBusService";
 import { EventType } from "../events/types";
@@ -160,6 +161,40 @@ describe("PipelineClient", () => {
       }, 20);
 
       await expect(waitPromise).resolves.toBeUndefined();
+    });
+  });
+
+  describe("constructor", () => {
+    it("should create WebSocket client with onError and onClose callbacks", () => {
+      // PipelineClient was constructed in beforeEach, so createWSClient was already called
+      expect(createWSClient).toHaveBeenCalledWith(
+        expect.objectContaining({
+          onError: expect.any(Function),
+          onClose: expect.any(Function),
+        }),
+      );
+    });
+
+    it("should pass the correct wsUrl to createWSClient", () => {
+      expect(createWSClient).toHaveBeenCalledWith(
+        expect.objectContaining({
+          url: "ws://localhost:8080",
+        }),
+      );
+    });
+  });
+
+  describe("stop", () => {
+    it("should close the WebSocket client", async () => {
+      await client.stop();
+      expect(mockWsClient.close).toHaveBeenCalled();
+    });
+  });
+
+  describe("start error message", () => {
+    it("should include the server URL in the error when ping fails", async () => {
+      mockClient.ping.query.mockRejectedValueOnce(new Error("Connection refused"));
+      await expect(client.start()).rejects.toThrow(serverUrl);
     });
   });
 

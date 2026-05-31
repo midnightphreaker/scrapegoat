@@ -1,6 +1,6 @@
 ## Context
 
-The application currently normalizes quoted values only when they pass through `src/utils/config.ts`, while many runtime paths read `process.env` directly. This split leads to inconsistent behavior: config-backed `DOCS_MCP_*` variables can be corrected in one place, but provider credentials, base URLs, tokens, log settings, and runtime toggles may still include literal outer quotes from Docker Compose or other environment injectors.
+The application currently normalizes quoted values only when they pass through `src/utils/config.ts`, while many runtime paths read `process.env` directly. This split leads to inconsistent behavior: config-backed `SCRAPEGOAT_*` variables can be corrected in one place, but provider credentials, base URLs, tokens, log settings, and runtime toggles may still include literal outer quotes from Docker Compose or other environment injectors.
 
 A proposal is needed because the fix changes bootstrap behavior across multiple systems rather than addressing a single leaf bug.
 
@@ -10,7 +10,7 @@ A proposal is needed because the fix changes bootstrap behavior across multiple 
 - Normalize surrounding quotes for environment variables from all supported injection paths, not just `.env` files
 - Ensure normalization happens before runtime modules interpret environment values
 - Keep the normalization rule narrow, predictable, and safe to run repeatedly
-- Retain config-layer normalization for `DOCS_MCP_*` overrides as a secondary safeguard
+- Retain config-layer normalization for `SCRAPEGOAT_*` overrides as a secondary safeguard
 
 **Non-Goals:**
 - Rewriting arbitrary environment variable contents beyond trimming whitespace and removing matching outer quotes

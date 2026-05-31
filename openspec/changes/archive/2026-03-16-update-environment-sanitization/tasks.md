@@ -8,7 +8,7 @@
 
 ## 2. Configuration Safeguards
 
-- [x] 2.1 Keep `DOCS_MCP_*` environment normalization in `src/utils/config.ts`
+- [x] 2.1 Keep `SCRAPEGOAT_*` environment normalization in `src/utils/config.ts`
 - [x] 2.2 Verify config precedence and fallback behavior remain unchanged after bootstrap sanitization
 
 ## 3. Test Coverage

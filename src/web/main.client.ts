@@ -1,5 +1,5 @@
 /**
- * Bootstraps the client-side experience for the Docs MCP Server web UI.
+ * Bootstraps the client-side experience for the ScrapeGoat web UI.
  * Initializes Alpine stores, HTMX helpers, Flowbite components, the
  * release checker that surfaces update notifications in the header,
  * and the unified event client for real-time updates.
@@ -21,9 +21,8 @@ import { EventClient } from "./EventClient";
 import { fallbackReleaseLabel, isVersionNewer } from "./utils/versionCheck";
 
 const LATEST_RELEASE_ENDPOINT =
-  "https://api.github.com/repos/arabold/docs-mcp-server/releases/latest";
-const LATEST_RELEASE_FALLBACK_URL =
-  "https://github.com/arabold/docs-mcp-server/releases/latest";
+  "https://api.github.com/repos/midnightphreaker/scrapegoat/releases/latest";
+const LATEST_RELEASE_FALLBACK_URL = "https://git.phrk.org/pub/scrapegoat/releases/latest";
 
 interface VersionUpdateConfig {
   currentVersion: string | null;
@@ -61,7 +60,7 @@ document.addEventListener("alpine:init", () => {
         const response = await fetch(LATEST_RELEASE_ENDPOINT, {
           headers: {
             Accept: "application/vnd.github+json",
-            "User-Agent": "docs-mcp-server-ui",
+            "User-Agent": "scrapegoat-ui",
           },
         });
 

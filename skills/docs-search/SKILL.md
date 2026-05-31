@@ -1,19 +1,19 @@
 ---
 name: docs-search
 description: >-
-  Search and query the Grounded Docs MCP Server documentation index.
+  Search and query the ScrapeGoat documentation index.
   Covers listing indexed libraries, searching documentation content,
   and resolving library versions. Use when you need to look up API
   references, find code examples, or check which documentation is
   available in the local index.
 compatibility: Requires Node.js 22+ and npx
 metadata:
-  author: grounded.tools
+  author: phrk.org
 ---
 
 # Docs Search
 
-Search the local Grounded Docs index for library documentation. These commands
+Search the local ScrapeGoat index for library documentation. These commands
 return structured data (JSON by default in non-interactive sessions) and never
 modify the index.
 
@@ -34,7 +34,7 @@ before searching.
 List every indexed library and its available versions.
 
 ```bash
-npx @arabold/docs-mcp-server@latest list [--output yaml]
+npx scrapegoat@latest list [--output yaml]
 ```
 
 | Flag | Description |
@@ -61,7 +61,7 @@ Example output (YAML):
 Search documents in an indexed library by natural-language query.
 
 ```bash
-npx @arabold/docs-mcp-server@latest search <library> "<query>" [options]
+npx scrapegoat@latest search <library> "<query>" [options]
 ```
 
 | Flag | Alias | Default | Description |
@@ -78,7 +78,7 @@ npx @arabold/docs-mcp-server@latest search <library> "<query>" [options]
 Example:
 
 ```bash
-npx @arabold/docs-mcp-server@latest search react "useEffect cleanup" --version 18.x --limit 3 --output yaml
+npx scrapegoat@latest search react "useEffect cleanup" --version 18.x --limit 3 --output yaml
 ```
 
 Each result contains a content snippet, source URL, and relevance score.
@@ -88,7 +88,7 @@ Each result contains a content snippet, source URL, and relevance score.
 Resolve the best matching documentation version for a library.
 
 ```bash
-npx @arabold/docs-mcp-server@latest find-version <library> [--version <pattern>]
+npx scrapegoat@latest find-version <library> [--version <pattern>]
 ```
 
 | Flag | Alias | Description |
@@ -102,7 +102,7 @@ npx @arabold/docs-mcp-server@latest find-version <library> [--version <pattern>]
 Example:
 
 ```bash
-npx @arabold/docs-mcp-server@latest find-version react --version "18.x" --output yaml
+npx scrapegoat@latest find-version react --version "18.x" --output yaml
 ```
 
 Returns the resolved version string and library metadata.
@@ -121,10 +121,10 @@ request `--output yaml` for a more readable format.
 
 ```bash
 # 1. Check what is indexed
-npx @arabold/docs-mcp-server@latest list --output yaml
+npx scrapegoat@latest list --output yaml
 
 # 2. Search for relevant docs
-npx @arabold/docs-mcp-server@latest search react "server components" --version 19.x --output yaml
+npx scrapegoat@latest search react "server components" --version 19.x --output yaml
 
 # 3. If no results, index the docs first (see docs-manage skill), then retry
 ```

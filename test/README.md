@@ -1,6 +1,6 @@
 # Testing Setup
 
-This directory contains end-to-end (e2e) tests for the docs-mcp-server project.
+This directory contains end-to-end (e2e) tests for the scrapegoat project.
 
 ## Test Structure
 

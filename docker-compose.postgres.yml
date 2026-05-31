@@ -1,7 +1,10 @@
-# Docker Compose configuration for ScrapeGoat
+# Docker Compose configuration for ScrapeGoat (PostgreSQL)
 #
-# Scaling setup with separate services:
-# - postgres: PostgreSQL database for primary storage
+# Copy .env.example to .env and configure before starting:
+#   cp .env.example .env
+#
+# Services:
+# - postgres: PostgreSQL database with pgvector extension
 # - worker: Handles documentation processing
 # - mcp: MCP server endpoint for AI tools
 # - web: Web interface for management
@@ -9,19 +12,19 @@
 services:
   # PostgreSQL database - primary storage backend
   postgres:
-    image: pgvector/pgvector:pg16
+    image: pgvector/pgvector:${SCRAPEGOAT_PG_VERSION:-pg16}
     container_name: scrapegoat-postgres
     restart: unless-stopped
     ports:
-      - "5432:5432"
+      - "${SCRAPEGOAT_DB_HOST_ADDRESS:-localhost}:${SCRAPEGOAT_DB_HOST_PORT:-5432}:5432"
     environment:
-      POSTGRES_USER: docs
-      POSTGRES_PASSWORD: docs
-      POSTGRES_DB: docs
+      POSTGRES_USER: ${SCRAPEGOAT_DB_USER:-scrapegoat}
+      POSTGRES_PASSWORD: ${SCRAPEGOAT_DB_PASSWORD:-scrapegoat}
+      POSTGRES_DB: ${SCRAPEGOAT_DB_NAME:-scrapegoat}
     volumes:
       - scrapegoat-pgdata:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U docs"]
+      test: ["CMD-SHELL", "pg_isready -U ${SCRAPEGOAT_DB_USER:-scrapegoat}"]
       interval: 5s
       timeout: 5s
       retries: 5
@@ -29,7 +32,7 @@ services:
 
   # Worker service - handles the actual documentation processing
   worker:
-    image: git.phrk.org/pub/scrapegoat:latest
+    image: git.phrk.org/pub/scrapegoat:${SCRAPEGOAT_IMAGE_TAG:-latest}
     build:
       context: .
       dockerfile: Dockerfile
@@ -37,11 +40,11 @@ services:
     container_name: scrapegoat-worker
     restart: unless-stopped
     ports:
-      - "8080:8080"
+      - "${SCRAPEGOAT_WORKER_HOST_ADDRESS:-localhost}:${SCRAPEGOAT_WORKER_HOST_PORT:-8080}:8080"
     env_file:
       - .env
     environment:
-      DATABASE_URL: "postgresql://docs:docs@postgres:5432/docs"
+      SCRAPEGOAT_DB_URL: postgresql://${SCRAPEGOAT_DB_USER:-scrapegoat}:${SCRAPEGOAT_DB_PASSWORD:-scrapegoat}@postgres:5432/${SCRAPEGOAT_DB_NAME:-scrapegoat}
     volumes:
       - scrapegoat-data:/data
       - scrapegoat-config:/config
@@ -57,13 +60,13 @@ services:
     deploy:
       resources:
         limits:
-          memory: 2G
+          memory: ${SCRAPEGOAT_WORKER_MEMORY_LIMIT:-2G}
         reservations:
-          memory: 1G
+          memory: ${SCRAPEGOAT_WORKER_MEMORY_RESERVATION:-1G}
 
   # MCP server - provides AI tool integration endpoint
   mcp:
-    image: git.phrk.org/pub/scrapegoat:latest
+    image: git.phrk.org/pub/scrapegoat:${SCRAPEGOAT_IMAGE_TAG:-latest}
     build:
       context: .
       dockerfile: Dockerfile
@@ -83,11 +86,11 @@ services:
     container_name: scrapegoat-mcp
     restart: unless-stopped
     ports:
-      - "6280:6280"
+      - "${SCRAPEGOAT_MCP_HOST_ADDRESS:-localhost}:${SCRAPEGOAT_MCP_HOST_PORT:-6280}:6280"
     env_file:
       - .env
     environment:
-      DATABASE_URL: "postgresql://docs:docs@postgres:5432/docs"
+      SCRAPEGOAT_DB_URL: postgresql://${SCRAPEGOAT_DB_USER:-scrapegoat}:${SCRAPEGOAT_DB_PASSWORD:-scrapegoat}@postgres:5432/${SCRAPEGOAT_DB_NAME:-scrapegoat}
     volumes:
       - scrapegoat-config:/config
     depends_on:
@@ -96,46 +99,36 @@ services:
     deploy:
       resources:
         limits:
-          memory: 512M
+          memory: ${SCRAPEGOAT_MCP_MEMORY_LIMIT:-512M}
         reservations:
-          memory: 256M
+          memory: ${SCRAPEGOAT_MCP_MEMORY_RESERVATION:-256M}
 
   # Web interface - provides browser-based management
   web:
-    image: git.phrk.org/pub/scrapegoat:latest
+    image: git.phrk.org/pub/scrapegoat:${SCRAPEGOAT_IMAGE_TAG:-latest}
     build:
       context: .
       dockerfile: Dockerfile
     command:
-      [
-        "web",
-        "--host",
-        "0.0.0.0",
-        "--port",
-        "6281",
-        "--server-url",
-        "http://worker:8080/api",
-        "--no-logo",
-      ]
+      ["web", "--host", "0.0.0.0", "--port", "6281", "--no-logo"]
     container_name: scrapegoat-web
     restart: unless-stopped
     ports:
-      - "6281:6281"
+      - "${SCRAPEGOAT_WEB_HOST_ADDRESS:-localhost}:${SCRAPEGOAT_WEB_HOST_PORT:-6281}:6281"
     env_file:
       - .env
     environment:
-      DATABASE_URL: "postgresql://docs:docs@postgres:5432/docs"
+      SCRAPEGOAT_DB_URL: postgresql://${SCRAPEGOAT_DB_USER:-scrapegoat}:${SCRAPEGOAT_DB_PASSWORD:-scrapegoat}@postgres:5432/${SCRAPEGOAT_DB_NAME:-scrapegoat}
+      SCRAPEGOAT_HOST: "0.0.0.0"
     volumes:
       - scrapegoat-config:/config
-    depends_on:
-      worker:
-        condition: service_healthy
+      - scrapegoat-data:/data
     deploy:
       resources:
         limits:
-          memory: 512M
+          memory: ${SCRAPEGOAT_WEB_MEMORY_LIMIT:-512M}
         reservations:
-          memory: 256M
+          memory: ${SCRAPEGOAT_WEB_MEMORY_RESERVATION:-256M}
 
 volumes:
   scrapegoat-data:

@@ -2,9 +2,9 @@
 
 ## Overview
 
-The Docs MCP Server supports optional OAuth2 authentication for HTTP endpoints, providing enterprise-grade security while maintaining a frictionless local development experience. Authentication is disabled by default and uses a binary authentication model for maximum compatibility with OAuth2 providers.
+ScrapeGoat supports optional OAuth2 authentication for HTTP endpoints, providing enterprise-grade security while maintaining a frictionless local development experience. Authentication is disabled by default and uses a binary authentication model for maximum compatibility with OAuth2 providers.
 
-**Important**: The Docs MCP Server is an **OAuth2 protected resource**, not an OAuth2 authorization server. It relies on external OAuth2 providers (such as Auth0, Clerk, Keycloak, or Azure AD) for authentication and authorization. The server validates JWT tokens issued by these providers but does not issue tokens itself.
+**Important**: ScrapeGoat is an **OAuth2 protected resource**, not an OAuth2 authorization server. It relies on external OAuth2 providers (such as Auth0, Clerk, Keycloak, or Azure AD) for authentication and authorization. The server validates JWT tokens issued by these providers but does not issue tokens itself.
 
 ## Security Scope
 
@@ -22,7 +22,7 @@ OAuth2 authentication **only protects MCP endpoints** (`/mcp`, `/sse`). The tRPC
 
 The authentication system uses a **binary authentication model** with OAuth2 proxy support, providing secure access control while maintaining compatibility with any RFC 6749 compliant OAuth2 provider.
 
-**Architecture Overview**: The Docs MCP Server acts as an OAuth2 **protected resource** that validates JWT access tokens issued by external OAuth2 providers. It implements an OAuth2 proxy to enable Dynamic Client Registration (DCR) for MCP clients like VS Code, while using standard OAuth identity scopes for maximum provider compatibility.
+**Architecture Overview**: ScrapeGoat acts as an OAuth2 **protected resource** that validates JWT access tokens issued by external OAuth2 providers. It implements an OAuth2 proxy to enable Dynamic Client Registration (DCR) for MCP clients like VS Code, while using standard OAuth identity scopes for maximum provider compatibility.
 
 ### Binary Authentication Model
 
@@ -48,7 +48,7 @@ The server includes a built-in OAuth2 proxy that enables seamless integration wi
 ```mermaid
 sequenceDiagram
     participant Client as MCP Client
-    participant Server as docs-mcp-server
+    participant Server as scrapegoat
     participant Provider as OAuth2/OIDC Provider
 
     Note over Client,Provider: OAuth2 Authentication with DCR Support
@@ -83,18 +83,18 @@ sequenceDiagram
 
 ## Configuration
 
-Authentication settings live in `appConfig.auth` and follow the unified precedence: defaults → `docs-mcp.config.yaml` (or `DOCS_MCP_CONFIG`) → legacy envs → generic env `DOCS_MCP_<KEY>` → CLI flags for the current run.
+Authentication settings live in `appConfig.auth` and follow the unified precedence: defaults → `scrapegoat.config.yaml` (or `SCRAPEGOAT_CONFIG`) → legacy envs → generic env `SCRAPEGOAT_<KEY>` → CLI flags for the current run.
 
 **Setup Steps**:
 
 1. **Set up your OAuth2 provider** (Auth0, Clerk, Keycloak, etc.) with standard OAuth identity scopes
-2. **Configure the Docs MCP Server** to validate tokens from that provider using the settings below
+2. **Configure ScrapeGoat** to validate tokens from that provider using the settings below
 
 ### CLI Arguments
 
 ```bash
-# Configure Docs MCP Server to validate tokens from your OAuth2/OIDC provider
-npx docs-mcp-server
+# Configure ScrapeGoat to validate tokens from your OAuth2/OIDC provider
+npx scrapegoat
   --auth-enabled
   --auth-issuer-url "https://auth.your-domain.com"
   --auth-audience "https://mcp.your-domain.com"
@@ -103,27 +103,27 @@ npx docs-mcp-server
 ### Environment Variables
 
 ```bash
-# Configure Docs MCP Server via environment variables
-export DOCS_MCP_AUTH_ENABLED=true
-export DOCS_MCP_AUTH_ISSUER_URL="https://auth.your-domain.com"
-export DOCS_MCP_AUTH_AUDIENCE="https://mcp.your-domain.com"
+# Configure ScrapeGoat via environment variables
+export SCRAPEGOAT_AUTH_ENABLED=true
+export SCRAPEGOAT_AUTH_ISSUER_URL="https://auth.your-domain.com"
+export SCRAPEGOAT_AUTH_AUDIENCE="https://mcp.your-domain.com"
 ```
 
-You can also set the same values in `docs-mcp.config.yaml` under `auth.enabled`, `auth.issuerUrl`, and `auth.audience`.
+You can also set the same values in `scrapegoat.config.yaml` under `auth.enabled`, `auth.issuerUrl`, and `auth.audience`.
 
 ### Configuration Options
 
 | Option      | CLI Flag            | Environment Variable       | Description                                             |
 | ----------- | ------------------- | -------------------------- | ------------------------------------------------------- |
-| Enable Auth | `--auth-enabled`    | `DOCS_MCP_AUTH_ENABLED`    | Enable OAuth2 token validation                          |
-| Issuer URL  | `--auth-issuer-url` | `DOCS_MCP_AUTH_ISSUER_URL` | OAuth2 discovery endpoint of your external provider     |
-| Audience    | `--auth-audience`   | `DOCS_MCP_AUTH_AUDIENCE`   | JWT audience claim (identifies this protected resource) |
+| Enable Auth | `--auth-enabled`    | `SCRAPEGOAT_AUTH_ENABLED`    | Enable OAuth2 token validation                          |
+| Issuer URL  | `--auth-issuer-url` | `SCRAPEGOAT_AUTH_ISSUER_URL` | OAuth2 discovery endpoint of your external provider     |
+| Audience    | `--auth-audience`   | `SCRAPEGOAT_AUTH_AUDIENCE`   | JWT audience claim (identifies this protected resource) |
 
 ## OAuth2 Setup
 
-The Docs MCP Server supports OAuth2 authentication for securing MCP endpoints. Token validation is handled through standard JWT validation using the provider's public keys (JWKS).
+The ScrapeGoat server supports OAuth2 authentication for securing MCP endpoints. Token validation is handled through standard JWT validation using the provider's public keys (JWKS).
 
-**Note**: You must configure an external OAuth2 provider (such as Clerk, Auth0, Keycloak, or Azure AD) before enabling authentication. The Docs MCP Server validates JWT tokens but does not issue them.
+**Note**: You must configure an external OAuth2 provider (such as Clerk, Auth0, Keycloak, or Azure AD) before enabling authentication. ScrapeGoat validates JWT tokens but does not issue them.
 
 ### How It Works
 
@@ -131,11 +131,11 @@ OAuth2 authentication uses the DCR flow shown above, where the server acts as an
 
 ### Server Configuration
 
-To enable OAuth2 authentication, configure the Docs MCP Server to connect to your OAuth2 provider:
+To enable OAuth2 authentication, configure ScrapeGoat to connect to your OAuth2 provider:
 
 ```bash
-# Configure Docs MCP Server to validate tokens from your OAuth2 provider
-npx docs-mcp-server
+# Configure ScrapeGoat to validate tokens from your OAuth2 provider
+npx scrapegoat
   --auth-enabled
   --auth-issuer-url "https://your-provider.example.com"
   --auth-audience "https://mcp.your-domain.com"
@@ -143,14 +143,14 @@ npx docs-mcp-server
 
 ### OAuth2 Provider Setup
 
-**Prerequisite**: You must first set up an OAuth2/OIDC provider separately. The following examples show how to configure popular providers to work with the Docs MCP Server.
+**Prerequisite**: You must first set up an OAuth2/OIDC provider separately. The following examples show how to configure popular providers to work with ScrapeGoat.
 
 #### Example Provider Configurations
 
 **Auth0**:
 
 ```bash
-npx docs-mcp-server
+npx scrapegoat
   --auth-enabled
   --auth-issuer-url "https://your-tenant.auth0.com"
   --auth-audience "https://mcp.your-domain.com"
@@ -159,7 +159,7 @@ npx docs-mcp-server
 **Clerk**:
 
 ```bash
-npx docs-mcp-server
+npx scrapegoat
   --auth-enabled
   --auth-issuer-url "https://your-app.clerk.accounts.dev"
   --auth-audience "https://mcp.your-domain.com"
@@ -168,7 +168,7 @@ npx docs-mcp-server
 **Keycloak**:
 
 ```bash
-npx docs-mcp-server
+npx scrapegoat
   --auth-enabled
   --auth-issuer-url "https://keycloak.your-domain.com/auth/realms/your-realm"
   --auth-audience "https://mcp.your-domain.com"
@@ -177,7 +177,7 @@ npx docs-mcp-server
 **Azure AD**:
 
 ```bash
-npx docs-mcp-server
+npx scrapegoat
   --auth-enabled
   --auth-issuer-url "https://login.microsoftonline.com/your-tenant-id/v2.0"
   --auth-audience "https://mcp.your-domain.com"
@@ -204,8 +204,8 @@ The server exposes RFC 9728 compliant metadata at `/.well-known/oauth-protected-
   "resource": "https://mcp.your-domain.com",
   "authorization_servers": ["https://your-provider.example.com"],
   "scopes_supported": ["openid", "profile", "email"],
-  "resource_name": "Documentation MCP Server",
-  "resource_documentation": "https://github.com/arabold/docs-mcp-server#readme",
+  "resource_name": "ScrapeGoat",
+  "resource_documentation": "https://git.phrk.org/pub/scrapegoat#readme",
   "bearer_methods_supported": ["header"]
 }
 ```
@@ -219,7 +219,7 @@ MCP clients can authenticate using standard OAuth2 flows with DCR support:
 3. **Authentication**: Obtain JWT token using OAuth2 Authorization Code flow
 4. **API Access**: Include `Authorization: Bearer <token>` header in MCP requests
 
-**Dynamic Client Registration**: The Docs MCP Server supports RFC 7591 compliant DCR, enabling MCP clients like VS Code to automatically register and obtain authorization without manual client configuration. The DCR workflow is proxied to your OAuth2 provider with resource parameter support for multi-transport scenarios.
+**Dynamic Client Registration**: ScrapeGoat supports RFC 7591 compliant DCR, enabling MCP clients like VS Code to automatically register and obtain authorization without manual client configuration. The DCR workflow is proxied to your OAuth2 provider with resource parameter support for multi-transport scenarios.
 
 ## Binary Access Control
 
@@ -274,14 +274,14 @@ All tools are available to authenticated users:
 
 ```bash
 # Start server without authentication
-npx docs-mcp-server --port 6280
+npx scrapegoat --port 6280
 ```
 
 ### Production with Auth
 
 ```bash
-# Configure Docs MCP Server to validate tokens from your OAuth2 provider
-npx docs-mcp-server
+# Configure ScrapeGoat to validate tokens from your OAuth2 provider
+npx scrapegoat
   --port 6280
   --auth-enabled
   --auth-issuer-url "https://keycloak.your-domain.com/realms/api"
@@ -314,7 +314,7 @@ const response = await fetch("http://localhost:6280/mcp", {
 
 ### OAuth2 Providers
 
-The Docs MCP Server works with any RFC 6749 compliant OAuth2 provider as an external authentication service. You must set up one of these providers separately:
+The ScrapeGoat server works with any RFC 6749 compliant OAuth2 provider as an external authentication service. You must set up one of these providers separately:
 
 - **Auth0**: Use tenant domain as provider URL
 - **Keycloak**: Use realm-specific issuer URL
@@ -323,14 +323,14 @@ The Docs MCP Server works with any RFC 6749 compliant OAuth2 provider as an exte
 - **Clerk**: Use your Clerk domain for provider URL
 - **Custom**: Any provider supporting JWT access tokens
 
-The Docs MCP Server validates tokens issued by these providers but does not replace them.
+The ScrapeGoat server validates tokens issued by these providers but does not replace them.
 
 #### Provider Configuration Examples
 
 **Auth0**:
 
 ```bash
-npx docs-mcp-server
+npx scrapegoat
   --auth-enabled
   --auth-issuer-url "https://your-tenant.auth0.com"
   --auth-audience "https://mcp.your-domain.com"
@@ -339,7 +339,7 @@ npx docs-mcp-server
 **Clerk**:
 
 ```bash
-npx docs-mcp-server
+npx scrapegoat
   --auth-enabled
   --auth-issuer-url "https://your-app.clerk.accounts.dev"
   --auth-audience "https://mcp.your-domain.com"
@@ -361,7 +361,7 @@ Configure your provider's JWT template/claims to include the resource ID as the 
 
 - Must be a valid URI (URL or URN)
 - **URL examples**: `https://mcp.your-domain.com`, `http://localhost:6280` (dev only)
-- **URN examples**: `urn:docs-mcp-server:api`, `urn:company:service`
+- **URN examples**: `urn:scrapegoat:api`, `urn:company:service`
 - Used as the JWT audience claim for validation
 - Should be unique and not conflict with your actual server URL
 
@@ -404,7 +404,7 @@ When deployed behind an API gateway with authentication:
 Enable debug logging to troubleshoot authentication issues:
 
 ```bash
-DEBUG=mcp:auth npx docs-mcp-server --auth-enabled --auth-issuer-url "..."
+DEBUG=mcp:auth npx scrapegoat --auth-enabled --auth-issuer-url "..."
 ```
 
 ## Security Considerations

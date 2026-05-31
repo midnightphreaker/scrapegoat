@@ -9,7 +9,7 @@ We selected **Promptfoo** because:
 - It supports **Model-Graded Metrics** out of the box.
 
 ### 2. The Provider Adapter
-To bridge `promptfoo` and `docs-mcp-server`, we will create a Custom Provider script (`src/tools/search-provider.ts`).
+To bridge `promptfoo` and `scrapegoat`, we will create a Custom Provider script (`src/tools/search-provider.ts`).
 - **Input:** The query string from the test dataset.
 - **Process:**
     1.  Instantiate `DocumentStore` and `DocumentRetrieverService`.

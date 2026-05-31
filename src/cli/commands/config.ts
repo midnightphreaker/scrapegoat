@@ -54,7 +54,7 @@ export function createConfigCommand(cli: Argv) {
         const path = argv.path as string | undefined;
         if (!path || !validateConfigPath(path)) {
           reportCliError(`Error: Invalid config path '${path ?? ""}'`);
-          reportCliError("Use 'docs-mcp-server config' to see all available paths.");
+          reportCliError("Use 'scrapegoat config' to see all available paths.");
           process.exitCode = 1;
           return;
         }
@@ -99,7 +99,7 @@ export function createConfigCommand(cli: Argv) {
 
       if (!validateConfigPath(path)) {
         reportCliError(`Error: Invalid config path '${path}'`);
-        reportCliError("Use 'docs-mcp-server config' to see all available paths.");
+        reportCliError("Use 'scrapegoat config' to see all available paths.");
         process.exitCode = 1;
         return;
       }
@@ -118,9 +118,7 @@ export function createConfigCommand(cli: Argv) {
         reportCliError(
           `Error: Config path '${path}' refers to an object. Use a more specific leaf path to set a scalar value.`,
         );
-        reportCliError(
-          "Hint: Run 'docs-mcp-server config' to inspect the current structure.",
-        );
+        reportCliError("Hint: Run 'scrapegoat config' to inspect the current structure.");
         process.exitCode = 1;
         return;
       }

@@ -43,7 +43,7 @@ export function createCli(argv: string[]): Argv {
   const commandStartTimes = new Map<string, number>();
 
   const cli = registerGlobalOutputOptions(yargs(hideBin(argv)))
-    .scriptName("docs-mcp-server")
+    .scriptName("scrapegoat")
     .strict()
     .usage("Usage: $0 <command> [options]")
     .version(__APP_VERSION__)
@@ -64,7 +64,7 @@ export function createCli(argv: string[]): Argv {
       description: "Enable/disable telemetry collection",
       // yargs handles boolean logic for --no-telemetry automatically if strictly typed
       // but we want tri-state or env var handling.
-      // Yargs doesn't naturally do "default: true, but respecting env var DOCS_MCP_TELEMETRY"
+      // Yargs doesn't naturally do "default: true, but respecting env var SCRAPEGOAT_TELEMETRY"
       // without middleware overriding.
       default: undefined, // Let config loader handle defaults
     })
@@ -90,7 +90,8 @@ export function createCli(argv: string[]): Argv {
       }
 
       // 1. Load Config & Resolve Paths
-      const rawStorePath = (argv.storePath as string) || process.env.DOCS_MCP_STORE_PATH;
+      const rawStorePath =
+        (argv.storePath as string) || process.env.SCRAPEGOAT_STORE_PATH;
       const resolvedStorePath = resolveStorePath(rawStorePath);
 
       // Mutate argv to use resolved path

@@ -19,7 +19,7 @@ Use this interface to:
 If you are using the [Embedded Server](../setup/installation.md#embedded-server) (running inside your AI tool), it does not expose a web interface by default. You can launch a temporary web UI that connects to the same database:
 
 ```bash
-OPENAI_API_KEY="your-key" npx @arabold/docs-mcp-server@latest web --port 6281
+OPENAI_API_KEY="your-key" npx @midnightphreaker/scrapegoat@latest web --port 6281
 ```
 
 Open `http://localhost:6281`. Stop the process (`Ctrl+C`) when finished.
@@ -35,20 +35,20 @@ The CLI lets you index and query documentation directly from the command line �
 Download and index documentation from a URL or local directory:
 
 ```bash
-npx @arabold/docs-mcp-server@latest scrape react https://react.dev/reference/react
+npx @midnightphreaker/scrapegoat@latest scrape react https://react.dev/reference/react
 ```
 
 You can tag a specific version, limit crawl depth, and more:
 
 ```bash
-npx @arabold/docs-mcp-server@latest scrape react https://react.dev/reference/react \
+npx @midnightphreaker/scrapegoat@latest scrape react https://react.dev/reference/react \
   --version 19.0.0 --max-pages 200 --max-depth 3
 ```
 
 Local files are also supported using the `file://` URL scheme:
 
 ```bash
-npx @arabold/docs-mcp-server@latest scrape mylib file:///Users/me/docs/my-library
+npx @midnightphreaker/scrapegoat@latest scrape mylib file:///Users/me/docs/my-library
 ```
 
 ### Search the Index
@@ -56,13 +56,13 @@ npx @arabold/docs-mcp-server@latest scrape mylib file:///Users/me/docs/my-librar
 Query indexed documentation by library name and a natural-language query:
 
 ```bash
-npx @arabold/docs-mcp-server@latest search react "useEffect cleanup" --output yaml
+npx @midnightphreaker/scrapegoat@latest search react "useEffect cleanup" --output yaml
 ```
 
 Use `--version` to target a specific version and `--limit` to control the number of results:
 
 ```bash
-npx @arabold/docs-mcp-server@latest search react "server components" --version 19.x --limit 3
+npx @midnightphreaker/scrapegoat@latest search react "server components" --version 19.x --limit 3
 ```
 
 ### Fetch a Single Page
@@ -70,7 +70,7 @@ npx @arabold/docs-mcp-server@latest search react "server components" --version 1
 Fetch any URL and convert it to Markdown without adding it to the index:
 
 ```bash
-npx @arabold/docs-mcp-server@latest fetch-url https://react.dev/reference/react/useEffect
+npx @midnightphreaker/scrapegoat@latest fetch-url https://react.dev/reference/react/useEffect
 ```
 
 ### Other Commands
@@ -82,7 +82,7 @@ npx @arabold/docs-mcp-server@latest fetch-url https://react.dev/reference/react/
 | `refresh <library>` | Re-scrape an existing library, skipping unchanged pages |
 | `remove <library>` | Delete a library or version from the index |
 
-Run `npx @arabold/docs-mcp-server@latest --help` for the full command reference.
+Run `npx @midnightphreaker/scrapegoat@latest --help` for the full command reference.
 
 ### Output Behavior
 
@@ -97,14 +97,14 @@ Run `npx @arabold/docs-mcp-server@latest --help` for the full command reference.
 Starting the server without any command runs both the MCP endpoint and the web interface:
 
 ```bash
-npx @arabold/docs-mcp-server@latest
+npx @midnightphreaker/scrapegoat@latest
 ```
 
 You can then use the CLI in parallel to query the same local database, for example from an AI coding agent, while managing documentation through the web UI at **[http://localhost:6280](http://localhost:6280)**.
 
 ### Agent Skills
 
-The repository ships with ready-made [Agent Skills](https://agentskills.io) in the [`skills/`](https://github.com/arabold/docs-mcp-server/tree/main/skills) directory. Agent Skills are an open format for giving AI coding agents new capabilities — they contain structured instructions that teach an agent how to use the CLI commands above.
+The repository ships with ready-made [Agent Skills](https://agentskills.io) in the [`skills/`](https://git.phrk.org/pub/scrapegoat/tree/main/skills) directory. Agent Skills are an open format for giving AI coding agents new capabilities — they contain structured instructions that teach an agent how to use the CLI commands above.
 
 **Bundled skills:**
 
@@ -116,7 +116,7 @@ The repository ships with ready-made [Agent Skills](https://agentskills.io) in t
 
 Each skill folder contains a `SKILL.md` file with structured instructions, command references, flag tables, and example workflows. Compatible agents discover these files automatically and load the relevant skill when a matching task is detected.
 
-Skills are supported by a growing number of agents including Claude Code, Gemini CLI, Cursor, OpenCode, Roo Code, and many others. Copy the skill folders from the [`skills/`](https://github.com/arabold/docs-mcp-server/tree/main/skills) directory into the appropriate location for your agent. Consult your agent's documentation for the correct path — for example, [Claude Code](https://code.claude.com/docs/en/skills), [Gemini CLI](https://geminicli.com/docs/cli/skills/), or [Cursor](https://cursor.com/docs/context/skills).
+Skills are supported by a growing number of agents including Claude Code, Gemini CLI, Cursor, OpenCode, Roo Code, and many others. Copy the skill folders from the [`skills/`](https://git.phrk.org/pub/scrapegoat/tree/main/skills) directory into the appropriate location for your agent. Consult your agent's documentation for the correct path — for example, [Claude Code](https://code.claude.com/docs/en/skills), [Gemini CLI](https://geminicli.com/docs/cli/skills/), or [Cursor](https://cursor.com/docs/context/skills).
 
 See **[agentskills.io](https://agentskills.io)** for the full specification and a list of all compatible agents.
 
@@ -144,7 +144,7 @@ If your docs are in `/absolute/path/to/docs` on your host:
     docker run --rm \
       -v /absolute/path/to/docs:/docs:ro \
       ... (other args) ...
-      ghcr.io/arabold/docs-mcp-server:latest
+      ghcr.io/midnightphreaker/scrapegoat:latest
     ```
 
 2.  **Scrape using the container path:**

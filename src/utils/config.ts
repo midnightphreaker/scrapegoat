@@ -7,6 +7,15 @@ import { normalizeEnvValue } from "./env";
 import { logger } from "./logger";
 
 /**
+ * Log a deprecation warning when a legacy env var is used instead of the new one.
+ * @param oldName - The deprecated environment variable name
+ * @param newName - The replacement environment variable name
+ */
+function logDeprecation(oldName: string, newName: string): void {
+  logger.warn(`⚠ Environment variable ${oldName} is deprecated. Use ${newName} instead.`);
+}
+
+/**
  * Custom zod schema for boolean values that properly handles string representations.
  * Unlike z.coerce.boolean() which treats any non-empty string as true,
  * this schema correctly parses "false", "0", "no", "off" as false.
@@ -83,11 +92,11 @@ export const DEFAULT_CONFIG = {
     requestTimeoutMs: 30_000,
     initTimeoutMs: 30_000,
     vectorDimension: 1536,
-    /** Whether to strip newlines from text before generating embeddings (all providers). Env: `DOCS_MCP_EMBEDDINGS_STRIP_NEW_LINES` */
+    /** Whether to strip newlines from text before generating embeddings (all providers). Env: `SCRAPEGOAT_EMBEDDINGS_STRIP_NEW_LINES` */
     stripNewLines: true,
-    /** SDK-level batch size for provider API calls (currently OpenAI-only). Env: `DOCS_MCP_EMBEDDINGS_API_BATCH_SIZE` */
+    /** SDK-level batch size for provider API calls (currently OpenAI-only). Env: `SCRAPEGOAT_EMBEDDINGS_API_BATCH_SIZE` */
     apiBatchSize: 512,
-    /** Whether to allow truncating embeddings to target dimension (currently Gemini-only). Env: `DOCS_MCP_EMBEDDINGS_ALLOW_TRUNCATE` */
+    /** Whether to allow truncating embeddings to target dimension (currently Gemini-only). Env: `SCRAPEGOAT_EMBEDDINGS_ALLOW_TRUNCATE` */
     allowTruncate: true,
   },
   db: {
@@ -109,7 +118,7 @@ export const DEFAULT_CONFIG = {
     weightVec: 1,
     weightFts: 1,
     vectorMultiplier: 10,
-    /** RRF smoothing constant for hybrid search score fusion. Env: `DOCS_MCP_SEARCH_RRF_K` */
+    /** RRF smoothing constant for hybrid search score fusion. Env: `SCRAPEGOAT_SEARCH_RRF_K` */
     rrfK: 60,
   },
   sandbox: {
@@ -350,56 +359,83 @@ interface ConfigMapping {
 }
 
 const configMappings: ConfigMapping[] = [
-  { path: ["server", "protocol"], env: ["DOCS_MCP_PROTOCOL"], cli: "protocol" },
-  { path: ["app", "storePath"], env: ["DOCS_MCP_STORE_PATH"], cli: "storePath" },
-  { path: ["app", "telemetryEnabled"], env: ["DOCS_MCP_TELEMETRY"] }, // Handled via --no-telemetry in CLI usually
-  { path: ["app", "readOnly"], env: ["DOCS_MCP_READ_ONLY"], cli: "readOnly" },
+  {
+    path: ["server", "protocol"],
+    env: ["SCRAPEGOAT_PROTOCOL", "DOCS_MCP_PROTOCOL"],
+    cli: "protocol",
+  },
+  {
+    path: ["app", "storePath"],
+    env: ["SCRAPEGOAT_STORE_PATH", "DOCS_MCP_STORE_PATH"],
+    cli: "storePath",
+  },
+  {
+    path: ["app", "telemetryEnabled"],
+    env: ["SCRAPEGOAT_TELEMETRY", "DOCS_MCP_TELEMETRY"],
+  }, // Handled via --no-telemetry in CLI usually
+  {
+    path: ["app", "readOnly"],
+    env: ["SCRAPEGOAT_READ_ONLY", "DOCS_MCP_READ_ONLY"],
+    cli: "readOnly",
+  },
   // Ports - Special handling for shared env vars is done in mapping logic
   {
     path: ["server", "ports", "default"],
-    env: ["DOCS_MCP_PORT", "PORT"],
+    env: ["SCRAPEGOAT_PORT", "DOCS_MCP_PORT", "PORT"],
     cli: "port",
   },
   {
     path: ["server", "ports", "worker"],
-    env: ["DOCS_MCP_PORT", "PORT"],
+    env: ["SCRAPEGOAT_PORT", "DOCS_MCP_PORT", "PORT"],
     cli: "port",
   },
   {
     path: ["server", "ports", "mcp"],
-    env: ["DOCS_MCP_PORT", "PORT"],
+    env: ["SCRAPEGOAT_PORT", "DOCS_MCP_PORT", "PORT"],
     cli: "port",
   },
   {
     path: ["server", "ports", "web"],
-    env: ["DOCS_MCP_WEB_PORT", "DOCS_MCP_PORT", "PORT"],
+    env: ["SCRAPEGOAT_WEB_PORT", "DOCS_MCP_WEB_PORT", "DOCS_MCP_PORT", "PORT"],
     cli: "port",
   },
-  { path: ["server", "host"], env: ["DOCS_MCP_HOST", "HOST"], cli: "host" },
+  {
+    path: ["server", "host"],
+    env: ["SCRAPEGOAT_HOST", "DOCS_MCP_HOST", "HOST"],
+    cli: "host",
+  },
   {
     path: ["app", "embeddingModel"],
-    env: ["DOCS_MCP_EMBEDDING_MODEL"],
+    env: ["SCRAPEGOAT_EMBEDDING_MODEL", "DOCS_MCP_EMBEDDING_MODEL"],
     cli: "embeddingModel",
   },
-  { path: ["auth", "enabled"], env: ["DOCS_MCP_AUTH_ENABLED"], cli: "authEnabled" },
+  {
+    path: ["auth", "enabled"],
+    env: ["SCRAPEGOAT_AUTH_ENABLED", "DOCS_MCP_AUTH_ENABLED"],
+    cli: "authEnabled",
+  },
   {
     path: ["auth", "issuerUrl"],
-    env: ["DOCS_MCP_AUTH_ISSUER_URL"],
+    env: ["SCRAPEGOAT_AUTH_ISSUER_URL", "DOCS_MCP_AUTH_ISSUER_URL"],
     cli: "authIssuerUrl",
   },
   {
     path: ["auth", "audience"],
-    env: ["DOCS_MCP_AUTH_AUDIENCE"],
+    env: ["SCRAPEGOAT_AUTH_AUDIENCE", "DOCS_MCP_AUTH_AUDIENCE"],
     cli: "authAudience",
   },
   {
     path: ["database", "url"],
-    env: ["DATABASE_URL", "DOCS_MCP_DATABASE_URL"],
+    env: ["SCRAPEGOAT_DB_URL", "DATABASE_URL", "SCRAPEGOAT_DATABASE_URL"],
     cli: "databaseUrl",
   },
   {
     path: ["database", "vectorDimension"],
-    env: ["VECTOR_DIMENSION", "DOCS_MCP_DATABASE_VECTOR_DIMENSION"],
+    env: [
+      "SCRAPEGOAT_DB_VECTOR_SIZE",
+      "VECTOR_DIMENSION",
+      "SCRAPEGOAT_DATABASE_VECTOR_DIMENSION",
+    ],
     cli: "vectorDimension",
   },
   // Add other mappings as needed for CLI/Env overrides
@@ -413,16 +449,23 @@ export interface LoadConfigOptions {
 }
 
 // System-specific paths
-const systemPaths = envPaths("docs-mcp-server", { suffix: "" });
+const systemPaths = envPaths("scrapegoat", { suffix: "" });
 
 export function loadConfig(
   cliArgs: Record<string, unknown> = {},
   options: LoadConfigOptions = {},
 ): AppConfig {
   // 1. Determine Config File Path & Mode
-  // Priority: CLI > Options > Env > Default System Path
+  // Priority: CLI > Options > Env (SCRAPEGOAT_CONFIG > DOCS_MCP_CONFIG) > Default System Path
   const explicitPath =
-    (cliArgs.config as string) || options.configPath || process.env.DOCS_MCP_CONFIG;
+    (cliArgs.config as string) ||
+    options.configPath ||
+    process.env.SCRAPEGOAT_CONFIG ||
+    process.env.DOCS_MCP_CONFIG;
+
+  if (!process.env.SCRAPEGOAT_CONFIG && process.env.DOCS_MCP_CONFIG) {
+    logDeprecation("DOCS_MCP_CONFIG", "SCRAPEGOAT_CONFIG");
+  }
 
   let configPath: string;
   let isReadOnlyConfig = false;
@@ -508,6 +551,7 @@ function mapEnvToConfig(): Record<string, unknown> {
   const config: Record<string, unknown> = {};
 
   // 1. Apply explicit mappings first (for aliases like PORT, HOST)
+  //    SCRAPEGOAT_* entries take precedence; DOCS_MCP_* entries act as fallback
   for (const mapping of configMappings) {
     if (mapping.env) {
       for (const envVar of mapping.env) {
@@ -517,6 +561,13 @@ function mapEnvToConfig(): Record<string, unknown> {
             mapping.path,
             normalizeEnvValue(process.env[envVar] as string),
           );
+          // Log deprecation if a legacy DOCS_MCP_* var was matched and no SCRAPEGOAT_* equivalent was set
+          if (envVar.startsWith("DOCS_MCP_")) {
+            const primary = mapping.env.find((e) => e.startsWith("SCRAPEGOAT_"));
+            if (primary && !process.env[primary]) {
+              logDeprecation(envVar, primary);
+            }
+          }
           break; // First match wins
         }
       }
@@ -524,10 +575,16 @@ function mapEnvToConfig(): Record<string, unknown> {
   }
 
   // 2. Apply auto-generated env vars (takes precedence over explicit mappings)
+  //    SCRAPEGOAT_* vars are checked first, then legacy DOCS_MCP_* as fallback
   for (const pathArr of ALL_CONFIG_LEAF_PATHS) {
-    const envVar = pathToEnvVar(pathArr);
-    if (process.env[envVar] !== undefined) {
-      setAtPath(config, pathArr, normalizeEnvValue(process.env[envVar] as string));
+    const newEnvVar = pathToEnvVar(pathArr);
+    const oldEnvVar = `DOCS_MCP_${pathArr.map(camelToUpperSnake).join("_")}`;
+
+    if (process.env[newEnvVar] !== undefined) {
+      setAtPath(config, pathArr, normalizeEnvValue(process.env[newEnvVar] as string));
+    } else if (process.env[oldEnvVar] !== undefined) {
+      setAtPath(config, pathArr, normalizeEnvValue(process.env[oldEnvVar] as string));
+      logDeprecation(oldEnvVar, newEnvVar);
     }
   }
 
@@ -559,10 +616,10 @@ export function camelToUpperSnake(str: string): string {
 
 /**
  * Convert config path to environment variable name
- * Example: ["scraper", "document", "maxSize"] → "DOCS_MCP_SCRAPER_DOCUMENT_MAX_SIZE"
+ * Example: ["scraper", "document", "maxSize"] → "SCRAPEGOAT_SCRAPER_DOCUMENT_MAX_SIZE"
  */
 export function pathToEnvVar(pathArr: string[]): string {
-  return `DOCS_MCP_${pathArr.map(camelToUpperSnake).join("_")}`;
+  return `SCRAPEGOAT_${pathArr.map(camelToUpperSnake).join("_")}`;
 }
 
 /**

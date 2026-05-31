@@ -6,7 +6,7 @@
 The system MUST provide an automated pipeline to evaluate search result quality against a known dataset.
 
 #### Scenario: Running the evaluation suite
-- **Given** the `docs-mcp-server` has indexed the "react" documentation
+- **Given** the `scrapegoat` has indexed the "react" documentation
 - **When** the developer runs `npm run evaluate:search`
 - **Then** the system should execute the `promptfoo` evaluation suite
 - **And** it should generate a report comparing search results against expected golden answers.
@@ -30,4 +30,4 @@ The system MUST provide an automated pipeline to evaluate search result quality 
 #### Scenario: Handling missing index
 - **Given** the "react" documentation is NOT indexed
 - **When** the evaluation starts
-- **Then** it should fail fast with a clear error message instructing the user to run `docs-mcp-server scrape ...` first.
+- **Then** it should fail fast with a clear error message instructing the user to run `scrapegoat scrape ...` first.

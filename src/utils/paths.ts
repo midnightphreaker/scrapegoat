@@ -75,7 +75,7 @@ export function resolveStorePath(storePath?: string): string {
       dbDir = oldDbDir;
     } else {
       // 3. Use Standard Path
-      const standardPaths = envPaths("docs-mcp-server", { suffix: "" });
+      const standardPaths = envPaths("scrapegoat", { suffix: "" });
       dbDir = standardPaths.data;
     }
   }

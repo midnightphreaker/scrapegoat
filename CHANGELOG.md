@@ -1,3 +1,11 @@
+## [2.4.0](https://github.com/arabold/docs-mcp-server/compare/v2.2.1...v2.4.0) (2026-05-31)
+
+
+### Features
+
+* Bump version to 2.4.0 to align with upstream baseline for tracking divergence
+
+
 ## [2.2.1](https://github.com/arabold/docs-mcp-server/compare/v2.2.0...v2.2.1) (2026-03-30)
 
 

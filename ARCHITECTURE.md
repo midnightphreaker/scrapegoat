@@ -1,4 +1,4 @@
-# Documentation MCP Server Architecture
+# ScrapeGoat Architecture
 
 ## System Overview
 
@@ -36,8 +36,8 @@ Configuration resolves once per process via `loadConfig` in `src/utils/config.ts
 
 **Loading Logic**:
 
-- **Explicit Config (Read-Only)**: Files loaded via `--config` or `DOCS_MCP_CONFIG` are never modified by the server.
-- **System Default (Read-Write)**: If no explicit config is provided, the server attempts to load from the system default path (e.g., `~/Library/Preferences/docs-mcp-server/config.yaml`). The server automatically updates this file with new defaults on startup.
+- **Explicit Config (Read-Only)**: Files loaded via `--config` or `SCRAPEGOAT_CONFIG` are never modified by the server.
+- **System Default (Read-Write)**: If no explicit config is provided, the server attempts to load from the system default path (e.g., `~/Library/Preferences/scrapegoat/config.yaml`). The server automatically updates this file with new defaults on startup.
 
 All default values are unified in a single `DEFAULT_CONFIG` source of truth. The loading process ensures that the resulting `AppConfig` object is fully typed and validated before the application starts.
 

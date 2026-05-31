@@ -181,7 +181,7 @@ describe("Telemetry", () => {
  * configuration changes made via initTelemetry().
  *
  * This specifically tests the fix for GitHub issue #306 where disabling
- * telemetry via DOCS_MCP_TELEMETRY=false was not working because the proxy
+ * telemetry via SCRAPEGOAT_TELEMETRY=false was not working because the proxy
  * was caching a stale enabled instance.
  */
 describe("telemetry proxy", () => {

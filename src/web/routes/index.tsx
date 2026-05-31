@@ -23,7 +23,7 @@ export function registerIndexRoute(
       "<!DOCTYPE html>" +
       (
         <Layout
-          title="MCP Docs"
+          title="ScrapeGoat"
           eventClientConfig={{
             useRemoteWorker,
             trpcUrl,

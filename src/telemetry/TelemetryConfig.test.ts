@@ -122,7 +122,7 @@ describe("shouldEnableTelemetry", () => {
   });
 
   it("should return true when telemetry is enabled", () => {
-    delete process.env.DOCS_MCP_TELEMETRY;
+    delete process.env.SCRAPEGOAT_TELEMETRY;
     process.argv = ["node", "script.js"];
 
     const result = shouldEnableTelemetry();

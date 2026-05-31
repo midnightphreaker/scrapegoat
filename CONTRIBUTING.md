@@ -1,6 +1,6 @@
 # Development
 
-To develop or contribute to the Docs MCP Server:
+To develop or contribute to ScrapeGoat:
 
 -   Fork the repository and create a feature branch.
 -   Follow the code conventions in [ARCHITECTURE.md](ARCHITECTURE.md).

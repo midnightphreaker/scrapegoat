@@ -6,18 +6,18 @@ The system SHALL support overriding any configuration setting via environment va
 #### Scenario: Environment Variable Naming Convention
 
 - **GIVEN** a config path `scraper.document.maxSize`
-- **WHEN** the environment variable `DOCS_MCP_SCRAPER_DOCUMENT_MAX_SIZE` is set
+- **WHEN** the environment variable `SCRAPEGOAT_SCRAPER_DOCUMENT_MAX_SIZE` is set
 - **THEN** its value SHALL override the config file and default values
 
 #### Scenario: Quoted configuration override from Docker Compose
 
-- **GIVEN** the environment variable `DOCS_MCP_EMBEDDING_MODEL` is provided as `"openai:nomic-embed-text"`
+- **GIVEN** the environment variable `SCRAPEGOAT_EMBEDDING_MODEL` is provided as `"openai:nomic-embed-text"`
 - **WHEN** the configuration is loaded
 - **THEN** the resulting `app.embeddingModel` value SHALL be `openai:nomic-embed-text`
 
 #### Scenario: Whitespace-padded configuration override
 
-- **GIVEN** the environment variable `DOCS_MCP_SCRAPER_MAX_PAGES` is provided as `  "500"  `
+- **GIVEN** the environment variable `SCRAPEGOAT_SCRAPER_MAX_PAGES` is provided as `  "500"  `
 - **WHEN** the configuration is loaded
 - **THEN** the resulting `scraper.maxPages` value SHALL be parsed as `500`
 
@@ -31,7 +31,7 @@ The system SHALL support overriding any configuration setting via environment va
 
 - **GIVEN** a config path `splitter.json.maxNestingDepth`
 - **WHEN** converted to environment variable name
-- **THEN** it SHALL become `DOCS_MCP_SPLITTER_JSON_MAX_NESTING_DEPTH`
+- **THEN** it SHALL become `SCRAPEGOAT_SPLITTER_JSON_MAX_NESTING_DEPTH`
 
 ## ADDED Requirements
 ### Requirement: Bootstrap Environment Normalization

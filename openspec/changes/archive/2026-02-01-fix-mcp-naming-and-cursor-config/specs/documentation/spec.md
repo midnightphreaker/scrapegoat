@@ -8,4 +8,4 @@ The system MUST provide comprehensive user documentation for configuration and c
 
 #### Scenario: Consistent Naming
 - **WHEN** a user copies configuration snippets
-- **THEN** the server name key SHOULD consistently be `docs-mcp-server`
+- **THEN** the server name key SHOULD consistently be `scrapegoat`

@@ -26,7 +26,7 @@ const LibraryList = ({ libraries }: LibraryListProps) => {
             enter the URL of a documentation site to index. For more
             information, check the{" "}
             <a
-              href="https://grounded.tools"
+              href="https://phrk.org"
               target="_blank"
               rel="noopener noreferrer"
               class="font-medium underline hover:no-underline"

@@ -1,20 +1,20 @@
 # Configuration
 
-The Docs MCP Server uses a unified configuration system that aggregates settings from multiple sources, validating them against a strict schema. This ensures consistency whether you are running the server via CLI, Docker, or as a library.
+ScrapeGoat uses a unified configuration system that aggregates settings from multiple sources, validating them against a strict schema. This ensures consistency whether you are running the server via CLI, Docker, or as a library.
 
 ## Configuration File
 
 By default, configuration is stored in your system's preferences directory:
 
-- **macOS**: `~/Library/Preferences/docs-mcp-server/config.yaml`
-- **Linux**: `~/.config/docs-mcp-server/config.yaml`
-- **Windows**: `%APPDATA%\docs-mcp-server\config.yaml`
+- **macOS**: `~/Library/Preferences/scrapegoat/config.yaml`
+- **Linux**: `~/.config/scrapegoat/config.yaml`
+- **Windows**: `%APPDATA%\scrapegoat/config.yaml`
 
 Example `config.yaml`:
 
 ```yaml
 app:
-  storePath: ~/.docs-mcp-server
+  storePath: ~/.scrapegoat
   telemetryEnabled: true
   embeddingModel: text-embedding-3-small
 
@@ -33,10 +33,10 @@ The server **automatically updates** this file on startup with new defaults.
 
 ### Using an Explicit Config File
 
-You can specify a custom config file with `--config` or `DOCS_MCP_CONFIG`:
+You can specify a custom config file with `--config` or `SCRAPEGOAT_CONFIG`:
 
 ```bash
-docs-mcp-server --config /path/to/config.yaml
+scrapegoat --config /path/to/config.yaml
 ```
 
 **Note:** Explicit config files are treated as **read-only**. The server will not modify them.
@@ -55,7 +55,7 @@ Configuration values are merged from multiple sources, with **later sources taki
 Any configuration setting can be overridden via environment variables using the naming convention:
 
 ```
-DOCS_MCP_<SECTION>_<SETTING>
+SCRAPEGOAT_<SECTION>_<SETTING>
 ```
 
 Rules:
@@ -66,14 +66,14 @@ Rules:
 
 ```bash
 # Override scraper settings
-export DOCS_MCP_SCRAPER_MAX_PAGES=2000
-export DOCS_MCP_SCRAPER_DOCUMENT_MAX_SIZE=52428800
+export SCRAPEGOAT_SCRAPER_MAX_PAGES=2000
+export SCRAPEGOAT_SCRAPER_DOCUMENT_MAX_SIZE=52428800
 
 # Override splitter settings
-export DOCS_MCP_SPLITTER_PREFERRED_CHUNK_SIZE=2000
+export SCRAPEGOAT_SPLITTER_PREFERRED_CHUNK_SIZE=2000
 
 # Override app settings
-export DOCS_MCP_APP_TELEMETRY_ENABLED=false
+export SCRAPEGOAT_APP_TELEMETRY_ENABLED=false
 ```
 
 Some settings also have **legacy aliases** for convenience:
@@ -88,8 +88,8 @@ Some settings also have **legacy aliases** for convenience:
 Common settings have dedicated CLI flags:
 
 ```bash
-docs-mcp-server --port 8080 --host 0.0.0.0
-docs-mcp-server --store-path /data/docs --read-only
+scrapegoat --port 8080 --host 0.0.0.0
+scrapegoat --store-path /data/docs --read-only
 ```
 
 ## CLI Configuration Commands
@@ -98,21 +98,21 @@ Manage configuration directly from the command line:
 
 ```bash
 # View current configuration (JSON format)
-docs-mcp-server config
+scrapegoat config
 
 # View current configuration (YAML format)
-docs-mcp-server config --yaml
+scrapegoat config --yaml
 
 # Get a specific value
-docs-mcp-server config get scraper.maxPages
+scrapegoat config get scraper.maxPages
 # Output: 1000
 
 # Get a nested object
-docs-mcp-server config get scraper.fetcher
+scrapegoat config get scraper.fetcher
 # Output: { "maxRetries": 6, ... }
 
 # Set a value (persists to config file)
-docs-mcp-server config set scraper.maxPages 500
+scrapegoat config set scraper.maxPages 500
 # Output: Updated scraper.maxPages = 500
 ```
 
@@ -128,7 +128,7 @@ General application settings.
 
 | Option | Default | Description |
 |:-------|:--------|:------------|
-| `storePath` | `~/.docs-mcp-server` | Directory for storing databases and logs. |
+| `storePath` | `~/.scrapegoat` | Directory for storing databases and logs. |
 | `telemetryEnabled` | `true` | Enable anonymous usage telemetry. |
 | `readOnly` | `false` | Prevent modification of data (scraping/indexing). |
 | `embeddingModel` | `text-embedding-3-small` | Model to use for vector embeddings. |
@@ -223,7 +223,7 @@ Settings for the vector embedding generation.
 | `batchChars` | `50000` | Maximum total characters per embedding batch. |
 | `requestTimeoutMs` | `30000` | Timeout for each embedding API request (ms). |
 | `initTimeoutMs` | `30000` | Timeout for the initial test embedding during model initialization (ms). |
-| `vectorDimension` | `1536` | Dimension of the vector space. Must be a positive integer (minimum 1). Override with `DOCS_MCP_EMBEDDINGS_VECTOR_DIMENSION`. Changing this value triggers a model change confirmation on next startup. |
+| `vectorDimension` | `1536` | Dimension of the vector space. Must be a positive integer (minimum 1). Override with `SCRAPEGOAT_EMBEDDINGS_VECTOR_DIMENSION`. Changing this value triggers a model change confirmation on next startup. |
 
 ### Search (`search`)
 
