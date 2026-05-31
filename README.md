@@ -123,6 +123,75 @@ OPENAI_API_KEY="sk-proj-..." npx @midnightphreaker/scrapegoat@latest
 
 See **[Embedding Models](docs/guides/embedding-models.md)** for configuring **Ollama**, **Gemini**, **Azure**, and others.
 
+### 🔄 Switching Embedding Models or Dimensions
+
+When you change the embedding model or vector dimensions (e.g., from 1536 to 768), ScrapeGoat throws an `EmbeddingModelChangedError` because existing vectors are incompatible. This requires manual confirmation and invalidates all stored embeddings — full-text search continues to work, but vector search won't return results until libraries are re-scraped.
+
+> **⚠️ Always back up your database before changing dimensions.**
+
+#### Interactive (non-Docker) usage
+
+Start the server normally — it will detect the change and prompt for confirmation:
+
+```
+Embedding dimension mismatch: stored=1536, configured=768
+This will invalidate all existing vectors. Continue? (y/N):
+```
+
+Type `y` to confirm. Then re-scrape libraries to regenerate vectors:
+
+```bash
+scrapegoat scrape <library> <version>
+```
+
+#### Docker usage
+
+The worker runs non-interactively and can't prompt for confirmation. Use one of these approaches:
+
+**Option A — Run the worker interactively once:**
+
+```bash
+docker compose run --rm -it worker
+# Type y when prompted, then Ctrl+C
+docker compose up -d
+```
+
+**Option B — Direct database migration:**
+
+```bash
+# 1. Stop the worker
+docker compose stop worker
+
+# 2. Connect to postgres
+docker exec -it scrapegoat-postgres psql -U scrapegoat -d scrapegoat
+
+# 3. Nullify existing vectors
+UPDATE documents SET embedding = NULL;
+
+# 4. Alter the column type (replace NEW_DIMENSION, e.g. 768)
+ALTER TABLE documents ALTER COLUMN embedding TYPE vector(NEW_DIMENSION);
+
+# 5. Update metadata
+INSERT INTO metadata (key, value) VALUES ('embedding_dimension', 'NEW_DIMENSION')
+  ON CONFLICT (key) DO UPDATE SET value = 'NEW_DIMENSION';
+
+# 6. Restart
+docker compose up -d
+```
+
+Then re-scrape libraries to regenerate vectors.
+
+#### Common dimensions
+
+| Model | Dimensions |
+|-------|-----------|
+| `text-embedding-3-small` | 1536 |
+| `text-embedding-3-large` | 3072 |
+| `nomic-embed-text` | 768 |
+| `all-MiniLM-L6-v2` | 384 |
+
+Check your model's documentation for the correct dimension.
+
 ---
 
 ## 📜 Documentation
