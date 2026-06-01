@@ -19,12 +19,17 @@
 import fs from "node:fs/promises";
 import multipart from "@fastify/multipart";
 import type { FastifyInstance, FastifyReply, FastifyRequest } from "fastify";
+import type { IPipeline } from "../../../pipeline/trpc/interfaces";
+import type { IDocumentManagement } from "../../../store/trpc/interfaces";
 import { ArchiveExtractor, UploadStagingService } from "../../../upload/index";
 import type { UploadConfig } from "../../../upload/types";
 import { DEFAULT_UPLOAD_CONFIG } from "../../../upload/types";
+import { logger } from "../../../utils/logger";
 import { registerUploadPageRoute } from "./page";
 
 let stagingService: UploadStagingService | null = null;
+let pipelineManager: IPipeline | null = null;
+let docService: IDocumentManagement | null = null;
 
 function getStagingService(): UploadStagingService {
   if (!stagingService) {
@@ -45,13 +50,33 @@ function getStagingService(): UploadStagingService {
       sessionTtlSeconds: process.env.SCRAPEGOAT_WEBUI_IMPORT_SESSION_TTL_SECONDS
         ? Number.parseInt(process.env.SCRAPEGOAT_WEBUI_IMPORT_SESSION_TTL_SECONDS, 10)
         : undefined,
+      maxArchiveCompressedBytes: process.env
+        .SCRAPEGOAT_WEBUI_IMPORT_MAX_ARCHIVE_SIZE_BYTES
+        ? Number.parseInt(process.env.SCRAPEGOAT_WEBUI_IMPORT_MAX_ARCHIVE_SIZE_BYTES, 10)
+        : undefined,
+      maxDepth: process.env.SCRAPEGOAT_WEBUI_IMPORT_MAX_DEPTH
+        ? Number.parseInt(process.env.SCRAPEGOAT_WEBUI_IMPORT_MAX_DEPTH, 10)
+        : undefined,
+      maxFilenameLength: process.env.SCRAPEGOAT_WEBUI_IMPORT_MAX_FILENAME_LENGTH
+        ? Number.parseInt(process.env.SCRAPEGOAT_WEBUI_IMPORT_MAX_FILENAME_LENGTH, 10)
+        : undefined,
+      maxPathLength: process.env.SCRAPEGOAT_WEBUI_IMPORT_MAX_PATH_LENGTH
+        ? Number.parseInt(process.env.SCRAPEGOAT_WEBUI_IMPORT_MAX_PATH_LENGTH, 10)
+        : undefined,
     };
     stagingService = new UploadStagingService(config);
   }
   return stagingService;
 }
 
-export async function registerUploadRoutes(server: FastifyInstance): Promise<void> {
+export async function registerUploadRoutes(
+  server: FastifyInstance,
+  pipeline: IPipeline,
+  docs: IDocumentManagement,
+): Promise<void> {
+  pipelineManager = pipeline;
+  docService = docs;
+
   await server.register(multipart, {
     limits: {
       fileSize: DEFAULT_UPLOAD_CONFIG.maxFileSizeBytes,
@@ -114,13 +139,10 @@ export async function registerUploadRoutes(server: FastifyInstance): Promise<voi
                 });
               }
               for (const extracted of result.files) {
-                const content = await fs.readFile(
-                  `${extractDir}/${extracted.relativePath}`,
-                );
                 const staged = await service.stageFile(
                   sessionId,
                   extracted.relativePath,
-                  content,
+                  extracted.content,
                   true,
                   fileName,
                 );
@@ -129,11 +151,12 @@ export async function registerUploadRoutes(server: FastifyInstance): Promise<voi
                   name: staged.displayName,
                   path: staged.relativePath,
                   size: staged.size,
+                  ingestible: staged.ingestible,
+                  fromArchive: staged.fromArchive,
+                  mimeType: staged.mimeType,
                 });
-                await fs
-                  .unlink(`${extractDir}/${extracted.relativePath}`)
-                  .catch(() => {});
               }
+              // Clean up extraction temp dir (TAR archives write to disk; ZIP does not)
               await fs.rm(extractDir, { recursive: true, force: true }).catch(() => {});
             } else {
               const staged = await service.stageFile(sessionId, fileName, buffer);
@@ -142,6 +165,9 @@ export async function registerUploadRoutes(server: FastifyInstance): Promise<voi
                 name: staged.displayName,
                 path: staged.relativePath,
                 size: staged.size,
+                ingestible: staged.ingestible,
+                fromArchive: staged.fromArchive,
+                mimeType: staged.mimeType,
               });
             }
           } catch (err) {
@@ -231,27 +257,93 @@ export async function registerUploadRoutes(server: FastifyInstance): Promise<voi
   );
 
   server.post(
+    "/web/upload/tree/virtual-folder",
+    async (request: FastifyRequest, reply: FastifyReply) => {
+      const { sessionId, folderPath } = request.body as Record<string, string>;
+      if (!sessionId || !folderPath)
+        return reply.code(400).send({ error: "sessionId and folderPath are required" });
+      try {
+        await getStagingService().createVirtualFolder(sessionId, folderPath);
+        return { success: true };
+      } catch (err) {
+        return reply
+          .code(400)
+          .send({ error: err instanceof Error ? err.message : String(err) });
+      }
+    },
+  );
+
+  server.post(
     "/web/upload/commit",
     async (request: FastifyRequest, reply: FastifyReply) => {
       const { sessionId } = request.body as Record<string, string>;
       if (!sessionId) return reply.code(400).send({ error: "sessionId is required" });
+
+      if (!pipelineManager || !docService) {
+        return reply.code(500).send({ error: "Server not fully initialized" });
+      }
+
       const service = getStagingService();
       const session = service.getSession(sessionId);
       if (!session) return reply.code(404).send({ error: "Session not found" });
+
+      if (session.status !== "active") {
+        return reply
+          .code(400)
+          .send({ error: `Session is not active (status: ${session.status})` });
+      }
+
       try {
+        // Check for duplicate library/version
+        const duplicateExists = await docService.versionExists(
+          session.library,
+          session.version,
+        );
+        if (duplicateExists) {
+          return reply.code(409).send({
+            error: `Library "${session.library}" version "${session.version}" already exists. Please use a different version.`,
+          });
+        }
+
+        // Mark session as committed
         await service.commitSession(sessionId);
+
+        // Generate source URL for the import strategy
+        const sourceUrl = `file:///import/${encodeURIComponent(session.library)}/${encodeURIComponent(session.version)}/`;
+
+        // Enqueue the pipeline job
+        const jobId = await pipelineManager.enqueueScrapeJob(
+          session.library,
+          session.version,
+          {
+            url: sourceUrl,
+            library: session.library,
+            version: session.version,
+            localImportStagingPath: session.stagingPath,
+          },
+        );
+
+        logger.info(
+          `📦 Import job enqueued: ${jobId} for ${session.library}@${session.version}`,
+        );
+
+        // Set up cleanup listener for staging directory
+        registerStagingCleanup(pipelineManager, jobId, session.stagingPath, sessionId);
+
+        const stats = service.getSessionStats(sessionId);
+
         return {
           success: true,
           sessionId,
           library: session.library,
           version: session.version,
-          stats: service.getSessionStats(sessionId),
-          stagingPath: session.stagingPath,
+          stats,
+          jobId,
         };
       } catch (err) {
-        return reply
-          .code(400)
-          .send({ error: err instanceof Error ? err.message : String(err) });
+        const message = err instanceof Error ? err.message : String(err);
+        logger.error(`✗ Commit failed for session ${sessionId}: ${message}`);
+        return reply.code(500).send({ error: message });
       }
     },
   );
@@ -333,6 +425,48 @@ export async function registerUploadRoutes(server: FastifyInstance): Promise<voi
         version: session.version,
         stats: service.getSessionStats(sessionId),
       };
+    },
+  );
+}
+
+/**
+ * Registers a one-time listener on the pipeline event bus to clean up the staging
+ * directory after the import job finishes.
+ *
+ * - On success or cancellation: removes the staging directory.
+ * - On failure: keeps the staging directory for debugging.
+ */
+function registerStagingCleanup(
+  pipeline: IPipeline,
+  jobId: string,
+  stagingPath: string,
+  sessionId: string,
+): void {
+  // We use the job's completion promise to trigger cleanup.
+  // This is more reliable than listening to event bus events since we
+  // have direct access to the job via PipelineManager.
+  const job = pipeline.getJob(jobId);
+  if (!job) {
+    logger.warn(`Cannot register cleanup for unknown job: ${jobId}`);
+    return;
+  }
+
+  // Use waitForJobCompletion which resolves on success/cancel and rejects on failure
+  pipeline.waitForJobCompletion(jobId).then(
+    () => {
+      // Success or cancellation — remove staging dir
+      logger.info(
+        `🧹 Cleaning up staging directory for session ${sessionId}: ${stagingPath}`,
+      );
+      fs.rm(stagingPath, { recursive: true, force: true }).catch((err) => {
+        logger.warn(`Failed to clean up staging directory ${stagingPath}: ${err}`);
+      });
+    },
+    () => {
+      // Failure — keep staging directory for debugging
+      logger.info(
+        `Keeping staging directory for failed import session ${sessionId}: ${stagingPath}`,
+      );
     },
   );
 }

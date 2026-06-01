@@ -132,6 +132,12 @@ export interface ScraperOptions {
    * Used internally by strategies that handle local file content.
    */
   internalAllowedFileRoots?: string[];
+  /**
+   * Path to the local import staging directory for file:///import/ URLs.
+   * Set by the commit endpoint when enqueuing a local import job.
+   * The LocalImportStrategy uses this to resolve actual file locations.
+   */
+  localImportStagingPath?: string;
 }
 
 /**

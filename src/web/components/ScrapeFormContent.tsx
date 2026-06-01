@@ -82,7 +82,7 @@ const ScrapeFormContent = ({
     ? "#add-version-form-container"
     : "#addJobForm";
 
-  const title = isAddVersionMode ? "Add New Version" : "Add New Documentation";
+  const title = isAddVersionMode ? "Add Remote Documentation Version" : "Add Remote Documentation Source";
 
   return (
     <div class="mt-4 p-4 bg-white dark:bg-gray-800 rounded-lg shadow border border-gray-300 dark:border-gray-600 relative animate-[fadeSlideIn_0.2s_ease-out]">

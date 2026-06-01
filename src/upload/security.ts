@@ -148,6 +148,42 @@ export function formatBytes(bytes: number): string {
 }
 
 /**
+ * File extensions accepted for ingestion (FR-3.3.5).
+ * Archive formats are also accepted — they are extracted separately.
+ */
+const INGESTIBLE_EXTENSIONS = new Set([
+  // Document formats
+  ".md",
+  ".markdown",
+  ".txt",
+  // Archive formats (extracted, not ingested directly, but accepted for upload)
+  ".zip",
+  ".tar",
+  ".tar.gz",
+  ".tgz",
+  ".tar.bz2",
+]);
+
+/**
+ * Checks whether a file's extension is in the accepted set for ingestion.
+ * Matches against lowercase extensions including compound ones like `.tar.gz`.
+ *
+ * @param fileName - The filename (or full path) to check
+ * @returns `true` if the file type is accepted for ingestion
+ */
+export function isIngestibleFileType(fileName: string): boolean {
+  const lower = fileName.toLowerCase();
+
+  // Check compound extensions first
+  if (lower.endsWith(".tar.gz") || lower.endsWith(".tar.bz2")) {
+    return true;
+  }
+
+  const ext = path.extname(lower);
+  return INGESTIBLE_EXTENSIONS.has(ext);
+}
+
+/**
  * Sanitizes a filename for safe filesystem usage.
  * Removes or replaces dangerous characters.
  */

@@ -19,17 +19,55 @@ const LocalUploadPanel = ({ library, version }: LocalUploadPanelProps) => {
       class="bg-white border border-gray-200 rounded-lg shadow-sm dark:bg-gray-800 dark:border-gray-700"
     >
       {/* Header */}
-      <div class="px-6 py-4 border-b border-gray-200 dark:border-gray-700">
+      <div class="px-6 py-4 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between">
         <h3 class="text-lg font-semibold text-gray-900 dark:text-white">
-          Upload Documentation Files
+          Add Local Documentation Source
         </h3>
-        <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">
-          Import from local files, folders, or archives for{" "}
-          <span class="font-medium text-gray-700 dark:text-gray-300" safe>
-            {library}
-          </span>{" "}
-          v<span safe>{version || "latest"}</span>
-        </p>
+        <button
+          type="button"
+          class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors"
+          hx-get="/web/jobs/source-selection"
+          hx-target="#modal-container"
+          hx-swap="innerHTML"
+          title="Close"
+        >
+          <svg class="w-5 h-5" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+            <path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+          </svg>
+        </button>
+      </div>
+
+      {/* Library / Version fields */}
+      <div class="px-6 pt-5 grid grid-cols-2 gap-4">
+        <div>
+          <label
+            for="upload-library"
+            class="block mb-2 text-sm font-medium text-gray-900 dark:text-white"
+          >
+            Library Name *
+          </label>
+          <input
+            id="upload-library"
+            type="text"
+            class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500"
+            x-model="library"
+            required
+          />
+        </div>
+        <div>
+          <label
+            for="upload-version"
+            class="block mb-2 text-sm font-medium text-gray-900 dark:text-white"
+          >
+            Version
+          </label>
+          <input
+            id="upload-version"
+            type="text"
+            class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500"
+            x-model="version"
+          />
+        </div>
       </div>
 
       {/* Upload area */}
@@ -73,6 +111,31 @@ const LocalUploadPanel = ({ library, version }: LocalUploadPanelProps) => {
             accept=".md,.markdown,.txt,.zip,.tar,.tar.gz,.tgz,.tar.bz2"
             x-on:change="handleFiles($event.target.files)"
           />
+        </div>
+
+        {/* Add Folder / Add Virtual Folder buttons */}
+        <div class="mt-3 flex gap-2">
+          <button
+            type="button"
+            class="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 dark:bg-gray-800 dark:text-gray-400 dark:border-gray-600 dark:hover:text-white dark:hover:bg-gray-700"
+            x-on:click="$refs.folderInput.click()"
+          >
+            Add Folder
+          </button>
+          <input
+            x-ref="folderInput"
+            type="file"
+            class="hidden"
+            {...{ webkitdirectory: true }}
+            x-on:change="handleFolderSelect($event)"
+          />
+          <button
+            type="button"
+            class="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 dark:bg-gray-800 dark:text-gray-400 dark:border-gray-600 dark:hover:text-white dark:hover:bg-gray-700"
+            x-on:click="createVirtualFolder()"
+          >
+            Add Virtual Folder
+          </button>
         </div>
 
         {/* Upload progress */}
@@ -156,6 +219,7 @@ const LocalUploadPanel = ({ library, version }: LocalUploadPanelProps) => {
                 <div
                   class="flex items-center gap-2 px-3 py-2 border-b border-gray-100 last:border-0 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700/50"
                   x-bind:style="'padding-left: ' + (node.depth * 20 + 12) + 'px'"
+                  x-on:click="selectNode(node)"
                 >
                   {/* File/folder icon */}
                   <svg
@@ -198,7 +262,7 @@ const LocalUploadPanel = ({ library, version }: LocalUploadPanelProps) => {
                       type="button"
                       class="p-1 text-gray-400 hover:text-blue-600 dark:hover:text-blue-400"
                       title="Rename"
-                      x-on:click="startRename(node)"
+                      x-on:click="$event.stopPropagation(); startRename(node)"
                     >
                       <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
@@ -206,9 +270,19 @@ const LocalUploadPanel = ({ library, version }: LocalUploadPanelProps) => {
                     </button>
                     <button
                       type="button"
+                      class="p-1 text-gray-400 hover:text-green-600 dark:hover:text-green-400"
+                      title="Move"
+                      x-on:click="$event.stopPropagation(); moveNode(node)"
+                    >
+                      <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4" />
+                      </svg>
+                    </button>
+                    <button
+                      type="button"
                       class="p-1 text-gray-400 hover:text-red-600 dark:hover:text-red-400"
                       title="Remove"
-                      x-on:click="removeNode(node)"
+                      x-on:click="$event.stopPropagation(); removeNode(node)"
                     >
                       <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
@@ -217,6 +291,14 @@ const LocalUploadPanel = ({ library, version }: LocalUploadPanelProps) => {
                   </div>
                 </div>
               </template>
+            </div>
+
+            {/* Source path preview */}
+            <div
+              x-show="selectedNode"
+              class="mt-2 px-3 py-2 text-xs text-gray-500 dark:text-gray-400 bg-gray-50 dark:bg-gray-700/50 rounded-lg font-mono truncate"
+              x-text="sourcePathPreview"
+            >
             </div>
           </div>
         </template>
@@ -255,8 +337,10 @@ const LocalUploadPanel = ({ library, version }: LocalUploadPanelProps) => {
             class="px-5 py-2.5 text-sm font-medium text-white bg-blue-700 rounded-lg hover:bg-blue-800 focus:ring-4 focus:ring-blue-300 dark:bg-blue-600 dark:hover:bg-blue-700 dark:focus:ring-blue-800 disabled:opacity-50 disabled:cursor-not-allowed"
             x-bind:disabled="stagedFiles.length === 0 || committing"
             x-on:click="commitImport()"
-            x-text="committing ? 'Importing...' : 'Import Documentation'"
-          />
+            x-text="committing ? 'Importing...' : 'Accept & Submit'"
+          >
+            Accept &amp; Submit
+          </button>
           <button
             type="button"
             class="px-5 py-2.5 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 dark:bg-gray-800 dark:text-gray-400 dark:border-gray-600 dark:hover:text-white dark:hover:bg-gray-700"

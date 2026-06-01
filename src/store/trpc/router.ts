@@ -69,6 +69,20 @@ export function createDataRouter(trpc: unknown) {
         },
       ),
 
+    versionExists: tt.procedure
+      .input(z.object({ library: nonEmpty, version: nonEmpty }))
+      .query(
+        async ({
+          ctx,
+          input,
+        }: {
+          ctx: DataTrpcContext;
+          input: { library: string; version: string };
+        }) => {
+          return await ctx.docService.versionExists(input.library, input.version);
+        },
+      ),
+
     search: tt.procedure
       .input(
         z.object({

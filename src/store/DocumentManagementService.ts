@@ -257,6 +257,21 @@ export class DocumentManagementService {
   }
 
   /**
+   * Check if a specific library and version combination exists in the database.
+   * This checks for the version record itself, not whether it has documents.
+   *
+   * @param library - The library name
+   * @param version - The version string
+   * @returns true if the library+version record exists in the database
+   */
+  async versionExists(library: string, version: string): Promise<boolean> {
+    const normalizedLibrary = library.toLowerCase();
+    const normalizedVersion = this.normalizeVersion(version);
+    const versions = await this.store.queryUniqueVersions(normalizedLibrary);
+    return versions.includes(normalizedVersion);
+  }
+
+  /**
    * Finds the most appropriate version of documentation based on the requested version.
    * When no target version is specified, returns the latest version.
    *

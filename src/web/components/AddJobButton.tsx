@@ -7,7 +7,7 @@ import PrimaryButton from "./PrimaryButton";
 const AddJobButton = () => {
   return (
     <PrimaryButton
-      hx-get="/web/jobs/new"
+      hx-get="/web/jobs/source-selection"
       hx-target="#addJobForm"
       hx-swap="innerHTML"
     >

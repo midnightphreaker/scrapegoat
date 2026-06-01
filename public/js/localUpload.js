@@ -26,6 +26,7 @@ document.addEventListener("alpine:init", () => {
     showTree: false,
     committing: false,
     dragover: false,
+    selectedNode: null,
 
     async init() {
       // Create a new upload session
@@ -96,6 +97,83 @@ document.addEventListener("alpine:init", () => {
       }
     },
 
+    async handleFolderSelect(event) {
+      const files = event.target.files;
+      if (!files || files.length === 0 || !this.sessionId) return;
+
+      this.uploading = true;
+      this.uploadProgress = 0;
+      this.uploadErrors = [];
+
+      const formData = new FormData();
+      for (const file of files) {
+        formData.append("files", file, file.webkitRelativePath || file.name);
+      }
+
+      try {
+        const xhr = new XMLHttpRequest();
+        xhr.open("POST", `/web/upload/files?sessionId=${encodeURIComponent(this.sessionId)}`);
+
+        xhr.upload.onprogress = (e) => {
+          if (e.lengthComputable) {
+            this.uploadProgress = Math.round((e.loaded / e.total) * 100);
+          }
+        };
+
+        const result = await new Promise((resolve, reject) => {
+          xhr.onload = () => {
+            if (xhr.status >= 200 && xhr.status < 300) {
+              resolve(JSON.parse(xhr.responseText));
+            } else {
+              reject(new Error(xhr.responseText));
+            }
+          };
+          xhr.onerror = () => reject(new Error("Upload failed"));
+          xhr.send(formData);
+        });
+
+        if (result.stagedFiles) {
+          this.stagedFiles = [...this.stagedFiles, ...result.stagedFiles];
+        }
+        if (result.errors && result.errors.length > 0) {
+          this.uploadErrors = result.errors;
+        }
+
+        await this.refreshTree();
+      } catch (e) {
+        this.uploadErrors = [{ path: "upload", error: e.message || "Upload failed" }];
+      } finally {
+        this.uploading = false;
+        this.uploadProgress = 0;
+        // Reset the input so the same folder can be re-selected
+        event.target.value = "";
+      }
+    },
+
+    async createVirtualFolder() {
+      if (!this.sessionId) return;
+      const name = window.prompt("Enter folder name:");
+      if (!name || name.trim() === "") return;
+      try {
+        const resp = await fetch("/web/upload/tree/virtual-folder", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            sessionId: this.sessionId,
+            folderPath: name.trim(),
+          }),
+        });
+        if (resp.ok) {
+          await this.refreshTree();
+        } else {
+          const err = await resp.json().catch(() => ({ error: "Failed to create folder" }));
+          this.uploadErrors = [{ path: "virtual-folder", error: err.error || "Unknown error" }];
+        }
+      } catch (e) {
+        this.uploadErrors = [{ path: "virtual-folder", error: e.message || "Failed to create folder" }];
+      }
+    },
+
     handleDrop(event) {
       this.dragover = false;
       const files = event.dataTransfer?.files;
@@ -129,6 +207,15 @@ document.addEventListener("alpine:init", () => {
         }
       }
       return result;
+    },
+
+    selectNode(node) {
+      this.selectedNode = node;
+    },
+
+    get sourcePathPreview() {
+      if (!this.selectedNode) return "";
+      return `${this.library} ${this.version} > ${this.selectedNode.relativePath || this.selectedNode.path || this.selectedNode.name}`;
     },
 
     async startRename(node) {
@@ -167,8 +254,33 @@ document.addEventListener("alpine:init", () => {
       }
     },
 
+    async moveNode(node) {
+      if (!this.sessionId) return;
+      const targetPath = prompt("Move to folder:", "/");
+      if (targetPath === null) return;
+      try {
+        const resp = await fetch("/web/upload/tree/move", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            sessionId: this.sessionId,
+            fileId: node.id,
+            newRelativePath: targetPath
+              ? `${targetPath.replace(/\/$/, "")}/${node.name}`
+              : node.name,
+          }),
+        });
+        if (resp.ok) await this.refreshTree();
+      } catch (e) {
+        console.error("Move failed:", e);
+      }
+    },
+
     async commitImport() {
       if (!this.sessionId) return;
+
+      if (!window.confirm("Submit this import tree? The current file/folder structure will define the retrieval source paths for all imported documents.")) return;
+
       this.committing = true;
       try {
         const resp = await fetch("/web/upload/commit", {
@@ -178,6 +290,8 @@ document.addEventListener("alpine:init", () => {
         });
         if (resp.ok) {
           const result = await resp.json();
+          const stats = result.stats || {};
+
           // Trigger toast notification
           document.dispatchEvent(
             new CustomEvent("toast", {
@@ -187,6 +301,20 @@ document.addEventListener("alpine:init", () => {
               },
             }),
           );
+
+          // Report prompts
+          if (stats.failedFiles > 0) {
+            if (window.confirm("Some files failed to upload. Download report?")) {
+              this.downloadFile(`/web/upload/report/failed?sessionId=${encodeURIComponent(this.sessionId)}`, "Scrapegoat-FailedToUpload.txt");
+            }
+          }
+
+          if (stats.renamedFiles > 0) {
+            if (window.confirm("Some files were renamed. Download report?")) {
+              this.downloadFile(`/web/upload/report/renamed?sessionId=${encodeURIComponent(this.sessionId)}`, "Scrapegoat-RenamedFiles.txt");
+            }
+          }
+
           // Close the upload panel or redirect
           this.sessionId = null;
           this.stagedFiles = [];
@@ -194,6 +322,7 @@ document.addEventListener("alpine:init", () => {
           this.flatNodes = [];
           this.stats = null;
           this.showTree = false;
+          this.selectedNode = null;
         } else {
           const err = await resp.json().catch(() => ({ error: "Commit failed" }));
           this.uploadErrors = [{ path: "commit", error: err.error }];
@@ -203,6 +332,15 @@ document.addEventListener("alpine:init", () => {
       } finally {
         this.committing = false;
       }
+    },
+
+    downloadFile(url, filename) {
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = filename;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
     },
 
     async cancelImport() {
@@ -223,6 +361,7 @@ document.addEventListener("alpine:init", () => {
       this.stats = null;
       this.showTree = false;
       this.uploadErrors = [];
+      this.selectedNode = null;
     },
 
     formatSize(bytes) {

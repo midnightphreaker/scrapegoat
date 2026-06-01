@@ -1,6 +1,7 @@
 import type { LibraryInfo } from "../../tools/ListLibrariesTool";
 import type { VersionSummary } from "../../store/types";
 import AddVersionButton from "./AddVersionButton";
+import UploadVersionButton from "./UploadVersionButton";
 import VersionDetailsRow from "./VersionDetailsRow";
 
 /**
@@ -80,7 +81,10 @@ const LibraryDetailCard = ({ library }: LibraryDetailCardProps) => {
       </div>
       {/* Add New Version Section */}
       <div id="add-version-form-container" class="mt-4">
-        <AddVersionButton libraryName={library.name} />
+        <div class="grid grid-cols-2 gap-3">
+          <AddVersionButton libraryName={library.name} />
+          <UploadVersionButton libraryName={library.name} />
+        </div>
       </div>
     </div>
   );

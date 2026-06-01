@@ -1,12 +1,16 @@
 /**
- * Upload page route — renders the local upload panel for importing documentation.
+ * Upload page route — renders the local upload panel as an HTMX fragment.
  *
- * GET /web/upload?library=<name>&version=<ver> — shows the upload UI
+ * GET /web/upload?library=<name>&version=<ver> — returns the upload panel fragment
+ *
+ * The library and version parameters are optional. When omitted the panel renders
+ * with empty defaults so the user can fill them in directly on the form.
+ * All callers (SourceSelectionModal, UploadVersionButton) use HTMX innerHTML
+ * swap, so this route returns a bare fragment — no Layout wrapper.
  */
 
 import type { FastifyInstance, FastifyRequest } from "fastify";
 import LocalUploadPanel from "../../components/upload/LocalUploadPanel";
-import Layout from "../../components/Layout";
 
 export function registerUploadPageRoute(server: FastifyInstance) {
   server.get(
@@ -18,32 +22,10 @@ export function registerUploadPageRoute(server: FastifyInstance) {
       reply,
     ) => {
       reply.type("text/html");
-      const library = request.query.library?.trim();
-      if (!library) {
-        reply.status(400);
-        return (
-          "<!DOCTYPE html>" +
-          (
-            <Layout title="Upload Error">
-              <div class="p-6 text-center text-red-600 dark:text-red-400">
-                Library name is required. Use ?library=Name
-              </div>
-            </Layout>
-          )
-        );
-      }
+      const library = request.query.library?.trim() ?? "";
+      const version = request.query.version?.trim();
       return (
-        "<!DOCTYPE html>" +
-        (
-          <Layout title={`Upload — ${library}`}>
-            <LocalUploadPanel
-              library={library}
-              version={request.query.version}
-            />
-            {/* Alpine.js component for upload page state */}
-            <script src="/js/localUpload.js"></script>
-          </Layout>
-        )
+        <LocalUploadPanel library={library} version={version} />
       );
     },
   );

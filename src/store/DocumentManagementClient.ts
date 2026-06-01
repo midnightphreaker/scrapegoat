@@ -61,6 +61,10 @@ export class DocumentManagementClient implements IDocumentManagement {
     await this.client.validateLibraryExists.mutate({ library });
   }
 
+  async versionExists(library: string, version: string): Promise<boolean> {
+    return this.client.versionExists.query({ library, version });
+  }
+
   async findBestVersion(
     library: string,
     targetVersion?: string,

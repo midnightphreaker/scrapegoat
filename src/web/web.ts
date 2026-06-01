@@ -20,8 +20,10 @@ import { registerCancelJobRoute } from "./routes/jobs/cancel";
 import { registerClearCompletedJobsRoute } from "./routes/jobs/clear-completed";
 import { registerJobListRoutes } from "./routes/jobs/list";
 import { registerNewJobRoutes } from "./routes/jobs/new";
+import { registerSourceSelectionRoute } from "./routes/jobs/source-selection";
 import { registerLibraryDetailRoutes } from "./routes/libraries/detail";
 import { registerLibrariesRoutes } from "./routes/libraries/list";
+import { registerUploadRoutes } from "./routes/upload/index";
 
 /**
  * Initializes the Fastify web server instance.
@@ -65,6 +67,7 @@ export async function startWebServer(
   // Register routes
   registerIndexRoute(server); // Register the root route first
   registerJobListRoutes(server, listJobsTool);
+  registerSourceSelectionRoute(server);
   registerNewJobRoutes(server, scrapeTool, config.scraper);
   registerCancelJobRoute(server, cancelJobTool);
   registerClearCompletedJobsRoute(server, clearCompletedJobsTool);
@@ -76,6 +79,7 @@ export async function startWebServer(
     scrapeTool,
     docService,
   );
+  registerUploadRoutes(server, pipelineManager, docService);
 
   // Graceful shutdown of services will be handled by the caller (src/index.ts)
 

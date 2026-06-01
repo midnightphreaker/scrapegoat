@@ -5,6 +5,7 @@ import type { SearchTool } from "../../../tools/SearchTool";
 import type { IDocumentManagement } from "../../../store/trpc/interfaces";
 import { logger } from "../../../utils/logger";
 import AddVersionButton from "../../components/AddVersionButton";
+import UploadVersionButton from "../../components/UploadVersionButton";
 import Alert from "../../components/Alert";
 import Layout from "../../components/Layout";
 import LibraryDetailCard from "../../components/LibraryDetailCard";
@@ -201,6 +202,16 @@ export function registerLibraryDetailRoutes(
       const { libraryName } = request.params;
       reply.type("text/html; charset=utf-8");
       return <AddVersionButton libraryName={libraryName} />;
+    }
+  );
+
+  // GET route for upload-version button (returns the upload button)
+  server.get<{ Params: { libraryName: string } }>(
+    "/web/libraries/:libraryName/upload-version-button",
+    async (request, reply) => {
+      const { libraryName } = request.params;
+      reply.type("text/html; charset=utf-8");
+      return <UploadVersionButton libraryName={libraryName} />;
     }
   );
 

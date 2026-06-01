@@ -17,6 +17,7 @@ import mime from "mime";
 import { ImportTreeBuilder } from "./ImportTreeBuilder";
 import {
   ensureWithinBase,
+  isIngestibleFileType,
   sanitizeFileName,
   validateFileSize,
   validateTotalSize,
@@ -144,6 +145,30 @@ export class UploadStagingService {
     const safeName = sanitizeFileName(fileName);
     const fileId = generateFileId();
     const relativePath = safeName;
+
+    // Validate path depth
+    const depth = relativePath.split("/").length - 1;
+    if (depth > this.config.maxDepth) {
+      throw new Error(
+        `Path depth (${depth}) exceeds maximum (${this.config.maxDepth}): ${relativePath}`,
+      );
+    }
+
+    // Validate filename length
+    const basename = path.basename(relativePath);
+    if (basename.length > this.config.maxFilenameLength) {
+      throw new Error(
+        `Filename "${basename}" exceeds maximum length (${this.config.maxFilenameLength})`,
+      );
+    }
+
+    // Validate full path length
+    if (relativePath.length > this.config.maxPathLength) {
+      throw new Error(
+        `Path "${relativePath}" exceeds maximum length (${this.config.maxPathLength})`,
+      );
+    }
+
     const absolutePath = path.resolve(session.stagingPath, relativePath);
 
     // Security: ensure we stay inside the staging directory
@@ -168,7 +193,7 @@ export class UploadStagingService {
       mimeType,
       fromArchive,
       archiveSource,
-      ingestible: true,
+      ingestible: isIngestibleFileType(safeName),
     };
 
     // Check for rename
@@ -291,6 +316,27 @@ export class UploadStagingService {
 
     file.relativePath = sanitizedSegments;
     file.absolutePath = newAbsolutePath;
+    session.updatedAt = new Date();
+  }
+
+  /**
+   * Create a virtual (empty) folder in the staging directory.
+   * The folder is implicit in the tree — no StagedFile entry is created.
+   */
+  async createVirtualFolder(
+    sessionId: UploadSessionId,
+    folderPath: string,
+  ): Promise<void> {
+    const session = this.requireActiveSession(sessionId);
+
+    const sanitized = folderPath
+      .split("/")
+      .map((s) => sanitizeFileName(s))
+      .join("/");
+    const absolutePath = path.resolve(session.stagingPath, sanitized);
+    ensureWithinBase(absolutePath, session.stagingPath);
+
+    await fs.mkdir(absolutePath, { recursive: true });
     session.updatedAt = new Date();
   }
 

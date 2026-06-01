@@ -4,6 +4,7 @@ import { logger } from "../utils/logger";
 import { validateUrl } from "../utils/url";
 import { GitHubScraperStrategy } from "./strategies/GitHubScraperStrategy";
 import { LocalFileStrategy } from "./strategies/LocalFileStrategy";
+import { LocalImportStrategy } from "./strategies/LocalImportStrategy";
 import { NpmScraperStrategy } from "./strategies/NpmScraperStrategy";
 import { PyPiScraperStrategy } from "./strategies/PyPiScraperStrategy";
 import { WebScraperStrategy } from "./strategies/WebScraperStrategy";
@@ -32,6 +33,13 @@ export class ScraperRegistry {
 
     // Check each strategy type without instantiating heavy objects.
     // Order matters: more specific strategies should come before generic ones.
+
+    // LocalImportStrategy must be checked before LocalFileStrategy because
+    // file:///import/ URLs are a subset of file:// URLs.
+    if (isLocalImportUrl(url)) {
+      logger.debug(`Using strategy "LocalImportStrategy" for URL: ${url}`);
+      return new LocalImportStrategy(this.config);
+    }
 
     if (isLocalFileUrl(url)) {
       logger.debug(`Using strategy "LocalFileStrategy" for URL: ${url}`);
@@ -64,6 +72,10 @@ export class ScraperRegistry {
 
 function isLocalFileUrl(url: string): boolean {
   return url.startsWith("file://");
+}
+
+function isLocalImportUrl(url: string): boolean {
+  return url.startsWith("file:///import/");
 }
 
 function isNpmUrl(url: string): boolean {

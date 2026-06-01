@@ -287,6 +287,8 @@ const Layout = ({
           {`window.__EVENT_CLIENT_CONFIG__ = ${JSON.stringify(eventClientConfig)};`}
         </script>
 
+        {/* Local upload Alpine.js component (must load before main.js module so alpine:init listener is registered) */}
+        <script src="/js/localUpload.js"></script>
         {/* Bundled JS (includes Flowbite, HTMX, AlpineJS, and initialization) */}
         <script type="module" src="/assets/main.js"></script>
       </body>

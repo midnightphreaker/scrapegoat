@@ -106,7 +106,7 @@ export interface UploadConfig {
   stagingMode: "memory" | "filesystem";
   /** Base directory for filesystem staging (defaults to os.tmpdir()) */
   stagingPath?: string;
-  /** Maximum total upload size in bytes per session (default: 500MB) */
+  /** Maximum total upload size in bytes per session (default: 999MB) */
   maxTotalSizeBytes: number;
   /** Maximum single file size in bytes (default: 100MB) */
   maxFileSizeBytes: number;
@@ -118,15 +118,27 @@ export interface UploadConfig {
   maxArchiveEntries: number;
   /** Maximum uncompressed archive size in bytes */
   maxArchiveUncompressedBytes: number;
+  /** Maximum compressed archive size in bytes */
+  maxArchiveCompressedBytes: number;
+  /** Maximum directory depth for staged files */
+  maxDepth: number;
+  /** Maximum filename length for staged files */
+  maxFilenameLength: number;
+  /** Maximum full path length for staged files */
+  maxPathLength: number;
 }
 
 /** Default upload configuration */
 export const DEFAULT_UPLOAD_CONFIG: UploadConfig = {
   stagingMode: "memory",
-  maxTotalSizeBytes: 500 * 1024 * 1024,
+  maxTotalSizeBytes: 999 * 1024 * 1024,
   maxFileSizeBytes: 100 * 1024 * 1024,
-  maxFiles: 10_000,
+  maxFiles: 999,
   sessionTtlSeconds: 3600,
   maxArchiveEntries: 50_000,
-  maxArchiveUncompressedBytes: 2 * 1024 * 1024 * 1024, // 2GB
+  maxArchiveUncompressedBytes: 999 * 1024 * 1024,
+  maxArchiveCompressedBytes: 500 * 1024 * 1024,
+  maxDepth: 9,
+  maxFilenameLength: 99,
+  maxPathLength: 255,
 };

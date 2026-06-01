@@ -45,9 +45,14 @@ services:
       - .env
     environment:
       SCRAPEGOAT_DB_URL: postgresql://${SCRAPEGOAT_DB_USER:-scrapegoat}:${SCRAPEGOAT_DB_PASSWORD:-scrapegoat}@postgres:5432/${SCRAPEGOAT_DB_NAME:-scrapegoat}
+      # Local upload configuration (uncomment for filesystem staging mode)
+      # SCRAPEGOAT_WEBUI_IMPORT_STAGING_MODE: filesystem
+      # SCRAPEGOAT_WEBUI_IMPORT_STAGING_INTERNAL_PATH: /data/staging
     volumes:
       - scrapegoat-data:/data
       - scrapegoat-config:/config
+      # Local upload staging volume (uncomment for filesystem staging mode)
+      # - scrapegoat-staging:/data/staging
     depends_on:
       postgres:
         condition: service_healthy
@@ -120,9 +125,14 @@ services:
     environment:
       SCRAPEGOAT_DB_URL: postgresql://${SCRAPEGOAT_DB_USER:-scrapegoat}:${SCRAPEGOAT_DB_PASSWORD:-scrapegoat}@postgres:5432/${SCRAPEGOAT_DB_NAME:-scrapegoat}
       SCRAPEGOAT_HOST: "0.0.0.0"
+      # Local upload configuration (uncomment for filesystem staging mode)
+      # SCRAPEGOAT_WEBUI_IMPORT_STAGING_MODE: filesystem
+      # SCRAPEGOAT_WEBUI_IMPORT_STAGING_INTERNAL_PATH: /data/staging
     volumes:
       - scrapegoat-config:/config
       - scrapegoat-data:/data
+      # Local upload staging volume (uncomment for filesystem staging mode)
+      # - scrapegoat-staging:/data/staging
     deploy:
       resources:
         limits:
@@ -137,3 +147,6 @@ volumes:
     name: scrapegoat-config
   scrapegoat-pgdata:
     name: scrapegoat-pgdata
+  # Local upload staging volume (uncomment for filesystem staging mode)
+  # scrapegoat-staging:
+  #   name: scrapegoat-staging

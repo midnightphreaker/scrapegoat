@@ -79,8 +79,15 @@ export class ArchiveExtractor {
   /**
    * Extract an archive buffer to `targetDir`.
    * Detects archive type automatically from magic bytes.
+   * @param buffer - The archive content buffer
+   * @param targetDir - Directory to extract into
+   * @param fromArchive - If true, nested archive entries will be rejected
    */
-  async extract(buffer: Buffer, targetDir: string): Promise<ExtractionResult> {
+  async extract(
+    buffer: Buffer,
+    targetDir: string,
+    fromArchive = false,
+  ): Promise<ExtractionResult> {
     const archiveType = this.detectArchiveType(buffer);
     if (!archiveType) {
       throw new Error("Unrecognized archive format. Supported: ZIP, TAR, TAR.GZ/TGZ");
@@ -91,11 +98,11 @@ export class ArchiveExtractor {
 
     switch (archiveType) {
       case "zip":
-        return this.extractZip(buffer, targetDir);
+        return this.extractZip(buffer, targetDir, fromArchive);
       case "tar.gz":
-        return this.extractTarGz(buffer, targetDir);
+        return this.extractTarGz(buffer, targetDir, fromArchive);
       case "tar":
-        return this.extractTar(buffer, targetDir);
+        return this.extractTar(buffer, targetDir, fromArchive);
     }
   }
 
@@ -153,7 +160,11 @@ export class ArchiveExtractor {
   // ZIP extraction (yauzl — callback-based, promisified)
   // ---------------------------------------------------------------------------
 
-  private extractZip(buffer: Buffer, targetDir: string): Promise<ExtractionResult> {
+  private extractZip(
+    buffer: Buffer,
+    targetDir: string,
+    fromArchive = false,
+  ): Promise<ExtractionResult> {
     return new Promise((resolve) => {
       const files: ExtractedFile[] = [];
       const errors: Array<{ path: string; error: string }> = [];
@@ -257,6 +268,16 @@ export class ArchiveExtractor {
             readStream.on("end", () => {
               const content = Buffer.concat(chunks, byteCount);
 
+              // Reject nested archives when extracting from within an archive
+              if (fromArchive && this.detectArchiveType(content) !== null) {
+                errors.push({
+                  path: entry.fileName,
+                  error: "Nested archives are not supported",
+                });
+                zipfile.readEntry();
+                return;
+              }
+
               // Validate individual file size
               try {
                 validateFileSize(
@@ -312,13 +333,14 @@ export class ArchiveExtractor {
   private async extractTarGz(
     buffer: Buffer,
     targetDir: string,
+    fromArchive = false,
   ): Promise<ExtractionResult> {
     // Write the buffer to a temporary .tar.gz so the `tar` module can read it
     const tmpFile = path.join(targetDir, `.tmp_archive_${Date.now()}.tar.gz`);
     await fs.writeFile(tmpFile, buffer);
 
     try {
-      return await this.extractTarArchive(tmpFile, targetDir, true);
+      return await this.extractTarArchive(tmpFile, targetDir, true, fromArchive);
     } finally {
       // Clean up temp file
       try {
@@ -333,13 +355,17 @@ export class ArchiveExtractor {
   // TAR extraction (tar module)
   // ---------------------------------------------------------------------------
 
-  private async extractTar(buffer: Buffer, targetDir: string): Promise<ExtractionResult> {
+  private async extractTar(
+    buffer: Buffer,
+    targetDir: string,
+    fromArchive = false,
+  ): Promise<ExtractionResult> {
     // Write buffer to a temp .tar
     const tmpFile = path.join(targetDir, `.tmp_archive_${Date.now()}.tar`);
     await fs.writeFile(tmpFile, buffer);
 
     try {
-      return await this.extractTarArchive(tmpFile, targetDir, false);
+      return await this.extractTarArchive(tmpFile, targetDir, false, fromArchive);
     } finally {
       try {
         await fs.unlink(tmpFile);
@@ -357,6 +383,7 @@ export class ArchiveExtractor {
     archivePath: string,
     targetDir: string,
     isGzip: boolean,
+    fromArchive = false,
   ): Promise<ExtractionResult> {
     const files: ExtractedFile[] = [];
     const errors: Array<{ path: string; error: string }> = [];
@@ -448,6 +475,20 @@ export class ArchiveExtractor {
           error: e instanceof Error ? e.message : String(e),
         });
         // Remove the extracted file since it exceeded limits
+        try {
+          await fs.unlink(absPath);
+        } catch {
+          /* best effort */
+        }
+        continue;
+      }
+
+      // Reject nested archives when extracting from within an archive
+      if (fromArchive && this.detectArchiveType(content) !== null) {
+        errors.push({
+          path: entry.path,
+          error: "Nested archives are not supported",
+        });
         try {
           await fs.unlink(absPath);
         } catch {

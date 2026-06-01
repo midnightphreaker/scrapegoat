@@ -123,6 +123,38 @@ OPENAI_API_KEY="sk-proj-..." npx @midnightphreaker/scrapegoat@latest
 
 See **[Embedding Models](docs/guides/embedding-models.md)** for configuring **Ollama**, **Gemini**, **Azure**, and others.
 
+### 📁 Local Upload (Docker)
+
+ScrapeGoat supports uploading local documentation files through the Web UI. Uploaded files are staged temporarily before being processed.
+
+**Staging Modes:**
+
+| Mode | Description |
+|------|-------------|
+| `memory` (default) | Files are held in memory during the upload session. No volume mount required. |
+| `filesystem` | Files are written to a staging directory on disk. Requires a Docker volume mount. |
+
+**To enable filesystem staging mode in Docker:**
+
+1. Uncomment the staging volume mount and environment variables in `docker-compose.yml` (or `docker-compose.postgres.yml`) for the **worker** and **web** services:
+
+   ```yaml
+   environment:
+     SCRAPEGOAT_WEBUI_IMPORT_STAGING_MODE: filesystem
+     SCRAPEGOAT_WEBUI_IMPORT_STAGING_INTERNAL_PATH: /data/staging
+   volumes:
+     - scrapegoat-staging:/data/staging
+   ```
+
+2. Uncomment the `scrapegoat-staging` volume definition at the bottom of the compose file.
+
+**Relevant environment variables:**
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `SCRAPEGOAT_WEBUI_IMPORT_STAGING_MODE` | `memory` | Staging mode: `memory` or `filesystem` |
+| `SCRAPEGOAT_WEBUI_IMPORT_STAGING_INTERNAL_PATH` | — | Container path for filesystem staging (e.g. `/data/staging`) |
+
 ### 🔄 Switching Embedding Models or Dimensions
 
 When you change the embedding model or vector dimensions (e.g., from 1536 to 768), ScrapeGoat throws an `EmbeddingModelChangedError` because existing vectors are incompatible. This requires manual confirmation and invalidates all stored embeddings — full-text search continues to work, but vector search won't return results until libraries are re-scraped.
