@@ -1,4 +1,6 @@
-![ScrapeGoat Logo](assets/ScrapeGoat-Banner.svg)
+<p align="center">
+  <img src="assets/ScrapeGoat-Banner.svg" alt="ScrapeGoat Logo" width="700">
+</p>
 
 ScrapeGoat: Your AI's Documentation GOAT!
 
