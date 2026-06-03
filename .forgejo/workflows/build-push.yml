@@ -108,7 +108,7 @@ jobs:
         env:
           AUTH_TOKEN: ${{ secrets.AUTH_TOKEN }}
         run: |
-          set -eu
+          set -euo pipefail
 
           echo "$AUTH_TOKEN" \
             | docker login "$REGISTRY" \
@@ -154,7 +154,7 @@ jobs:
         env:
           AUTH_TOKEN: ${{ secrets.AUTH_TOKEN }}
         run: |
-          set -eu
+          set -euo pipefail
 
           TAG="v${NEW_VERSION}"
           RELEASE_NAME="${IMAGE_REF}:${NEW_VERSION}"
@@ -169,7 +169,7 @@ jobs:
               tag_name: $tag_name,
               target_commitish: $target_commitish,
               name: $name,
-              body: "Docker image:\n\n`" + $image_ref + ":" + $version + "`\n\nLatest tag:\n\n`" + $image_ref + ":latest`",
+              body: ("Docker image:\n\n`" + $image_ref + ":" + $version + "`\n\nLatest tag:\n\n`" + $image_ref + ":latest`"),
               draft: false,
               prerelease: false
             }' \
