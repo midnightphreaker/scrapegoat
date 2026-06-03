@@ -102,3 +102,15 @@ Strictly enforced by `commitlint`. Commits will fail if format is incorrect.
 - **Isolation**: Each test should check **one** behavior.
 - **Performance**: Keep unit tests <100ms.
 - **Mocks**: Use `vi.mock()` sparingly; prefer real dependencies where feasible.
+
+
+## Repository Map
+
+A full codemap is available at `codemap.md` in the project root.
+
+Before working on any task, read `codemap.md` to understand:
+- Project architecture and entry points
+- Directory responsibilities and design patterns
+- Data flow and integration points between modules
+
+For deep work on a specific folder, also read that folder's `codemap.md`.
