@@ -2,14 +2,16 @@
 
 <img src="assets/ScrapeGoat-Banner.svg" alt="ScrapeGoat Logo" width="700">
 
+<br>
+
 **ScrapeGoat: Your AI's Documentation GOAT!**
+
+<br>
 
 </div>
 
 
 **ScrapeGoat** solves the problem of AI hallucinations and outdated knowledge by providing a personal, always-current documentation index for your AI coding assistant. It fetches official docs from websites, GitHub, npm, PyPI, and local files, allowing your AI to query the exact version you are using.
-
-![ScrapeGoat Web Interface](docs/scrapegoat.png)
 
 ## ❄️ Why ScrapeGoat?
 
