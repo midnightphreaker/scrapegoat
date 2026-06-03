@@ -70,7 +70,7 @@ export async function registerWebService(
   registerNewJobRoutes(server, scrapeTool, appConfig.scraper);
   registerCancelJobRoute(server, cancelJobTool);
   registerClearCompletedJobsRoute(server, clearCompletedJobsTool);
-  registerUploadRoutes(server, pipeline, docService);
+  await registerUploadRoutes(server, pipeline, docService);
   registerEventsRoute(server, eventBus);
   registerStatsRoute(server, docService);
 }
