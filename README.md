@@ -24,7 +24,7 @@ The open-source alternative to **Context7**, **NiA**, and **Ref.Tools**.
 -   🐐 **Broad Compatibility:** Works with any MCP-compatible client (Claude, Cline, etc.).
 -   📚 **Multiple Sources:** Index websites, GitHub repositories, local folders, and zip archives — or upload files directly from the browser.
 -   📄 **Rich File Support:** Processes HTML, Markdown, PDF, Office documents (Word, Excel, PowerPoint), OpenDocument, RTF, EPUB, Jupyter Notebooks, and [90+ source code languages](docs/concepts/supported-formats.md).
--   🛡️ **Built-in Security:** SSRF protection on all outbound fetches, rate limiting on uploads, and tRPC API authentication enforcement.
+-   🛡️ **Built-in Security:** SSRF protection on all outbound fetches and tRPC API authentication enforcement.
 
 ---
 
@@ -275,7 +275,6 @@ Check your model's documentation for the correct dimension.
 ScrapeGoat includes several built-in security measures:
 
 -   **SSRF Protection:** All outbound URL fetches are validated against private IP ranges, loopback addresses, link-local addresses, and cloud metadata endpoints. Requests to internal hosts are blocked.
--   **Rate Limiting:** The upload endpoint enforces per-IP rate limiting (10 requests per minute) to prevent abuse.
 -   **API Authentication:** tRPC API endpoints enforce authentication when OAuth2/OIDC is enabled.
 -   **Configurable Host Binding:** By default, services bind to `127.0.0.1` (localhost only). Bind to `0.0.0.0` or a specific IP using `SCRAPEGOAT_HOST` when exposing to a network.
 -   **Token Safety:** Authentication tokens are excluded from debug logs to prevent credential leakage.

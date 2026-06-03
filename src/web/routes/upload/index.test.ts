@@ -1,10 +1,3 @@
-/**
- * Tests for upload route rate limiting.
- *
- * Validates that the upload endpoints enforce per-IP rate limiting
- * using @fastify/rate-limit, returning HTTP 429 when the threshold is exceeded.
- */
-
 import Fastify, { type FastifyInstance } from "fastify";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import type { IPipeline } from "../../../pipeline/trpc/interfaces";
@@ -32,7 +25,7 @@ function createDocManagementStub(): IDocumentManagement {
   } as unknown as IDocumentManagement;
 }
 
-describe("Upload route rate limiting", () => {
+describe("Upload routes", () => {
   let server: FastifyInstance;
 
   beforeAll(async () => {
@@ -44,9 +37,7 @@ describe("Upload route rate limiting", () => {
     await server.close();
   });
 
-  it("should return 429 after exceeding the rate limit", async () => {
-    // The rate limit is 10 requests per minute per IP.
-    // We send 11 rapid requests and expect the last one to be rejected with 429.
+  it("accepts repeated upload session starts", async () => {
     const totalRequests = 11;
     let lastStatus = 0;
 
@@ -54,11 +45,11 @@ describe("Upload route rate limiting", () => {
       const response = await server.inject({
         method: "POST",
         url: "/web/upload/start",
-        payload: { library: "rate-limit-test" },
+        payload: { library: `upload-session-${i}` },
       });
       lastStatus = response.statusCode;
     }
 
-    expect(lastStatus).toBe(429);
+    expect(lastStatus).toBe(200);
   });
 });

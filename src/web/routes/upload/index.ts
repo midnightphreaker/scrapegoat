@@ -18,7 +18,6 @@
 
 import fs from "node:fs/promises";
 import multipart from "@fastify/multipart";
-import rateLimit from "@fastify/rate-limit";
 import type { FastifyInstance, FastifyReply, FastifyRequest } from "fastify";
 import type { IPipeline } from "../../../pipeline/trpc/interfaces";
 import type { IDocumentManagement } from "../../../store/trpc/interfaces";
@@ -67,16 +66,6 @@ export async function registerUploadRoutes(
       fileSize: DEFAULT_UPLOAD_CONFIG.maxFileSizeBytes,
       files: 50,
     },
-  });
-
-  /**
-   * Rate limit all upload routes to prevent abuse.
-   * Allows up to 10 requests per minute per originating IP address.
-   * Exceeding the limit returns HTTP 429 (Too Many Requests).
-   */
-  await server.register(rateLimit, {
-    max: 10,
-    timeWindow: "1 minute",
   });
 
   // Register the upload page UI route

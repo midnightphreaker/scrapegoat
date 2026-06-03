@@ -419,7 +419,6 @@ DEBUG=mcp:auth npx scrapegoat --auth-enabled --auth-issuer-url "..."
 ### Network Security
 
 - Deploy behind TLS termination
-- Consider API rate limiting
 - Implement proper CORS policies for web clients
 - Use secure OAuth2 flows (Authorization Code with PKCE)
 
