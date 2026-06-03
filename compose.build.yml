@@ -3,6 +3,6 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
-    image: git.phrk.org/pub/scrapegoat:latest
+    image: git.phrk.org/pub/scrapegoat:${SCRAPEGOAT_IMAGE_TAG:-latest}
     container_name: scrapegoat
     network_mode: host

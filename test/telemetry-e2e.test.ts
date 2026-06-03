@@ -16,7 +16,7 @@
 import { spawn } from "node:child_process";
 import path from "node:path";
 import { describe, expect, it } from "vitest";
-import { getCliCommand } from "./test-helpers";
+import { getCliCommand, resolvePgBaseUrl } from "./test-helpers";
 
 describe("Telemetry E2E", () => {
   const projectRoot = path.resolve(import.meta.dirname, "..");
@@ -41,6 +41,8 @@ describe("Telemetry E2E", () => {
           VITEST_WORKER_ID: undefined,
           // Enable debug logging to see telemetry messages
           LOG_LEVEL: "debug",
+          // Ensure database URL is available to spawned process
+          DATABASE_URL: resolvePgBaseUrl(),
           // Apply test-specific environment
           ...env,
         },
@@ -77,9 +79,9 @@ describe("Telemetry E2E", () => {
     const output = stdout + stderr;
 
     // Should indicate telemetry was disabled by user preference
-    expect(output).toContain("Telemetry disabled (user preference)");
+    expect(output).toMatch(/telemetry.*disabled.*user preference/i);
     // Should NOT say "no API key" since user explicitly disabled it
-    expect(output).not.toContain("Telemetry disabled (no API key configured)");
+    expect(output).not.toMatch(/telemetry.*disabled.*no api key/i);
   });
 
   it("should log 'no API key' when DOCS_MCP_TELEMETRY=true but no API key", async () => {
@@ -91,9 +93,9 @@ describe("Telemetry E2E", () => {
     const output = stdout + stderr;
 
     // Should indicate telemetry disabled due to missing API key, not user preference
-    expect(output).toContain("Telemetry disabled (no API key configured)");
+    expect(output).toMatch(/telemetry.*disabled.*no api key/i);
     // Should NOT say "user preference" since user wanted it enabled
-    expect(output).not.toContain("Telemetry disabled (user preference)");
+    expect(output).not.toMatch(/telemetry.*disabled.*user preference/i);
   });
 
   it("should respect --no-telemetry CLI flag", async () => {
@@ -104,7 +106,7 @@ describe("Telemetry E2E", () => {
     const output = stdout + stderr;
 
     // CLI flag should result in "user preference" message
-    expect(output).toContain("Telemetry disabled (user preference)");
+    expect(output).toMatch(/telemetry.*disabled.*user preference/i);
   });
 
   it("should respect --telemetry=false CLI flag", async () => {
@@ -112,6 +114,6 @@ describe("Telemetry E2E", () => {
 
     const output = stdout + stderr;
 
-    expect(output).toContain("Telemetry disabled (user preference)");
+    expect(output).toMatch(/telemetry.*disabled.*user preference/i);
   });
 });

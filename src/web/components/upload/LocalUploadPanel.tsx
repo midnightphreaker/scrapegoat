@@ -5,9 +5,7 @@
  * Flowbite-styled to match the existing ScrapeGoat WebUI.
  */
 
-import type { PropsWithChildren } from "@kitajs/html";
-
-interface LocalUploadPanelProps extends PropsWithChildren {
+interface LocalUploadPanelProps {
   library: string;
   version?: string;
 }
@@ -15,7 +13,7 @@ interface LocalUploadPanelProps extends PropsWithChildren {
 const LocalUploadPanel = ({ library, version }: LocalUploadPanelProps) => {
   return (
     <div
-      x-data={`localUpload('${library}', '${version || "latest"}')`}
+      x-data={`localUpload('${library}', '${version || ""}')`}
       class="bg-white border border-gray-200 rounded-lg shadow-sm dark:bg-gray-800 dark:border-gray-700"
     >
       {/* Header */}
@@ -26,9 +24,7 @@ const LocalUploadPanel = ({ library, version }: LocalUploadPanelProps) => {
         <button
           type="button"
           class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors"
-          hx-get="/web/jobs/source-selection"
-          hx-target="#modal-container"
-          hx-swap="innerHTML"
+          x-on:click="closePanel()"
           title="Close"
         >
           <svg class="w-5 h-5" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
@@ -51,21 +47,29 @@ const LocalUploadPanel = ({ library, version }: LocalUploadPanelProps) => {
             type="text"
             class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500"
             x-model="library"
+            x-on:blur="createSession()"
             required
           />
+          <template x-if="!sessionId && !library">
+            <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">
+              Enter a Library Name to begin
+            </p>
+          </template>
         </div>
         <div>
           <label
             for="upload-version"
             class="block mb-2 text-sm font-medium text-gray-900 dark:text-white"
           >
-            Version
+            Version *
           </label>
           <input
             id="upload-version"
             type="text"
             class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500"
             x-model="version"
+            required
+            placeholder="e.g., 1.0.0"
           />
         </div>
       </div>
@@ -101,20 +105,26 @@ const LocalUploadPanel = ({ library, version }: LocalUploadPanelProps) => {
             <span class="font-semibold">Click to upload</span> or drag and drop
           </p>
           <p class="text-xs text-gray-500 dark:text-gray-400">
-            Markdown files, ZIP/TAR archives, or folders
+            Documents, archives, code files, or folders
           </p>
           <input
             x-ref="fileInput"
             type="file"
             class="hidden"
             multiple
-            accept=".md,.markdown,.txt,.zip,.tar,.tar.gz,.tgz,.tar.bz2"
             x-on:change="handleFiles($event.target.files)"
           />
         </div>
 
         {/* Add Folder / Add Virtual Folder buttons */}
         <div class="mt-3 flex gap-2">
+          <button
+            type="button"
+            class="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 dark:bg-gray-800 dark:text-gray-400 dark:border-gray-600 dark:hover:text-white dark:hover:bg-gray-700"
+            x-on:click="$refs.fileInput.click()"
+          >
+            Add File
+          </button>
           <button
             type="button"
             class="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 dark:bg-gray-800 dark:text-gray-400 dark:border-gray-600 dark:hover:text-white dark:hover:bg-gray-700"
@@ -335,7 +345,7 @@ const LocalUploadPanel = ({ library, version }: LocalUploadPanelProps) => {
           <button
             type="button"
             class="px-5 py-2.5 text-sm font-medium text-white bg-blue-700 rounded-lg hover:bg-blue-800 focus:ring-4 focus:ring-blue-300 dark:bg-blue-600 dark:hover:bg-blue-700 dark:focus:ring-blue-800 disabled:opacity-50 disabled:cursor-not-allowed"
-            x-bind:disabled="stagedFiles.length === 0 || committing"
+            x-bind:disabled="!sessionId || !tree || tree.length === 0 || committing || !library"
             x-on:click="commitImport()"
             x-text="committing ? 'Importing...' : 'Accept & Submit'"
           >

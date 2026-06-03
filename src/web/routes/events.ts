@@ -66,6 +66,21 @@ function convertToSsePayload(
       return {} satisfies SseEventPayloads["job-list-change"];
     }
 
+    case EventType.DB_UPDATE_FAILED: {
+      const { jobId, error } = payload as { jobId: string; error: Error };
+      return {
+        jobId,
+        error: error.message,
+      } satisfies SseEventPayloads["db-update-failed"];
+    }
+
+    case EventType.JOB_CANCEL_TIMEOUT: {
+      const { jobId } = payload as { jobId: string };
+      return {
+        jobId,
+      } satisfies SseEventPayloads["job-cancel-timeout"];
+    }
+
     default: {
       // TypeScript ensures this is unreachable if all cases are handled
       const _exhaustive: never = eventType;
@@ -116,6 +131,7 @@ export function registerEventsRoute(
       EventType.JOB_PROGRESS,
       EventType.LIBRARY_CHANGE,
       EventType.JOB_LIST_CHANGE,
+      EventType.DB_UPDATE_FAILED,
     ] as const;
 
     const unsubscribers: (() => void)[] = [];

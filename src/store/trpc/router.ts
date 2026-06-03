@@ -5,12 +5,13 @@
 import { initTRPC } from "@trpc/server";
 import superjson from "superjson";
 import { z } from "zod";
+import { ScrapeMode } from "../../scraper/types";
 import type {
   DbVersionWithLibrary,
   FindVersionResult,
   StoreSearchResult,
-  VersionStatus,
 } from "../types";
+import { VersionStatus } from "../types";
 import type { IDocumentManagement } from "./interfaces";
 
 // Context carries the document management API
@@ -32,6 +33,36 @@ const optionalVersion = z
   .optional()
   .nullable()
   .transform((v) => (typeof v === "string" ? v.trim() : v));
+
+/**
+ * Schema validating VersionStatus enum values at the tRPC boundary.
+ * Replaces loose `z.string()` to ensure only valid status strings are accepted.
+ */
+export const versionStatusSchema = z.nativeEnum(VersionStatus);
+
+/**
+ * Schema validating serializable ScraperOptions fields at the tRPC boundary.
+ * Only includes fields safe for RPC transport (excludes AbortSignal, QueueItem arrays, etc.).
+ */
+export const scraperOptionsStoreInputSchema = z.object({
+  url: z.string().min(1),
+  library: z.string().min(1),
+  version: z.string(),
+  maxPages: z.number().int().positive().optional(),
+  maxDepth: z.number().int().nonnegative().optional(),
+  scope: z.enum(["subpages", "hostname", "domain"]).optional(),
+  followRedirects: z.boolean().optional(),
+  maxConcurrency: z.number().int().positive().optional(),
+  ignoreErrors: z.boolean().optional(),
+  excludeSelectors: z.array(z.string()).optional(),
+  includePatterns: z.array(z.string()).optional(),
+  excludePatterns: z.array(z.string()).optional(),
+  scrapeMode: z.nativeEnum(ScrapeMode).optional(),
+  headers: z.record(z.string(), z.string()).optional(),
+  isRefresh: z.boolean().optional(),
+  clear: z.boolean().optional(),
+  preserveHashes: z.boolean().optional(),
+});
 
 export function createDataRouter(trpc: unknown) {
   const tt = trpc as typeof t;
@@ -149,19 +180,17 @@ export function createDataRouter(trpc: unknown) {
     // Status and version helpers
 
     getVersionsByStatus: tt.procedure
-      .input(z.object({ statuses: z.array(z.string()) }))
+      .input(z.object({ statuses: z.array(versionStatusSchema) }))
       .query(
         async ({
           ctx,
           input,
         }: {
           ctx: DataTrpcContext;
-          input: { statuses: string[] };
+          input: { statuses: VersionStatus[] };
         }) => {
-          // Cast trusting caller to pass valid VersionStatus strings
-          const statuses = input.statuses as unknown as VersionStatus[];
           return (await ctx.docService.getVersionsByStatus(
-            statuses,
+            input.statuses,
           )) as DbVersionWithLibrary[];
         },
       ),
@@ -192,7 +221,7 @@ export function createDataRouter(trpc: unknown) {
       .input(
         z.object({
           versionId: z.number().int().positive(),
-          status: z.string(),
+          status: versionStatusSchema,
           errorMessage: z.string().optional().nullable(),
         }),
       )
@@ -202,11 +231,15 @@ export function createDataRouter(trpc: unknown) {
           input,
         }: {
           ctx: DataTrpcContext;
-          input: { versionId: number; status: string; errorMessage?: string | null };
+          input: {
+            versionId: number;
+            status: VersionStatus;
+            errorMessage?: string | null;
+          };
         }) => {
           await ctx.docService.updateVersionStatus(
             input.versionId,
-            input.status as VersionStatus,
+            input.status,
             input.errorMessage ?? undefined,
           );
           return { ok: true } as const;
@@ -242,7 +275,7 @@ export function createDataRouter(trpc: unknown) {
       .input(
         z.object({
           versionId: z.number().int().positive(),
-          options: z.unknown(),
+          options: scraperOptionsStoreInputSchema,
         }),
       )
       .mutation(
@@ -251,14 +284,14 @@ export function createDataRouter(trpc: unknown) {
           input,
         }: {
           ctx: DataTrpcContext;
-          input: { versionId: number; options: unknown };
+          input: {
+            versionId: number;
+            options: z.infer<typeof scraperOptionsStoreInputSchema>;
+          };
         }) => {
-          // options conforms to ScraperOptions at the caller; keep as unknown here
           await ctx.docService.storeScraperOptions(
             input.versionId,
-            input.options as unknown as Parameters<
-              IDocumentManagement["storeScraperOptions"]
-            >[1],
+            input.options as Parameters<IDocumentManagement["storeScraperOptions"]>[1],
           );
           return { ok: true } as const;
         },

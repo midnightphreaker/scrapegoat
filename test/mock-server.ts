@@ -138,6 +138,82 @@ export const handlers = [
       );
     },
   ),
+
+  // GitHub API mock for private repo tests (github-private-repo-e2e.test.ts)
+  // Simulates a private repo that requires authentication
+  http.get("https://api.github.com/repos/arabold/private-test-repo", ({ request }) => {
+    const authHeader = request.headers.get("Authorization");
+    if (!authHeader) {
+      return new HttpResponse(
+        JSON.stringify({ message: "Requires authentication" }),
+        { status: 401, headers: { "Content-Type": "application/json" } },
+      );
+    }
+    return new HttpResponse(
+      JSON.stringify({
+        default_branch: "main",
+        name: "private-test-repo",
+        full_name: "arabold/private-test-repo",
+        private: true,
+      }),
+      { status: 200, headers: { "Content-Type": "application/json" } },
+    );
+  }),
+
+  http.get(
+    "https://api.github.com/repos/arabold/private-test-repo/git/trees/main",
+    ({ request }) => {
+      // Handle both ?recursive=1 and no query params
+      const url = new URL(request.url);
+      const authHeader = request.headers.get("Authorization");
+      if (!authHeader) {
+        return new HttpResponse(
+          JSON.stringify({ message: "Requires authentication" }),
+          { status: 401, headers: { "Content-Type": "application/json" } },
+        );
+      }
+      return new HttpResponse(
+        JSON.stringify({
+          sha: "abc123",
+          url: "https://api.github.com/repos/arabold/private-test-repo/git/trees/abc123",
+          tree: [
+            {
+              path: "README.md",
+              mode: "100644",
+              type: "blob",
+              sha: "def456",
+              size: 100,
+              url: "https://api.github.com/repos/arabold/private-test-repo/git/blobs/def456",
+            },
+          ],
+          truncated: false,
+        }),
+        { status: 200, headers: { "Content-Type": "application/json" } },
+      );
+    },
+  ),
+
+  http.get(
+    "https://raw.githubusercontent.com/arabold/private-test-repo/main/README.md",
+    ({ request }) => {
+      const authHeader = request.headers.get("Authorization");
+      if (!authHeader) {
+        return new HttpResponse("Requires authentication", { status: 401 });
+      }
+      return new HttpResponse(
+        "# Private Test Repo\n\nThis is a private test repository README.",
+        {
+          status: 200,
+          headers: { "Content-Type": "text/plain" },
+        },
+      );
+    },
+  ),
+
+  // GitHub wiki mock - returns 404 since this test repo has no wiki
+  http.get("https://github.com/arabold/private-test-repo/wiki", () => {
+    return new HttpResponse("Not Found", { status: 404 });
+  }),
 ];
 
 // Create and export the mock server

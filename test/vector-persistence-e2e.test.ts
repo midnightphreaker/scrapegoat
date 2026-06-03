@@ -21,8 +21,9 @@ import { loadConfig } from "../src/utils/config";
 
 config();
 
-const PG_BASE_URL =
-  process.env.DATABASE_URL || "postgresql://docs:docs@localhost:5432/docs";
+import { resolvePgBaseUrl } from "./test-helpers";
+
+const PG_BASE_URL = resolvePgBaseUrl();
 
 async function createTestDatabase(): Promise<{
   url: string;
@@ -32,8 +33,11 @@ async function createTestDatabase(): Promise<{
   const dbName = `test_vec_persist_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
   await adminPool.query(`CREATE DATABASE "${dbName}"`);
   await adminPool.end();
+
+  // Build test DB URL by replacing the database name in the base URL
+  const testUrl = PG_BASE_URL.replace(/\/[^/]*$/, `/${dbName}`);
   return {
-    url: `postgresql://docs:docs@localhost:5432/${dbName}`,
+    url: testUrl,
     cleanup: async () => {
       const dropPool = new Pool({ connectionString: PG_BASE_URL, max: 5 });
       await dropPool.query(`DROP DATABASE IF EXISTS "${dbName}"`);

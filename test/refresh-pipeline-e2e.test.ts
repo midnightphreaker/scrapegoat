@@ -21,6 +21,7 @@ import { EventBusService } from "../src/events";
 import type { StoreSearchResult } from "../src/store/types";
 import { ScraperRegistry } from "../src/scraper";
 import { loadConfig, type AppConfig } from "../src/utils/config";
+import { resolvePgBaseUrl } from "./test-helpers";
 
 // Mock file system for file-based tests
 vi.mock("node:fs/promises", () => ({ default: vol.promises }));
@@ -39,6 +40,7 @@ describe("Refresh Pipeline E2E Tests", () => {
     appConfig = loadConfig();
     appConfig.app.storePath = ":memory:";
     appConfig.app.embeddingModel = ""; // disable embeddings for refresh e2e
+    appConfig.database.url = resolvePgBaseUrl();
     // Initialize in-memory store and services
     // DocumentManagementService creates its own DocumentStore internally
     const eventBus = new EventBusService();
@@ -55,12 +57,22 @@ describe("Refresh Pipeline E2E Tests", () => {
 
     // Clear any previous nock mocks
     nock.cleanAll();
+
+    // Mock /llms.txt probe that WebScraperStrategy.scrape() fires before every scrape.
+    // Without this, the probe leaks past nock to the real network (test-docs.example.com
+    // resolves to an actual server returning a 308 redirect to HTTPS) and either hangs
+    // or returns unexpected content, causing every HTTP-based test to time out.
+    nock(TEST_BASE_URL).persist().get("/llms.txt").reply(404);
   });
 
   afterEach(async () => {
     // Cleanup
-    await pipelineManager.stop();
-    await docService.shutdown();
+    if (pipelineManager) {
+      await pipelineManager.stop();
+    }
+    if (docService) {
+      await docService.shutdown();
+    }
     nock.cleanAll();
     vol.reset();
   });

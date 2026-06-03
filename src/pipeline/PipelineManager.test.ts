@@ -557,15 +557,21 @@ describe("PipelineManager", () => {
     });
 
     it("should handle database errors gracefully", async () => {
-      // Mock database failure
-      (mockStore.updateVersionStatus as Mock).mockRejectedValue(new Error("DB Error"));
+      // Mock database failure (ensureLibraryAndVersion also fails so all retries exhaust quickly)
+      (mockStore.ensureLibraryAndVersion as Mock).mockRejectedValue(
+        new Error("DB Error"),
+      );
 
       const options = { url: "http://example.com", library: "test-lib", version: "1.0" };
 
-      // Should not throw even if database update fails
-      await expect(
-        manager.enqueueScrapeJob("test-lib", "1.0", options),
-      ).resolves.toBeDefined();
+      // Start enqueue without awaiting (retry delays block with fake timers)
+      const jobPromise = manager.enqueueScrapeJob("test-lib", "1.0", options);
+
+      // Advance timers to let retries complete (3 retries with backoff)
+      await vi.advanceTimersByTimeAsync(10000);
+
+      // Should not throw even if database update fails after retries
+      await expect(jobPromise).resolves.toBeDefined();
 
       // Job should still be created in memory despite database error
       const allJobs = await manager.getJobs();
@@ -1127,6 +1133,292 @@ describe("PipelineManager", () => {
 
         await recoveryManager.stop();
       });
+    });
+  });
+
+  // --- CANCELLING Timeout Tests ---
+  describe("CANCELLING state timeout", () => {
+    it("should force-transition to CANCELLED after timeout if stuck in CANCELLING", async () => {
+      // Create a job that stays running indefinitely
+      const pendingPromise = new Promise(() => {});
+      mockWorkerInstance.executeJob.mockReturnValue(pendingPromise);
+
+      const options = {
+        url: "http://timeout.com",
+        library: "libTimeout",
+        version: "1.0",
+      };
+      const jobId = await manager.enqueueScrapeJob("libTimeout", "1.0", options);
+      await manager.start();
+      await vi.advanceTimersByTimeAsync(1);
+
+      // Cancel the job - transitions to CANCELLING
+      await manager.cancelJob(jobId);
+
+      const cancellingJob = await manager.getJob(jobId);
+      expect(cancellingJob?.status).toBe(PipelineJobStatus.CANCELLING);
+
+      // Advance time past the cancel timeout (default 60000ms)
+      await vi.advanceTimersByTimeAsync(60_000);
+
+      // Should have force-transitioned to CANCELLED
+      const cancelledJob = await manager.getJob(jobId);
+      expect(cancelledJob?.status).toBe(PipelineJobStatus.CANCELLED);
+      expect(cancelledJob?.finishedAt).toBeInstanceOf(Date);
+    });
+
+    it("should emit JOB_CANCEL_TIMEOUT event when force-cancelling", async () => {
+      const mockEventBus = new EventBusService();
+      const emitSpy = vi.spyOn(mockEventBus, "emit");
+      manager = new PipelineManager(
+        mockStore as DocumentManagementService,
+        mockEventBus,
+        { appConfig: appConfig },
+      );
+
+      const pendingPromise = new Promise(() => {});
+      mockWorkerInstance.executeJob.mockReturnValue(pendingPromise);
+
+      const options = {
+        url: "http://timeout.com",
+        library: "libTimeout",
+        version: "1.0",
+      };
+      const jobId = await manager.enqueueScrapeJob("libTimeout", "1.0", options);
+      await manager.start();
+      await vi.advanceTimersByTimeAsync(1);
+
+      await manager.cancelJob(jobId);
+
+      // Advance past timeout
+      await vi.advanceTimersByTimeAsync(60_000);
+
+      // Should have emitted JOB_CANCEL_TIMEOUT event
+      expect(emitSpy).toHaveBeenCalledWith(
+        "JOB_CANCEL_TIMEOUT",
+        expect.objectContaining({ jobId }),
+      );
+    });
+
+    it("should NOT force-cancel if job transitions to CANCELLED before timeout", async () => {
+      const mockEventBus = new EventBusService();
+      const emitSpy = vi.spyOn(mockEventBus, "emit");
+      manager = new PipelineManager(
+        mockStore as DocumentManagementService,
+        mockEventBus,
+        { appConfig: appConfig },
+      );
+
+      let rejectJob: (reason?: unknown) => void = () => {};
+      mockWorkerInstance.executeJob.mockImplementation((_job: any, _callbacks: any) => {
+        return new Promise<void>((_resolve, reject) => {
+          rejectJob = reject;
+        });
+      });
+
+      const options = { url: "http://normal.com", library: "libNormal", version: "1.0" };
+      const jobId = await manager.enqueueScrapeJob("libNormal", "1.0", options);
+      await manager.start();
+      await vi.advanceTimersByTimeAsync(1);
+
+      // Cancel the job
+      await manager.cancelJob(jobId);
+
+      // Simulate normal cancellation completion (worker throws CancellationError)
+      const { CancellationError } = await import("./errors");
+      rejectJob(new CancellationError("Job cancelled by signal"));
+      await vi.advanceTimersByTimeAsync(1);
+
+      // Job should be CANCELLED normally
+      const job = await manager.getJob(jobId);
+      expect(job?.status).toBe(PipelineJobStatus.CANCELLED);
+
+      // Advance past the timeout
+      await vi.advanceTimersByTimeAsync(60_000);
+
+      // JOB_CANCEL_TIMEOUT should NOT have been emitted
+      const cancelTimeoutCalls = emitSpy.mock.calls.filter(
+        (call) => call[0] === "JOB_CANCEL_TIMEOUT",
+      );
+      expect(cancelTimeoutCalls).toHaveLength(0);
+    });
+
+    it("should use configurable cancelTimeoutMs", async () => {
+      const mockEventBus = new EventBusService();
+      manager = new PipelineManager(
+        mockStore as DocumentManagementService,
+        mockEventBus,
+        { appConfig: appConfig, cancelTimeoutMs: 5_000 },
+      );
+
+      const pendingPromise = new Promise(() => {});
+      mockWorkerInstance.executeJob.mockReturnValue(pendingPromise);
+
+      const options = { url: "http://custom.com", library: "libCustom", version: "1.0" };
+      const jobId = await manager.enqueueScrapeJob("libCustom", "1.0", options);
+      await manager.start();
+      await vi.advanceTimersByTimeAsync(1);
+
+      await manager.cancelJob(jobId);
+
+      // Before custom timeout
+      await vi.advanceTimersByTimeAsync(4_999);
+      let job = await manager.getJob(jobId);
+      expect(job?.status).toBe(PipelineJobStatus.CANCELLING);
+
+      // After custom timeout
+      await vi.advanceTimersByTimeAsync(1);
+      job = await manager.getJob(jobId);
+      expect(job?.status).toBe(PipelineJobStatus.CANCELLED);
+    });
+  });
+
+  // --- DB Status Update Retry Tests ---
+  describe("DB status update retry logic", () => {
+    it("should retry DB update up to 3 times on failure", async () => {
+      // Mock DB update to fail 2 times then succeed
+      let callCount = 0;
+      (mockStore.updateVersionStatus as Mock).mockImplementation(() => {
+        callCount++;
+        if (callCount < 3) {
+          return Promise.reject(new Error("Transient DB error"));
+        }
+        return Promise.resolve(undefined);
+      });
+
+      const options = { url: "http://example.com", library: "test-lib", version: "1.0" };
+      // Start the enqueue without awaiting (it will block on retry timers)
+      const jobPromise = manager.enqueueScrapeJob("test-lib", "1.0", options);
+
+      // Advance timers to resolve retry delays
+      await vi.advanceTimersByTimeAsync(10000);
+
+      const jobId = await jobPromise;
+
+      // Should have been called 3 times (2 failures + 1 success)
+      expect(callCount).toBe(3);
+
+      // Job should still be created successfully
+      const job = await manager.getJob(jobId);
+      expect(job).toBeDefined();
+      expect(job?.status).toBe(PipelineJobStatus.QUEUED);
+    });
+
+    it("should emit DB_UPDATE_FAILED event after all retries exhausted", async () => {
+      // Mock DB update to always fail
+      (mockStore.ensureLibraryAndVersion as Mock).mockRejectedValue(
+        new Error("Persistent DB error"),
+      );
+
+      const mockEventBus = new EventBusService();
+      const emitSpy = vi.spyOn(mockEventBus, "emit");
+      manager = new PipelineManager(
+        mockStore as DocumentManagementService,
+        mockEventBus,
+        {
+          appConfig: appConfig,
+        },
+      );
+
+      const options = { url: "http://example.com", library: "test-lib", version: "1.0" };
+      // Start the enqueue without awaiting
+      const jobPromise = manager.enqueueScrapeJob("test-lib", "1.0", options);
+
+      // Advance timers for all retry delays (3 retries with backoff: 1000 + 2000 + 4000 = 7000ms)
+      await vi.advanceTimersByTimeAsync(30000);
+
+      await jobPromise;
+
+      // Should have emitted DB_UPDATE_FAILED
+      expect(emitSpy).toHaveBeenCalledWith(
+        "DB_UPDATE_FAILED",
+        expect.objectContaining({
+          jobId: expect.any(String),
+          error: expect.any(Error),
+        }),
+      );
+    });
+
+    it("should NOT emit DB_UPDATE_FAILED when retry succeeds", async () => {
+      // Mock DB to succeed on first try
+      (mockStore.updateVersionStatus as Mock).mockResolvedValue(undefined);
+
+      const mockEventBus = new EventBusService();
+      const emitSpy = vi.spyOn(mockEventBus, "emit");
+      manager = new PipelineManager(
+        mockStore as DocumentManagementService,
+        mockEventBus,
+        {
+          appConfig: appConfig,
+        },
+      );
+
+      const options = { url: "http://example.com", library: "test-lib", version: "1.0" };
+      await manager.enqueueScrapeJob("test-lib", "1.0", options);
+
+      // Should NOT have emitted DB_UPDATE_FAILED
+      const dbUpdateFailedCalls = emitSpy.mock.calls.filter(
+        (call) => call[0] === "DB_UPDATE_FAILED",
+      );
+      expect(dbUpdateFailedCalls).toHaveLength(0);
+    });
+
+    it("should use exponential backoff between retries", async () => {
+      // Mock DB update to always fail
+      (mockStore.ensureLibraryAndVersion as Mock).mockRejectedValue(
+        new Error("DB error"),
+      );
+
+      // Use real timers for this test to capture setTimeout calls
+      vi.useRealTimers();
+      vi.useFakeTimers({ shouldAdvanceTime: false });
+
+      // We'll track delay values by spying on the promise-based delay
+      // Instead, let's verify behavior: total time taken should be at least
+      // 1000 + 2000 = 3000ms (two waits before final attempt)
+
+      const mockEventBus = new EventBusService();
+      const emitSpy = vi.spyOn(mockEventBus, "emit");
+      manager = new PipelineManager(
+        mockStore as DocumentManagementService,
+        mockEventBus,
+        {
+          appConfig: appConfig,
+        },
+      );
+
+      const options = { url: "http://example.com", library: "test-lib", version: "1.0" };
+      const jobPromise = manager.enqueueScrapeJob("test-lib", "1.0", options);
+
+      // Advance in increments and check timing:
+      // After 500ms (less than first retry delay of 1000ms): only 1 call should have happened
+      await vi.advanceTimersByTimeAsync(500);
+      const callsAfter500 = (mockStore.ensureLibraryAndVersion as Mock).mock.calls.length;
+      expect(callsAfter500).toBe(1); // Only initial attempt, retry timer hasn't fired yet
+
+      // Advance to 1500ms total: first retry should have fired (delay was 1000ms)
+      await vi.advanceTimersByTimeAsync(1000);
+      const callsAfter1500 = (mockStore.ensureLibraryAndVersion as Mock).mock.calls
+        .length;
+      expect(callsAfter1500).toBe(2); // Initial + first retry
+
+      // Advance to 3500ms total: second retry should have fired (delay was 2000ms)
+      await vi.advanceTimersByTimeAsync(2000);
+      const callsAfter3500 = (mockStore.ensureLibraryAndVersion as Mock).mock.calls
+        .length;
+      expect(callsAfter3500).toBe(3); // Initial + 2 retries
+
+      // Advance to let final failure emit event
+      await vi.advanceTimersByTimeAsync(5000);
+      await jobPromise;
+
+      // Should have emitted DB_UPDATE_FAILED after all retries exhausted
+      expect(emitSpy).toHaveBeenCalledWith(
+        "DB_UPDATE_FAILED",
+        expect.objectContaining({
+          error: expect.any(Error),
+        }),
+      );
     });
   });
 });

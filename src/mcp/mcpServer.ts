@@ -1,6 +1,7 @@
 import { McpServer, ResourceTemplate } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod/v3";
 import { PipelineJobStatus } from "../pipeline/types";
+import type { ScrapeMode } from "../scraper/types";
 import { TelemetryEvent, telemetry } from "../telemetry";
 import type { JobInfo } from "../tools";
 import { ToolError } from "../tools/errors";
@@ -67,13 +68,48 @@ export function createMcpServerInstance(
           .optional()
           .default(true)
           .describe("Follow HTTP redirects (3xx responses)."),
+        includePatterns: z
+          .array(z.string())
+          .optional()
+          .describe(
+            "Regex patterns for including URLs (wrapped in slashes, e.g. /api/). If not set, all are included.",
+          ),
+        excludePatterns: z
+          .array(z.string())
+          .optional()
+          .describe(
+            "Regex patterns for excluding URLs (wrapped in slashes, e.g. /blog/). Exclude takes precedence over include.",
+          ),
+        headers: z
+          .record(z.string())
+          .optional()
+          .describe(
+            "Custom HTTP headers to send with each request (e.g., for authentication).",
+          ),
+        clear: z
+          .boolean()
+          .optional()
+          .default(true)
+          .describe("Clear existing documents for the library version before scraping."),
       },
       {
         title: "Scrape New Library Documentation",
         destructiveHint: true, // replaces existing docs
         openWorldHint: true, // requires internet access
       },
-      async ({ url, library, version, maxPages, maxDepth, scope, followRedirects }) => {
+      async ({
+        url,
+        library,
+        version,
+        maxPages,
+        maxDepth,
+        scope,
+        followRedirects,
+        includePatterns,
+        excludePatterns,
+        headers,
+        clear,
+      }) => {
         // Track MCP tool usage
         telemetry.track(TelemetryEvent.TOOL_USED, {
           tool: "scrape_docs",
@@ -99,6 +135,10 @@ export function createMcpServerInstance(
               maxDepth,
               scope,
               followRedirects,
+              includePatterns,
+              excludePatterns,
+              headers,
+              clear,
             },
           });
 
@@ -416,6 +456,31 @@ ${r.content}\n`,
       },
     );
 
+    // Clear completed jobs tool
+    server.tool(
+      "clear_completed_jobs",
+      "Clear all completed, cancelled, and failed indexing jobs from the queue.",
+      {},
+      {
+        title: "Clear Completed Jobs",
+        destructiveHint: false,
+      },
+      async () => {
+        // Track MCP tool usage
+        telemetry.track(TelemetryEvent.TOOL_USED, {
+          tool: "clear_completed_jobs",
+          context: "mcp_server",
+        });
+
+        try {
+          const result = await tools.clearCompletedJobs.execute({});
+          return createResponse(result.message);
+        } catch (error) {
+          return createError(error);
+        }
+      },
+    );
+
     // Remove docs tool
     server.tool(
       "remove_docs",
@@ -465,6 +530,19 @@ ${r.content}\n`,
         .optional()
         .default(true)
         .describe("Follow HTTP redirects (3xx responses)."),
+      scrapeMode: z
+        .enum(["fetch", "playwright", "auto"])
+        .optional()
+        .default("auto")
+        .describe(
+          "HTML processing strategy: 'fetch' (faster, less JS support), 'playwright' (full browser), or 'auto'.",
+        ),
+      headers: z
+        .record(z.string())
+        .optional()
+        .describe(
+          "Custom HTTP headers to send with the request (e.g., for authentication).",
+        ),
     },
     {
       title: "Fetch URL",
@@ -472,17 +550,23 @@ ${r.content}\n`,
       destructiveHint: false,
       openWorldHint: true, // requires internet access
     },
-    async ({ url, followRedirects }) => {
+    async ({ url, followRedirects, scrapeMode, headers }) => {
       // Track MCP tool usage
       telemetry.track(TelemetryEvent.TOOL_USED, {
         tool: "fetch_url",
         context: "mcp_server",
         url: new URL(url).hostname, // Privacy-safe URL tracking
         followRedirects,
+        scrapeMode,
       });
 
       try {
-        const result = await tools.fetchUrl.execute({ url, followRedirects });
+        const result = await tools.fetchUrl.execute({
+          url,
+          followRedirects,
+          scrapeMode: scrapeMode as ScrapeMode,
+          headers,
+        });
         return createResponse(result);
       } catch (error) {
         return createError(error);

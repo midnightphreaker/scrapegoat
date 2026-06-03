@@ -15,6 +15,7 @@ import { ScrapeTool } from "../tools/ScrapeTool";
 import type { AppConfig } from "../utils/config";
 import { logger } from "../utils/logger";
 import { getProjectRoot } from "../utils/paths";
+import { registerHealthRoute } from "./routes/health";
 import { registerIndexRoute } from "./routes/index";
 import { registerCancelJobRoute } from "./routes/jobs/cancel";
 import { registerClearCompletedJobsRoute } from "./routes/jobs/clear-completed";
@@ -65,6 +66,7 @@ export async function startWebServer(
   });
 
   // Register routes
+  registerHealthRoute(server); // Health check endpoint
   registerIndexRoute(server); // Register the root route first
   registerJobListRoutes(server, listJobsTool);
   registerSourceSelectionRoute(server);
@@ -84,7 +86,8 @@ export async function startWebServer(
   // Graceful shutdown of services will be handled by the caller (src/index.ts)
 
   try {
-    const address = await server.listen({ port, host: "0.0.0.0" });
+    const host = config.server.host;
+    const address = await server.listen({ port, host });
     logger.info(`🚀 Web UI available at ${address}`);
     return server; // Return the server instance
   } catch (error) {

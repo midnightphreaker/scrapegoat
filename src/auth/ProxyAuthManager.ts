@@ -332,7 +332,7 @@ export class ProxyAuthManager {
    * This provides universal compatibility with all OAuth2 providers and token formats.
    */
   private async verifyAccessToken(token: string, request?: FastifyRequest) {
-    logger.debug(`Attempting to verify token: ${token.substring(0, 20)}...`);
+    logger.debug("Attempting to verify access token");
 
     // Strategy 1: Try JWT validation first (more efficient for JWT tokens)
     if (this.jwks) {
@@ -446,9 +446,7 @@ export class ProxyAuthManager {
     }
 
     try {
-      logger.debug(
-        `Processing authorization header: ${authorization.substring(0, 20)}...`,
-      );
+      logger.debug("Processing authorization header");
 
       const match = authorization.match(/^Bearer\s+(.+)$/i);
       if (!match) {
@@ -457,7 +455,7 @@ export class ProxyAuthManager {
       }
 
       const token = match[1];
-      logger.debug(`Extracted token: ${token.substring(0, 20)}...`);
+      logger.debug("Token extracted from authorization header");
 
       const authInfo = await this.verifyAccessToken(token, request);
 

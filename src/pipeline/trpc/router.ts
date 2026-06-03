@@ -9,7 +9,7 @@
 import { initTRPC } from "@trpc/server";
 import superjson from "superjson";
 import { z } from "zod";
-import type { ScraperOptions } from "../../scraper/types";
+import { ScrapeMode } from "../../scraper/types";
 import { PipelineJobStatus } from "../types";
 import type { IPipeline } from "./interfaces";
 
@@ -33,10 +33,35 @@ const optionalTrimmed = z.preprocess(
   z.string().min(1).optional().nullable(),
 );
 
+/**
+ * Schema validating serializable ScraperOptions fields at the tRPC boundary.
+ * Ensures required fields are present and optional fields match expected types.
+ * Runtime-only fields (signal, initialQueue) are excluded as they cannot be transported via RPC.
+ */
+export const scraperOptionsInputSchema = z.object({
+  url: z.string().min(1),
+  library: z.string().min(1),
+  version: z.string(),
+  maxPages: z.number().int().positive().optional(),
+  maxDepth: z.number().int().nonnegative().optional(),
+  scope: z.enum(["subpages", "hostname", "domain"]).optional(),
+  followRedirects: z.boolean().optional(),
+  maxConcurrency: z.number().int().positive().optional(),
+  ignoreErrors: z.boolean().optional(),
+  excludeSelectors: z.array(z.string()).optional(),
+  includePatterns: z.array(z.string()).optional(),
+  excludePatterns: z.array(z.string()).optional(),
+  scrapeMode: z.nativeEnum(ScrapeMode).optional(),
+  headers: z.record(z.string(), z.string()).optional(),
+  isRefresh: z.boolean().optional(),
+  clear: z.boolean().optional(),
+  preserveHashes: z.boolean().optional(),
+});
+
 const enqueueScrapeInput = z.object({
   library: nonEmptyTrimmed,
   version: optionalTrimmed,
-  options: z.custom<ScraperOptions>(),
+  options: scraperOptionsInputSchema,
 });
 
 const enqueueRefreshInput = z.object({

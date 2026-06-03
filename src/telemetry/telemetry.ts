@@ -42,14 +42,14 @@ export class Telemetry {
     const config = TelemetryConfig.getInstance();
 
     // Single determination point for enabled status
-    const shouldEnable = config.isEnabled() && !!__POSTHOG_API_KEY__;
+    const shouldEnable = config.isEnabled();
 
     const telemetry = new Telemetry(shouldEnable);
 
     // Single log message after everything is initialized with better context
     if (telemetry.isEnabled()) {
       logger.debug("Telemetry enabled");
-    } else if (!config.isEnabled()) {
+    } else if (!config.isUserEnabled()) {
       logger.debug("Telemetry disabled (user preference)");
     } else if (!__POSTHOG_API_KEY__) {
       logger.debug("Telemetry disabled (no API key configured)");

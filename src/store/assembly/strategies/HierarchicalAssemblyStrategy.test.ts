@@ -1,5 +1,6 @@
 import { Pool } from "pg";
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it } from "vitest";
+import { resolvePgBaseUrl } from "../../../../test/test-helpers";
 import { type AppConfig, loadConfig } from "../../../utils/config";
 import { DocumentStore } from "../../DocumentStore";
 import { PostgresConnection } from "../../PostgresConnection";
@@ -8,7 +9,7 @@ import { HierarchicalAssemblyStrategy } from "./HierarchicalAssemblyStrategy";
 
 // ─── PostgreSQL Test Database Fixture ──────────────────────────────────────
 
-const PG_BASE_URL = "postgresql://docs:docs@localhost:5432/docs";
+const PG_BASE_URL = resolvePgBaseUrl();
 const TEST_DB_PREFIX = "test_assembly";
 
 function generateDbName(): string {
@@ -24,7 +25,7 @@ async function createTestDatabase(): Promise<{
   await basePool.query(`CREATE DATABASE "${dbName}"`);
   await basePool.end();
 
-  const testUrl = `postgresql://docs:docs@localhost:5432/${dbName}`;
+  const testUrl = PG_BASE_URL.replace(/\/[^/]*$/, `/${dbName}`);
   const cleanup = async () => {
     const pool = new Pool({ connectionString: PG_BASE_URL });
     await pool.query(`DROP DATABASE IF EXISTS "${dbName}" WITH (FORCE)`);

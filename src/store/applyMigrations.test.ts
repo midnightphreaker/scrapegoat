@@ -2,10 +2,11 @@
 
 import { Pool } from "pg";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import { resolvePgBaseUrl } from "../../test/test-helpers";
 import { applyMigrations } from "./applyMigrations";
 import { PostgresConnection } from "./PostgresConnection";
 
-const PG_BASE_URL = "postgresql://docs:docs@localhost:5432/docs";
+const PG_BASE_URL = resolvePgBaseUrl();
 
 /** Creates a unique test database and returns connection + cleanup. */
 async function createTestDatabase(): Promise<{
@@ -17,7 +18,7 @@ async function createTestDatabase(): Promise<{
   await adminPool.query(`CREATE DATABASE "${dbName}"`);
   await adminPool.end();
 
-  const url = `postgresql://docs:docs@localhost:5432/${dbName}`;
+  const url = PG_BASE_URL.replace(/\/[^/]*$/, `/${dbName}`);
   const connection = new PostgresConnection(url, { max: 5, min: 1 });
   await connection.initialize();
 
@@ -71,7 +72,9 @@ describe("Database Migrations", () => {
   });
 
   afterEach(async () => {
-    await cleanup();
+    if (cleanup) {
+      await cleanup();
+    }
   });
 
   it("should apply all migrations and create expected tables and columns", async () => {
@@ -206,9 +209,10 @@ describe("Database Migrations", () => {
         "001-gin-fts-indexes.sql",
         "002-hnsw-vector-index.sql",
         "003-metadata-table.sql",
+        "004-fix-schema-mismatch.sql",
       ]),
     );
-    expect(appliedIds).toHaveLength(4);
+    expect(appliedIds).toHaveLength(5);
   });
 
   it("should be idempotent — re-running migrations does not fail", async () => {

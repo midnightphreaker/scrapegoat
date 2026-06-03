@@ -107,6 +107,9 @@ describe("DocumentManagementService", () => {
     // Ensure store path is defined for local DocumentManagementService instances
     appConfig.app.storePath = "/test/store/path";
 
+    // Set a dummy database URL so the constructor guard passes
+    appConfig.database.url = "postgresql://test:test@localhost:5432/test";
+
     // --- Create dummy package.json in memfs for getProjectRoot() ---
     // Ensure the calculated project root directory exists in memfs
     vol.mkdirSync(projectRoot, { recursive: true });

@@ -9,6 +9,7 @@ import {
 } from "../../utils/errors";
 import { logger } from "../../utils/logger";
 import { MimeTypeUtils } from "../../utils/mimeTypeUtils";
+import { isUrlAllowed } from "../../utils/urlValidation";
 import { FingerprintGenerator } from "./FingerprintGenerator";
 import {
   type ContentFetcher,
@@ -75,6 +76,14 @@ export class HttpFetcher implements ContentFetcher {
   }
 
   async fetch(source: string, options?: FetchOptions): Promise<RawContent> {
+    // SSRF protection: reject URLs pointing to private/reserved IP ranges
+    if (!isUrlAllowed(source)) {
+      throw new ScraperError(
+        `Blocked request to private/reserved IP address: ${source}`,
+        false,
+      );
+    }
+
     const maxRetries = options?.maxRetries ?? this.maxRetriesDefault;
     const baseDelay = options?.retryDelay ?? this.baseDelayDefaultMs;
     // Default to following redirects if not specified

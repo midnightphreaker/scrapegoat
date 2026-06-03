@@ -75,6 +75,8 @@ export interface UploadSession {
   updatedAt: Date;
   /** Map of staged file ID to StagedFile */
   files: Map<string, StagedFile>;
+  /** Map of normalized relative path to ImportFolder for virtual folders */
+  folders: Map<string, ImportFolder>;
   /** Root path for staged files */
   stagingPath: string;
   /** Files that failed to upload */

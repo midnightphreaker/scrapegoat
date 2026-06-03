@@ -9,7 +9,7 @@ import path from "node:path";
 import { Client } from "@modelcontextprotocol/sdk/client/index.js";
 import { StdioClientTransport } from "@modelcontextprotocol/sdk/client/stdio.js";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
-import { getCliCommand } from "./test-helpers";
+import { getCliCommand, resolvePgBaseUrl } from "./test-helpers";
 
 describe("MCP stdio server E2E", () => {
   let client: Client | null = null;
@@ -64,6 +64,7 @@ describe("MCP stdio server E2E", () => {
         ...testEnv,
         DOCS_MCP_STORE_PATH: path.join(projectRoot, "test", ".test-store-stdio"),
         DOCS_MCP_TELEMETRY: "false",
+        DATABASE_URL: resolvePgBaseUrl(),
       },
     });
 
@@ -118,6 +119,7 @@ describe("MCP stdio server E2E", () => {
         ...testEnv,
         DOCS_MCP_STORE_PATH: path.join(projectRoot, "test", ".test-store-stdio"),
         DOCS_MCP_TELEMETRY: "false",
+        DATABASE_URL: resolvePgBaseUrl(),
       },
     });
 

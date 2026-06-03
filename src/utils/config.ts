@@ -131,6 +131,18 @@ export const DEFAULT_CONFIG = {
     subsequentSiblingsLimit: 2,
     maxChunkDistance: 3,
   },
+  webImport: {
+    stagingMode: "memory" as const,
+    stagingInternalPath: "",
+    maxTotalSizeBytes: 999 * 1024 * 1024,
+    maxFileSizeBytes: 100 * 1024 * 1024,
+    maxFiles: 999,
+    sessionTtlSeconds: 3600,
+    maxArchiveCompressedBytes: 500 * 1024 * 1024,
+    maxDepth: 9,
+    maxFilenameLength: 99,
+    maxPathLength: 255,
+  },
 } as const;
 
 // --- Configuration Schema (Nested) ---
@@ -342,6 +354,42 @@ export const AppConfigSchema = z.object({
         .default(DEFAULT_CONFIG.assembly.maxChunkDistance),
     })
     .default(DEFAULT_CONFIG.assembly),
+  webImport: z
+    .object({
+      stagingMode: z
+        .enum(["memory", "filesystem"])
+        .default(DEFAULT_CONFIG.webImport.stagingMode),
+      stagingInternalPath: z
+        .string()
+        .default(DEFAULT_CONFIG.webImport.stagingInternalPath),
+      maxTotalSizeBytes: z.coerce
+        .number()
+        .int()
+        .default(DEFAULT_CONFIG.webImport.maxTotalSizeBytes),
+      maxFileSizeBytes: z.coerce
+        .number()
+        .int()
+        .default(DEFAULT_CONFIG.webImport.maxFileSizeBytes),
+      maxFiles: z.coerce.number().int().default(DEFAULT_CONFIG.webImport.maxFiles),
+      sessionTtlSeconds: z.coerce
+        .number()
+        .int()
+        .default(DEFAULT_CONFIG.webImport.sessionTtlSeconds),
+      maxArchiveCompressedBytes: z.coerce
+        .number()
+        .int()
+        .default(DEFAULT_CONFIG.webImport.maxArchiveCompressedBytes),
+      maxDepth: z.coerce.number().int().default(DEFAULT_CONFIG.webImport.maxDepth),
+      maxFilenameLength: z.coerce
+        .number()
+        .int()
+        .default(DEFAULT_CONFIG.webImport.maxFilenameLength),
+      maxPathLength: z.coerce
+        .number()
+        .int()
+        .default(DEFAULT_CONFIG.webImport.maxPathLength),
+    })
+    .default(DEFAULT_CONFIG.webImport),
 });
 
 export type AppConfig = z.infer<typeof AppConfigSchema>;
@@ -438,6 +486,47 @@ const configMappings: ConfigMapping[] = [
     ],
     cli: "vectorDimension",
   },
+  // webImport — legacy SCRAPEGOAT_WEBUI_IMPORT_* env vars for backward compatibility
+  {
+    path: ["webImport", "stagingMode"],
+    env: ["SCRAPEGOAT_WEBUI_IMPORT_STAGING_MODE"],
+  },
+  {
+    path: ["webImport", "stagingInternalPath"],
+    env: ["SCRAPEGOAT_WEBUI_IMPORT_STAGING_INTERNAL_PATH"],
+  },
+  {
+    path: ["webImport", "maxTotalSizeBytes"],
+    env: ["SCRAPEGOAT_WEBUI_IMPORT_MAX_TOTAL_SIZE_BYTES"],
+  },
+  {
+    path: ["webImport", "maxFileSizeBytes"],
+    env: ["SCRAPEGOAT_WEBUI_IMPORT_MAX_FILE_SIZE_BYTES"],
+  },
+  {
+    path: ["webImport", "maxFiles"],
+    env: ["SCRAPEGOAT_WEBUI_IMPORT_MAX_FILES"],
+  },
+  {
+    path: ["webImport", "sessionTtlSeconds"],
+    env: ["SCRAPEGOAT_WEBUI_IMPORT_SESSION_TTL_SECONDS"],
+  },
+  {
+    path: ["webImport", "maxArchiveCompressedBytes"],
+    env: ["SCRAPEGOAT_WEBUI_IMPORT_MAX_ARCHIVE_SIZE_BYTES"],
+  },
+  {
+    path: ["webImport", "maxDepth"],
+    env: ["SCRAPEGOAT_WEBUI_IMPORT_MAX_DEPTH"],
+  },
+  {
+    path: ["webImport", "maxFilenameLength"],
+    env: ["SCRAPEGOAT_WEBUI_IMPORT_MAX_FILENAME_LENGTH"],
+  },
+  {
+    path: ["webImport", "maxPathLength"],
+    env: ["SCRAPEGOAT_WEBUI_IMPORT_MAX_PATH_LENGTH"],
+  },
   // Add other mappings as needed for CLI/Env overrides
 ];
 
@@ -447,6 +536,34 @@ export interface LoadConfigOptions {
   configPath?: string; // Explicit config path
   searchDir?: string; // Search directory (store path)
 }
+
+/**
+ * Configuration Auto-Update Behavior
+ *
+ * ScrapeGoat loads configuration **once at startup** via `loadConfig()`. There is no
+ * file watcher, SIGHUP handler, or hot-reload mechanism — changes to the config file
+ * on disk are **not** picked up by a running process.
+ *
+ * **Default config path** (system directory, e.g. `~/.config/scrapegoat/config.yaml`):
+ *   - On every startup, the merged result of defaults + file values is written back
+ *     to disk. This ensures new default keys introduced by upgrades are materialised
+ *     in the YAML file so users can discover and customise them.
+ *   - The file is also updated by the CLI `config set` command, which validates the
+ *     change against the schema before persisting.
+ *
+ * **Explicit config path** (`--config` flag or `SCRAPEGOAT_CONFIG` env var):
+ *   - Treated as **read-only**. The server will never overwrite an explicit config
+ *     file. Users manage these files themselves (e.g. checked into version control).
+ *
+ * **Runtime changes**:
+ *   - `setConfigValue()` writes to the default config file, but the in-memory config
+ *     held by the running process is not refreshed. A restart is required for changes
+ *     to take effect.
+ *   - In-flight operations (scrapes, searches, etc.) are unaffected by file changes
+ *     since the config object is immutable after loading.
+ *
+ * **Precedence** (highest wins): CLI args → Environment variables → Config file → Defaults
+ */
 
 // System-specific paths
 const systemPaths = envPaths("scrapegoat", { suffix: "" });

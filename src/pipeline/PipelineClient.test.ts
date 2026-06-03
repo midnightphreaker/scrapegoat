@@ -1,5 +1,5 @@
 import { createWSClient } from "@trpc/client";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { EventBusService } from "../events/EventBusService";
 import { EventType } from "../events/types";
 import { PipelineClient } from "./PipelineClient";
@@ -161,6 +161,122 @@ describe("PipelineClient", () => {
       }, 20);
 
       await expect(waitPromise).resolves.toBeUndefined();
+    });
+
+    describe("timeout", () => {
+      beforeEach(() => {
+        vi.useFakeTimers();
+      });
+
+      afterEach(() => {
+        vi.useRealTimers();
+      });
+
+      it("should reject with a timeout error after the specified duration", async () => {
+        const jobId = "job-timeout";
+        const timeoutMs = 5000;
+
+        const waitPromise = client.waitForJobCompletion(jobId, timeoutMs);
+
+        vi.advanceTimersByTime(timeoutMs);
+
+        await expect(waitPromise).rejects.toThrow(
+          `waitForJobCompletion timed out after ${timeoutMs}ms`,
+        );
+      });
+
+      it("should clean up the event listener after timeout", async () => {
+        const jobId = "job-timeout-cleanup";
+        const timeoutMs = 5000;
+
+        const listenersBefore = eventBus.listenerCount(EventType.JOB_STATUS_CHANGE);
+
+        const waitPromise = client.waitForJobCompletion(jobId, timeoutMs);
+
+        // One listener should have been added
+        expect(eventBus.listenerCount(EventType.JOB_STATUS_CHANGE)).toBe(
+          listenersBefore + 1,
+        );
+
+        vi.advanceTimersByTime(timeoutMs);
+
+        await expect(waitPromise).rejects.toThrow("timed out");
+
+        // Listener should have been removed after timeout
+        expect(eventBus.listenerCount(EventType.JOB_STATUS_CHANGE)).toBe(listenersBefore);
+      });
+
+      it("should resolve successfully and clean up listener when job completes before timeout", async () => {
+        const jobId = "job-fast";
+        const timeoutMs = 10000;
+
+        const listenersBefore = eventBus.listenerCount(EventType.JOB_STATUS_CHANGE);
+
+        const waitPromise = client.waitForJobCompletion(jobId, timeoutMs);
+
+        expect(eventBus.listenerCount(EventType.JOB_STATUS_CHANGE)).toBe(
+          listenersBefore + 1,
+        );
+
+        // Complete the job before timeout
+        vi.advanceTimersByTime(2000);
+        eventBus.emit(EventType.JOB_STATUS_CHANGE, {
+          id: jobId,
+          status: "completed",
+          library: "test",
+          version: null,
+        } as any);
+
+        await expect(waitPromise).resolves.toBeUndefined();
+
+        // Listener should have been cleaned up after completion
+        expect(eventBus.listenerCount(EventType.JOB_STATUS_CHANGE)).toBe(listenersBefore);
+      });
+
+      it("should reject with job error and clean up listener when job fails before timeout", async () => {
+        const jobId = "job-fail-fast";
+        const timeoutMs = 10000;
+
+        const listenersBefore = eventBus.listenerCount(EventType.JOB_STATUS_CHANGE);
+
+        const waitPromise = client.waitForJobCompletion(jobId, timeoutMs);
+
+        expect(eventBus.listenerCount(EventType.JOB_STATUS_CHANGE)).toBe(
+          listenersBefore + 1,
+        );
+
+        // Fail the job before timeout
+        vi.advanceTimersByTime(2000);
+        eventBus.emit(EventType.JOB_STATUS_CHANGE, {
+          id: jobId,
+          status: "failed",
+          library: "test",
+          version: null,
+          error: { message: "Job exploded" },
+        } as any);
+
+        await expect(waitPromise).rejects.toThrow("Job exploded");
+
+        // Listener should have been cleaned up after failure
+        expect(eventBus.listenerCount(EventType.JOB_STATUS_CHANGE)).toBe(listenersBefore);
+      });
+
+      it("should use default timeout of 300000ms when no timeout is specified", async () => {
+        const jobId = "job-default-timeout";
+
+        const waitPromise = client.waitForJobCompletion(jobId);
+
+        // Advance just before default timeout — should NOT reject
+        vi.advanceTimersByTime(299_999);
+
+        // Rejecting here would mean the promise is still pending (good)
+        // Now cross the timeout boundary
+        vi.advanceTimersByTime(1);
+
+        await expect(waitPromise).rejects.toThrow(
+          "waitForJobCompletion timed out after 300000ms",
+        );
+      });
     });
   });
 

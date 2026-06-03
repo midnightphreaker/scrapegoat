@@ -24,6 +24,7 @@ import {
 } from "./security";
 import type {
   FailedFileEntry,
+  ImportFolder,
   ImportTreeNode,
   StagedFile,
   UploadConfig,
@@ -99,6 +100,7 @@ export class UploadStagingService {
       createdAt: now,
       updatedAt: now,
       files: new Map(),
+      folders: new Map(),
       stagingPath,
       failedFiles: [],
       renamedFiles: [],
@@ -321,7 +323,7 @@ export class UploadStagingService {
 
   /**
    * Create a virtual (empty) folder in the staging directory.
-   * The folder is implicit in the tree — no StagedFile entry is created.
+   * The folder is tracked in session.folders for tree building.
    */
   async createVirtualFolder(
     sessionId: UploadSessionId,
@@ -337,6 +339,120 @@ export class UploadStagingService {
     ensureWithinBase(absolutePath, session.stagingPath);
 
     await fs.mkdir(absolutePath, { recursive: true });
+
+    // Track the virtual folder in the session
+    const folderName = path.basename(sanitized);
+    const folderId = `vf_${crypto.randomUUID()}`;
+    const importFolder: ImportFolder = {
+      id: folderId,
+      name: folderName,
+      relativePath: sanitized,
+      virtual: true,
+    };
+    session.folders.set(sanitized, importFolder);
+
+    session.updatedAt = new Date();
+  }
+
+  /** Remove a virtual folder from the session and disk. */
+  async removeVirtualFolder(
+    sessionId: UploadSessionId,
+    folderPath: string,
+  ): Promise<void> {
+    const session = this.requireActiveSession(sessionId);
+    const sanitized = folderPath
+      .split("/")
+      .map((s) => sanitizeFileName(s))
+      .join("/");
+    const absolutePath = path.resolve(session.stagingPath, sanitized);
+    ensureWithinBase(absolutePath, session.stagingPath);
+
+    // Remove from disk
+    try {
+      await fs.rm(absolutePath, { recursive: true, force: true });
+    } catch {
+      // Best-effort — folder may already be gone
+    }
+
+    // Remove from session tracking
+    session.folders.delete(sanitized);
+    session.updatedAt = new Date();
+  }
+
+  /** Rename a virtual folder, updating session.folders tracking. */
+  async renameVirtualFolder(
+    sessionId: UploadSessionId,
+    oldFolderPath: string,
+    newName: string,
+  ): Promise<void> {
+    const session = this.requireActiveSession(sessionId);
+
+    const oldSanitized = oldFolderPath
+      .split("/")
+      .map((s) => sanitizeFileName(s))
+      .join("/");
+    const safeName = sanitizeFileName(newName);
+    const parentDir = path.dirname(oldSanitized);
+    const newRelativePath = parentDir === "." ? safeName : `${parentDir}/${safeName}`;
+
+    const oldAbsolutePath = path.resolve(session.stagingPath, oldSanitized);
+    const newAbsolutePath = path.resolve(session.stagingPath, newRelativePath);
+    ensureWithinBase(newAbsolutePath, session.stagingPath);
+
+    // Rename on disk
+    await fs.rename(oldAbsolutePath, newAbsolutePath);
+
+    // Update folder tracking
+    const folder = session.folders.get(oldSanitized);
+    if (folder) {
+      session.folders.delete(oldSanitized);
+      folder.name = safeName;
+      folder.relativePath = newRelativePath;
+      session.folders.set(newRelativePath, folder);
+    }
+
+    session.updatedAt = new Date();
+  }
+
+  /** Move a virtual folder to a new parent path, updating session.folders tracking. */
+  async moveVirtualFolder(
+    sessionId: UploadSessionId,
+    folderPath: string,
+    newParentPath: string,
+  ): Promise<void> {
+    const session = this.requireActiveSession(sessionId);
+
+    const oldSanitized = folderPath
+      .split("/")
+      .map((s) => sanitizeFileName(s))
+      .join("/");
+    const folderName = path.basename(oldSanitized);
+
+    const sanitizedParent = newParentPath
+      .split("/")
+      .map((s) => sanitizeFileName(s))
+      .join("/");
+    const newRelativePath =
+      sanitizedParent === "" || sanitizedParent === "."
+        ? folderName
+        : `${sanitizedParent}/${folderName}`;
+
+    const oldAbsolutePath = path.resolve(session.stagingPath, oldSanitized);
+    const newAbsolutePath = path.resolve(session.stagingPath, newRelativePath);
+    ensureWithinBase(newAbsolutePath, session.stagingPath);
+
+    // Ensure target parent dir exists
+    await fs.mkdir(path.dirname(newAbsolutePath), { recursive: true });
+    await fs.rename(oldAbsolutePath, newAbsolutePath);
+
+    // Update folder tracking
+    const folder = session.folders.get(oldSanitized);
+    if (folder) {
+      session.folders.delete(oldSanitized);
+      folder.relativePath = newRelativePath;
+      session.folders.set(newRelativePath, folder);
+    }
+
     session.updatedAt = new Date();
   }
 
@@ -415,23 +531,26 @@ export class UploadStagingService {
   getImportTree(sessionId: UploadSessionId): ImportTreeNode[] {
     const session = this.requireSession(sessionId);
     const files = Array.from(session.files.values());
-    return this.treeBuilder.buildTree(files, []);
+    const folders = Array.from(session.folders.values());
+    return this.treeBuilder.buildTree(files, folders);
   }
 
   /** Get aggregate stats for a session. */
   getSessionStats(sessionId: UploadSessionId): {
-    totalFiles: number;
+    fileCount: number;
     totalSize: number;
     failedFiles: number;
     renamedFiles: number;
+    folderCount: number;
   } {
     const session = this.requireSession(sessionId);
     const files = Array.from(session.files.values());
     return {
-      totalFiles: files.length,
+      fileCount: files.length,
       totalSize: files.reduce((sum, f) => sum + f.size, 0),
       failedFiles: session.failedFiles.length,
       renamedFiles: session.renamedFiles.length,
+      folderCount: session.folders.size,
     };
   }
 

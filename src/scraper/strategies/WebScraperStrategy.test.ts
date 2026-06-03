@@ -382,8 +382,8 @@ describe("WebScraperStrategy", () => {
 
     await strategy.scrape(options, progressCallback);
 
-    // Verify fetcher calls (should be exactly maxPages)
-    expect(mockFetchFn).toHaveBeenCalledTimes(2);
+    // Verify fetcher calls (llms.txt probe + maxPages)
+    expect(mockFetchFn).toHaveBeenCalledTimes(3);
     expect(mockFetchFn).toHaveBeenCalledWith("https://example.com", expect.anything());
 
     // Check which subpage was called (only one should be)
@@ -1254,8 +1254,8 @@ describe("WebScraperStrategy", () => {
       await strategy.scrape(options, progressCallback);
 
       // Verify root, refresh page, and discovered links were all fetched
-      // Root (depth 0) + refresh page (depth 1) + 2 new links (depth 2) = 4 total
-      expect(mockFetchFn).toHaveBeenCalledTimes(4);
+      // llms.txt probe + Root (depth 0) + refresh page (depth 1) + 2 new links (depth 2) = 5 total
+      expect(mockFetchFn).toHaveBeenCalledTimes(5);
       expect(mockFetchFn).toHaveBeenCalledWith("https://example.com", expect.anything());
       expect(mockFetchFn).toHaveBeenCalledWith(
         "https://example.com/page-with-links",
@@ -1336,8 +1336,8 @@ describe("WebScraperStrategy", () => {
 
       await strategy.scrape(options, progressCallback);
 
-      // Verify all three pages plus root were fetched (4 total)
-      expect(mockFetchFn).toHaveBeenCalledTimes(4);
+      // Verify llms.txt probe + all three pages plus root were fetched (5 total)
+      expect(mockFetchFn).toHaveBeenCalledTimes(5);
 
       // Verify root was processed + only the updated page produced a processed document (2 total)
       const docCalls = progressCallback.mock.calls.filter((call) => call[0].result);

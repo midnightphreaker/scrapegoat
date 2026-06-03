@@ -27,6 +27,12 @@ export class PostgresConnection {
    * Installs pgvector extension if not present.
    */
   async initialize(): Promise<void> {
+    // Guard: skip re-initialization if pool is already active
+    if (this.pool) {
+      logger.debug("PostgreSQL connection pool already initialized, skipping");
+      return;
+    }
+
     const config: PoolConfig = {
       connectionString: this.connectionString,
       max: this.poolConfig.max ?? 10,

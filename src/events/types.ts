@@ -15,6 +15,8 @@ export enum EventType {
   JOB_PROGRESS = "JOB_PROGRESS",
   LIBRARY_CHANGE = "LIBRARY_CHANGE",
   JOB_LIST_CHANGE = "JOB_LIST_CHANGE",
+  DB_UPDATE_FAILED = "DB_UPDATE_FAILED",
+  JOB_CANCEL_TIMEOUT = "JOB_CANCEL_TIMEOUT",
 }
 
 /**
@@ -26,11 +28,22 @@ export const ServerEventName = {
   [EventType.JOB_PROGRESS]: "job-progress",
   [EventType.LIBRARY_CHANGE]: "library-change",
   [EventType.JOB_LIST_CHANGE]: "job-list-change",
+  [EventType.DB_UPDATE_FAILED]: "db-update-failed",
+  [EventType.JOB_CANCEL_TIMEOUT]: "job-cancel-timeout",
 } as const;
 
 /**
  * Type-safe mapping of event types to their payload structures.
  */
+export interface DbUpdateFailedPayload {
+  jobId: string;
+  error: Error;
+}
+
+export interface JobCancelTimeoutPayload {
+  jobId: string;
+}
+
 export interface EventPayloads {
   [EventType.JOB_STATUS_CHANGE]: PipelineJob;
   [EventType.JOB_PROGRESS]: {
@@ -39,6 +52,8 @@ export interface EventPayloads {
   };
   [EventType.LIBRARY_CHANGE]: undefined;
   [EventType.JOB_LIST_CHANGE]: undefined;
+  [EventType.DB_UPDATE_FAILED]: DbUpdateFailedPayload;
+  [EventType.JOB_CANCEL_TIMEOUT]: JobCancelTimeoutPayload;
 }
 
 /**
@@ -77,6 +92,13 @@ export interface SseEventPayloads {
   };
   "library-change": Record<string, never>;
   "job-list-change": Record<string, never>;
+  "db-update-failed": {
+    jobId: string;
+    error: string;
+  };
+  "job-cancel-timeout": {
+    jobId: string;
+  };
 }
 
 /**

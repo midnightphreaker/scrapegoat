@@ -8,7 +8,7 @@ const AddJobButton = () => {
   return (
     <PrimaryButton
       hx-get="/web/jobs/source-selection"
-      hx-target="#addJobForm"
+      hx-target="#modal-container"
       hx-swap="innerHTML"
     >
       Add New Documentation

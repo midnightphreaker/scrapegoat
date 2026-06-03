@@ -17,25 +17,52 @@ vi.mock("../utils/paths", () => ({
 describe("TelemetryConfig", () => {
   let originalArgv: string[];
   let originalEnv: NodeJS.ProcessEnv;
+  let originalApiKey: string;
 
   beforeEach(() => {
     originalArgv = [...process.argv];
     originalEnv = { ...process.env };
+    originalApiKey = (globalThis as Record<string, unknown>)
+      .__POSTHOG_API_KEY__ as string;
     vi.clearAllMocks();
   });
 
   afterEach(() => {
     process.argv = originalArgv;
     process.env = originalEnv;
+    (globalThis as Record<string, unknown>).__POSTHOG_API_KEY__ = originalApiKey;
   });
 
-  it("should be enabled by default", () => {
+  it("should be enabled by default when API key is present", () => {
+    (globalThis as Record<string, unknown>).__POSTHOG_API_KEY__ = "test-api-key";
     const config = TelemetryConfig.getInstance();
-    config.setEnabled(true); // Reset to default
+    config.setEnabled(true);
+    expect(config.isEnabled()).toBe(true);
+  });
+
+  it("should be disabled when enabled flag is true but API key is missing", () => {
+    (globalThis as Record<string, unknown>).__POSTHOG_API_KEY__ = "";
+    const config = TelemetryConfig.getInstance();
+    config.setEnabled(true);
+    expect(config.isEnabled()).toBe(false);
+  });
+
+  it("should be disabled when enabled flag is false regardless of API key", () => {
+    (globalThis as Record<string, unknown>).__POSTHOG_API_KEY__ = "test-api-key";
+    const config = TelemetryConfig.getInstance();
+    config.setEnabled(false);
+    expect(config.isEnabled()).toBe(false);
+  });
+
+  it("should be enabled when enabled flag is true and API key is present", () => {
+    (globalThis as Record<string, unknown>).__POSTHOG_API_KEY__ = "valid-api-key";
+    const config = TelemetryConfig.getInstance();
+    config.setEnabled(true);
     expect(config.isEnabled()).toBe(true);
   });
 
   it("should allow runtime enable/disable", () => {
+    (globalThis as Record<string, unknown>).__POSTHOG_API_KEY__ = "test-api-key";
     const config = TelemetryConfig.getInstance();
     config.setEnabled(false);
     expect(config.isEnabled()).toBe(false);
@@ -109,23 +136,37 @@ describe("generateInstallationId", () => {
 describe("shouldEnableTelemetry", () => {
   let originalArgv: string[];
   let originalEnv: NodeJS.ProcessEnv;
+  let originalApiKey: string;
 
   beforeEach(() => {
     originalArgv = [...process.argv];
     originalEnv = { ...process.env };
+    originalApiKey = (globalThis as Record<string, unknown>)
+      .__POSTHOG_API_KEY__ as string;
     vi.clearAllMocks();
   });
 
   afterEach(() => {
     process.argv = originalArgv;
     process.env = originalEnv;
+    (globalThis as Record<string, unknown>).__POSTHOG_API_KEY__ = originalApiKey;
   });
 
-  it("should return true when telemetry is enabled", () => {
+  it("should return true when telemetry is enabled and API key is present", () => {
     delete process.env.SCRAPEGOAT_TELEMETRY;
     process.argv = ["node", "script.js"];
+    (globalThis as Record<string, unknown>).__POSTHOG_API_KEY__ = "test-api-key";
 
     const result = shouldEnableTelemetry();
     expect(result).toBe(true);
+  });
+
+  it("should return false when API key is missing", () => {
+    delete process.env.SCRAPEGOAT_TELEMETRY;
+    process.argv = ["node", "script.js"];
+    (globalThis as Record<string, unknown>).__POSTHOG_API_KEY__ = "";
+
+    const result = shouldEnableTelemetry();
+    expect(result).toBe(false);
   });
 });

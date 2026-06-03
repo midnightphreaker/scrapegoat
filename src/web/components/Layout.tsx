@@ -282,6 +282,9 @@ const Layout = ({
           <main>{children}</main>
         </div>
 
+        {/* Modal container for HTMX-swap modals */}
+        <div id="modal-container" />
+
         {/* Event client configuration */}
         <script>
           {`window.__EVENT_CLIENT_CONFIG__ = ${JSON.stringify(eventClientConfig)};`}

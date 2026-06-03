@@ -16,8 +16,24 @@ export class TelemetryConfig {
     // Private constructor for singleton pattern
   }
 
-  isEnabled(): boolean {
+  /**
+   * Check if telemetry is enabled by the user (via config, env, or CLI).
+   * This only checks the user's preference flag, not the API key availability.
+   *
+   * @returns `true` if the user has enabled telemetry, `false` otherwise
+   */
+  isUserEnabled(): boolean {
     return this.enabled;
+  }
+
+  /**
+   * Check if telemetry is fully enabled.
+   * Requires both the enabled flag to be set and a valid PostHog API key to be configured.
+   *
+   * @returns `true` if telemetry is enabled and an API key is present, `false` otherwise
+   */
+  isEnabled(): boolean {
+    return this.enabled && !!__POSTHOG_API_KEY__;
   }
 
   setEnabled(enabled: boolean): void {

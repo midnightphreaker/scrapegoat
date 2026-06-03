@@ -41,6 +41,32 @@ scrapegoat --config /path/to/config.yaml
 
 **Note:** Explicit config files are treated as **read-only**. The server will not modify them.
 
+## Auto-Update & Runtime Behavior
+
+Understanding when and how configuration changes take effect is important for operating ScrapeGoat reliably.
+
+### Startup-Time Load
+
+ScrapeGoat reads and resolves its configuration **once at startup**. There is no file watcher, SIGHUP handler, or hot-reload mechanism. Editing the config file on disk does **not** affect a running process — you must restart the server for changes to take effect.
+
+### Default Config Auto-Update
+
+When using the default config path (system directory), the server **writes back** the merged configuration on every startup. This materialises new default keys introduced by upgrades into the YAML file so you can discover and customise them.
+
+If the default config file does not exist, it is created automatically with all defaults populated.
+
+### Explicit Config Files Are Read-Only
+
+When you specify a config file via `--config` or `SCRAPEGOAT_CONFIG`, ScrapeGoat treats it as **read-only**. The server will never overwrite an explicit config file. You manage these files yourself — useful for version-controlled or shared configurations.
+
+### Runtime Changes via CLI
+
+The `scrapegoat config set` command modifies the default config file on disk. However, the running server's in-memory configuration is not refreshed. A restart is required for the change to take effect.
+
+### In-Flight Operations
+
+In-flight operations (scrapes, searches, embeddings) are unaffected by config file changes because the configuration object is resolved once and held immutable for the lifetime of the process.
+
 ## Overriding Configuration
 
 Configuration values are merged from multiple sources, with **later sources taking precedence**:

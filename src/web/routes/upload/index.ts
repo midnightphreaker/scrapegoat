@@ -18,12 +18,14 @@
 
 import fs from "node:fs/promises";
 import multipart from "@fastify/multipart";
+import rateLimit from "@fastify/rate-limit";
 import type { FastifyInstance, FastifyReply, FastifyRequest } from "fastify";
 import type { IPipeline } from "../../../pipeline/trpc/interfaces";
 import type { IDocumentManagement } from "../../../store/trpc/interfaces";
 import { ArchiveExtractor, UploadStagingService } from "../../../upload/index";
 import type { UploadConfig } from "../../../upload/types";
 import { DEFAULT_UPLOAD_CONFIG } from "../../../upload/types";
+import { loadConfig } from "../../../utils/config";
 import { logger } from "../../../utils/logger";
 import { registerUploadPageRoute } from "./page";
 
@@ -33,38 +35,21 @@ let docService: IDocumentManagement | null = null;
 
 function getStagingService(): UploadStagingService {
   if (!stagingService) {
-    const config: Partial<UploadConfig> = {
-      stagingMode:
-        (process.env.SCRAPEGOAT_WEBUI_IMPORT_STAGING_MODE as "memory" | "filesystem") ??
-        "memory",
-      stagingPath: process.env.SCRAPEGOAT_WEBUI_IMPORT_STAGING_INTERNAL_PATH,
-      maxTotalSizeBytes: process.env.SCRAPEGOAT_WEBUI_IMPORT_MAX_TOTAL_SIZE_BYTES
-        ? Number.parseInt(process.env.SCRAPEGOAT_WEBUI_IMPORT_MAX_TOTAL_SIZE_BYTES, 10)
-        : undefined,
-      maxFileSizeBytes: process.env.SCRAPEGOAT_WEBUI_IMPORT_MAX_FILE_SIZE_BYTES
-        ? Number.parseInt(process.env.SCRAPEGOAT_WEBUI_IMPORT_MAX_FILE_SIZE_BYTES, 10)
-        : undefined,
-      maxFiles: process.env.SCRAPEGOAT_WEBUI_IMPORT_MAX_FILES
-        ? Number.parseInt(process.env.SCRAPEGOAT_WEBUI_IMPORT_MAX_FILES, 10)
-        : undefined,
-      sessionTtlSeconds: process.env.SCRAPEGOAT_WEBUI_IMPORT_SESSION_TTL_SECONDS
-        ? Number.parseInt(process.env.SCRAPEGOAT_WEBUI_IMPORT_SESSION_TTL_SECONDS, 10)
-        : undefined,
-      maxArchiveCompressedBytes: process.env
-        .SCRAPEGOAT_WEBUI_IMPORT_MAX_ARCHIVE_SIZE_BYTES
-        ? Number.parseInt(process.env.SCRAPEGOAT_WEBUI_IMPORT_MAX_ARCHIVE_SIZE_BYTES, 10)
-        : undefined,
-      maxDepth: process.env.SCRAPEGOAT_WEBUI_IMPORT_MAX_DEPTH
-        ? Number.parseInt(process.env.SCRAPEGOAT_WEBUI_IMPORT_MAX_DEPTH, 10)
-        : undefined,
-      maxFilenameLength: process.env.SCRAPEGOAT_WEBUI_IMPORT_MAX_FILENAME_LENGTH
-        ? Number.parseInt(process.env.SCRAPEGOAT_WEBUI_IMPORT_MAX_FILENAME_LENGTH, 10)
-        : undefined,
-      maxPathLength: process.env.SCRAPEGOAT_WEBUI_IMPORT_MAX_PATH_LENGTH
-        ? Number.parseInt(process.env.SCRAPEGOAT_WEBUI_IMPORT_MAX_PATH_LENGTH, 10)
-        : undefined,
+    const config = loadConfig();
+    const webImport = config.webImport;
+    const stagingConfig: Partial<UploadConfig> = {
+      stagingMode: webImport.stagingMode,
+      stagingPath: webImport.stagingInternalPath || undefined,
+      maxTotalSizeBytes: webImport.maxTotalSizeBytes,
+      maxFileSizeBytes: webImport.maxFileSizeBytes,
+      maxFiles: webImport.maxFiles,
+      sessionTtlSeconds: webImport.sessionTtlSeconds,
+      maxArchiveCompressedBytes: webImport.maxArchiveCompressedBytes,
+      maxDepth: webImport.maxDepth,
+      maxFilenameLength: webImport.maxFilenameLength,
+      maxPathLength: webImport.maxPathLength,
     };
-    stagingService = new UploadStagingService(config);
+    stagingService = new UploadStagingService(stagingConfig);
   }
   return stagingService;
 }
@@ -82,6 +67,16 @@ export async function registerUploadRoutes(
       fileSize: DEFAULT_UPLOAD_CONFIG.maxFileSizeBytes,
       files: 50,
     },
+  });
+
+  /**
+   * Rate limit all upload routes to prevent abuse.
+   * Allows up to 10 requests per minute per originating IP address.
+   * Exceeding the limit returns HTTP 429 (Too Many Requests).
+   */
+  await server.register(rateLimit, {
+    max: 10,
+    timeWindow: "1 minute",
   });
 
   // Register the upload page UI route

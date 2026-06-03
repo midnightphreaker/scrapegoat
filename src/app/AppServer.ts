@@ -415,7 +415,13 @@ export class AppServer {
    * Enable Pipeline RPC (tRPC) service.
    */
   private async enableTrpcApi(): Promise<void> {
-    await registerTrpcService(this.server, this.pipeline, this.docService, this.eventBus);
+    await registerTrpcService(
+      this.server,
+      this.pipeline,
+      this.docService,
+      this.eventBus,
+      this.authManager || undefined,
+    );
     logger.debug("API server (tRPC) enabled");
   }
 
@@ -447,7 +453,13 @@ export class AppServer {
     });
 
     // Apply tRPC WebSocket handler to enable subscriptions
-    applyTrpcWebSocketHandler(this.wss, this.pipeline, this.docService, this.eventBus);
+    applyTrpcWebSocketHandler(
+      this.wss,
+      this.pipeline,
+      this.docService,
+      this.eventBus,
+      this.authManager || undefined,
+    );
 
     logger.debug("WebSocket server initialized for tRPC subscriptions");
   }

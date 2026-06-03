@@ -91,7 +91,7 @@ export class DocumentManagementClient implements IDocumentManagement {
 
   async getVersionsByStatus(statuses: VersionStatus[]): Promise<DbVersionWithLibrary[]> {
     return this.client.getVersionsByStatus.query({
-      statuses: statuses as unknown as string[],
+      statuses,
     });
   }
 

@@ -59,16 +59,26 @@ const SearchResultItem = async ({ result }: SearchResultItemProps) => {
   return (
     <div class="block px-4 py-2 bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-300 dark:border-gray-600 mb-2">
       <div class="text-sm text-gray-600 dark:text-gray-400 mb-1 flex items-center gap-2 min-w-0">
-        <a
-          href={result.url}
-          target="_blank"
-          rel="noopener noreferrer"
-          class="underline underline-offset-4 flex-1 truncate"
-          title={result.url}
-          safe
-        >
-          {result.url}
-        </a>
+        {result.url.startsWith("file://") ? (
+          <span
+            class="underline underline-offset-4 flex-1 truncate decoration-gray-400 dark:decoration-gray-500 cursor-default"
+            title="Local file path (not navigable in browser)"
+            safe
+          >
+            {result.url}
+          </span>
+        ) : (
+          <a
+            href={result.url}
+            target="_blank"
+            rel="noopener noreferrer"
+            class="underline underline-offset-4 flex-1 truncate"
+            title={result.url}
+            safe
+          >
+            {result.url}
+          </a>
+        )}
         {result.sourceMimeType || result.mimeType ? (
           <span class="text-xs opacity-75 font-mono" safe>
             {result.sourceMimeType || result.mimeType}

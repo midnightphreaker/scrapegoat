@@ -318,6 +318,7 @@ describe("AppServer Behavior Tests", () => {
         mockPipeline,
         mockDocService,
         expect.any(Object), // eventBus
+        undefined, // authManager
       );
       expect(mockWebService.registerWebService).not.toHaveBeenCalled();
       expect(mockMcpService.registerMcpService).not.toHaveBeenCalled();
@@ -363,6 +364,7 @@ describe("AppServer Behavior Tests", () => {
         mockPipeline,
         mockDocService,
         expect.any(Object), // eventBus
+        undefined, // authManager
       );
       expect(mockWorkerService.registerWorkerService).toHaveBeenCalledWith(mockPipeline);
     });
@@ -623,6 +625,7 @@ describe("AppServer Behavior Tests", () => {
         mockPipeline,
         mockDocService,
         expect.any(Object), // eventBus
+        undefined, // authManager
       );
     });
 

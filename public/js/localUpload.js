@@ -14,7 +14,7 @@
 document.addEventListener("alpine:init", () => {
   Alpine.data("localUpload", (library, version) => ({
     library,
-    version: version || "latest",
+    version: version || "",
     sessionId: null,
     uploading: false,
     uploadProgress: 0,
@@ -29,7 +29,13 @@ document.addEventListener("alpine:init", () => {
     selectedNode: null,
 
     async init() {
-      // Create a new upload session
+      // Session creation is deferred until Library Name is provided (REQ-001).
+      // See createSession().
+    },
+
+    async createSession() {
+      if (this.sessionId) return;
+      if (!this.library || this.library.trim() === "") return;
       try {
         const resp = await fetch("/web/upload/start", {
           method: "POST",
@@ -43,13 +49,38 @@ document.addEventListener("alpine:init", () => {
         }
         const data = await resp.json();
         this.sessionId = data.sessionId;
+        this.uploadErrors = [];
       } catch (e) {
         this.uploadErrors = [{ path: "session", error: e.message || "Network error" }];
       }
     },
 
+    async closePanel() {
+      if (this.sessionId) {
+        try {
+          await this.cancelImport();
+        } catch (_e) {
+          // Still navigate even if cancel fails
+        }
+      }
+      if (typeof htmx !== "undefined") {
+        const versionContainer = document.getElementById("add-version-form-container");
+        if (versionContainer && versionContainer.contains(this.$el)) {
+          htmx.ajax("GET", `/web/libraries/${encodeURIComponent(this.library)}/upload-version-button`, { target: "#add-version-form-container", swap: "innerHTML" });
+        } else {
+          htmx.ajax("GET", "/web/jobs/new-button", { target: "#addJobForm", swap: "innerHTML" });
+        }
+        const modalContainer = document.getElementById("modal-container");
+        if (modalContainer) modalContainer.innerHTML = "";
+      }
+    },
+
     async handleFiles(fileList) {
-      if (!this.sessionId || fileList.length === 0) return;
+      if (fileList.length === 0) return;
+      if (!this.sessionId) {
+        await this.createSession();
+        if (!this.sessionId) return;
+      }
       this.uploading = true;
       this.uploadProgress = 0;
       this.uploadErrors = [];
@@ -99,7 +130,11 @@ document.addEventListener("alpine:init", () => {
 
     async handleFolderSelect(event) {
       const files = event.target.files;
-      if (!files || files.length === 0 || !this.sessionId) return;
+      if (!files || files.length === 0) return;
+      if (!this.sessionId) {
+        await this.createSession();
+        if (!this.sessionId) return;
+      }
 
       this.uploading = true;
       this.uploadProgress = 0;
@@ -279,7 +314,7 @@ document.addEventListener("alpine:init", () => {
     async commitImport() {
       if (!this.sessionId) return;
 
-      if (!window.confirm("Submit this import tree? The current file/folder structure will define the retrieval source paths for all imported documents.")) return;
+      if (!window.confirm('This will ingest the selected files into a documentation library.\n\nThe file and folder layout currently shown in this window will be used as the source path layout for retrieval results.\n\nUploaded source files are temporary and will be removed after ingestion completes.\n\nContinue?')) return;
 
       this.committing = true;
       try {

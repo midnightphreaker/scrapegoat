@@ -23,6 +23,35 @@ import type { InternalPipelineJob, PipelineJob } from "./types";
 import { PipelineJobStatus } from "./types";
 
 /**
+ * Retries an async function with exponential backoff.
+ *
+ * @param fn - The async function to retry.
+ * @param maxRetries - Maximum number of retry attempts (default 3).
+ * @param baseDelay - Base delay in ms; doubles each retry (default 1000).
+ * @returns The result of `fn()` if it succeeds within retries.
+ * @throws The last error if all retries are exhausted.
+ */
+async function retryWithBackoff<T>(
+  fn: () => Promise<T>,
+  maxRetries: number = 3,
+  baseDelay: number = 1000,
+): Promise<T> {
+  let lastError: Error | undefined;
+  for (let attempt = 0; attempt < maxRetries; attempt++) {
+    try {
+      return await fn();
+    } catch (error) {
+      lastError = error instanceof Error ? error : new Error(String(error));
+      if (attempt < maxRetries - 1) {
+        const delay = baseDelay * 2 ** attempt;
+        await new Promise((resolve) => setTimeout(resolve, delay));
+      }
+    }
+  }
+  throw lastError;
+}
+
+/**
  * Manages a queue of document processing jobs, controlling concurrency and tracking progress.
  */
 export class PipelineManager implements IPipeline {
@@ -37,16 +66,23 @@ export class PipelineManager implements IPipeline {
   private eventBus: EventBusService;
   private appConfig: AppConfig;
 
+  /** Timeout in milliseconds before force-cancelling a stuck CANCELLING job. */
+  private cancelTimeoutMs: number;
+
+  /** Active cancel timeout timers, keyed by job ID. */
+  private cancelTimeouts: Map<string, ReturnType<typeof setTimeout>> = new Map();
+
   constructor(
     store: DocumentManagementService,
     eventBus: EventBusService,
-    options: { recoverJobs?: boolean; appConfig: AppConfig },
+    options: { recoverJobs?: boolean; appConfig: AppConfig; cancelTimeoutMs?: number },
   ) {
     this.store = store;
     this.eventBus = eventBus;
     this.appConfig = options.appConfig;
     this.concurrency = this.appConfig.scraper.maxConcurrency;
     this.shouldRecoverJobs = options.recoverJobs ?? true; // Default to true for backward compatibility
+    this.cancelTimeoutMs = options.cancelTimeoutMs ?? 60_000; // Default: 1 minute
     // ScraperService needs a registry. We create one internally for the manager.
     const registry = new ScraperRegistry(this.appConfig);
     this.scraperService = new ScraperService(registry);
@@ -498,6 +534,7 @@ export class PipelineManager implements IPipeline {
         job.abortController.abort();
         logger.info(`🚫 Signalling cancellation for running job: ${jobId}`);
         // The worker is responsible for transitioning to CANCELLED and rejecting
+        this.scheduleCancelTimeout(jobId);
         break;
 
       case PipelineJobStatus.COMPLETED:
@@ -555,6 +592,50 @@ export class PipelineManager implements IPipeline {
   }
 
   // --- Private Methods ---
+
+  /**
+   * Schedules a force-cancel timeout for a job in CANCELLING state.
+   * If the job doesn't transition to CANCELLED within the timeout, it is
+   * force-transitioned and a JOB_CANCEL_TIMEOUT event is emitted.
+   */
+  private scheduleCancelTimeout(jobId: string): void {
+    // Clear any existing timeout for this job
+    this.clearCancelTimeout(jobId);
+
+    const timeout = setTimeout(async () => {
+      const job = this.jobMap.get(jobId);
+      if (!job || job.status !== PipelineJobStatus.CANCELLING) {
+        return; // Already transitioned, nothing to do
+      }
+
+      logger.warn(
+        `⚠️  Job ${jobId} force-cancelled after CANCELLING timeout (${this.cancelTimeoutMs}ms)`,
+      );
+
+      await this.updateJobStatus(job, PipelineJobStatus.CANCELLED);
+      job.finishedAt = new Date();
+      job.rejectCompletion(
+        new PipelineStateError(`Job force-cancelled after CANCELLING timeout`),
+      );
+
+      this.eventBus.emit(EventType.JOB_CANCEL_TIMEOUT, { jobId });
+      this.cancelTimeouts.delete(jobId);
+    }, this.cancelTimeoutMs);
+
+    this.cancelTimeouts.set(jobId, timeout);
+  }
+
+  /**
+   * Clears the cancel timeout for a job, preventing a force-cancel.
+   * Called when a job transitions to CANCELLED through normal flow.
+   */
+  private clearCancelTimeout(jobId: string): void {
+    const existingTimeout = this.cancelTimeouts.get(jobId);
+    if (existingTimeout) {
+      clearTimeout(existingTimeout);
+      this.cancelTimeouts.delete(jobId);
+    }
+  }
 
   /**
    * Processes the job queue, starting new workers if capacity allows.
@@ -643,6 +724,8 @@ export class PipelineManager implements IPipeline {
         // Explicitly check for CancellationError or if the signal was aborted
         await this.updateJobStatus(job, PipelineJobStatus.CANCELLED);
         job.finishedAt = new Date();
+        // Clear any pending cancel timeout since the job cancelled normally
+        this.clearCancelTimeout(jobId);
         // Don't set job.error for cancellations - cancellation is not an error condition
         const cancellationError =
           error instanceof CancellationError
@@ -707,36 +790,45 @@ export class PipelineManager implements IPipeline {
 
     // Update database status
     try {
-      // Ensure the library and version exist and get the version ID
-      const versionId = await this.store.ensureLibraryAndVersion(
-        job.library,
-        job.version,
-      );
+      await retryWithBackoff(async () => {
+        // Ensure the library and version exist and get the version ID
+        const versionId = await this.store.ensureLibraryAndVersion(
+          job.library,
+          job.version,
+        );
 
-      // Update job object with database fields (single source of truth)
-      job.versionId = versionId;
-      job.versionStatus = this.mapJobStatusToVersionStatus(newStatus);
+        // Update job object with database fields (single source of truth)
+        job.versionId = versionId;
+        job.versionStatus = this.mapJobStatusToVersionStatus(newStatus);
 
-      const dbStatus = this.mapJobStatusToVersionStatus(newStatus);
-      await this.store.updateVersionStatus(versionId, dbStatus, errorMessage);
+        const dbStatus = this.mapJobStatusToVersionStatus(newStatus);
+        await this.store.updateVersionStatus(versionId, dbStatus, errorMessage);
 
-      // Store scraper options when job is first queued
-      if (newStatus === PipelineJobStatus.QUEUED && job.scraperOptions) {
-        try {
-          // Pass the complete scraper options (DocumentStore will filter runtime fields)
-          await this.store.storeScraperOptions(versionId, job.scraperOptions);
-          logger.debug(
-            `Stored scraper options for ${job.library}@${job.version}: ${job.sourceUrl}`,
-          );
-        } catch (optionsError) {
-          // Log warning but don't fail the job - options storage is not critical
-          logger.warn(
-            `⚠️  Failed to store scraper options for job ${job.id}: ${optionsError}`,
-          );
+        // Store scraper options when job is first queued
+        if (newStatus === PipelineJobStatus.QUEUED && job.scraperOptions) {
+          try {
+            // Pass the complete scraper options (DocumentStore will filter runtime fields)
+            await this.store.storeScraperOptions(versionId, job.scraperOptions);
+            logger.debug(
+              `Stored scraper options for ${job.library}@${job.version}: ${job.sourceUrl}`,
+            );
+          } catch (optionsError) {
+            // Log warning but don't fail the job - options storage is not critical
+            logger.warn(
+              `⚠️  Failed to store scraper options for job ${job.id}: ${optionsError}`,
+            );
+          }
         }
-      }
+      });
     } catch (error) {
-      logger.error(`❌ Failed to update database status for job ${job.id}: ${error}`);
+      const dbError = error instanceof Error ? error : new Error(String(error));
+      logger.error(
+        `❌ Failed to update database status for job ${job.id} after retries: ${dbError}`,
+      );
+      this.eventBus.emit(EventType.DB_UPDATE_FAILED, {
+        jobId: job.id,
+        error: dbError,
+      });
       // Don't throw - we don't want to break the pipeline for database issues
     }
 

@@ -18,6 +18,7 @@ import { Client } from "@modelcontextprotocol/sdk/client/index.js";
 // eslint-disable-next-line deprecation/deprecation
 import { SSEClientTransport } from "@modelcontextprotocol/sdk/client/sse.js";
 import { afterAll, afterEach, beforeAll, describe, expect, it } from "vitest";
+import { resolvePgBaseUrl } from "./test-helpers";
 import { getCliCommand } from "./test-helpers";
 
 describe("MCP HTTP server E2E", () => {
@@ -124,6 +125,7 @@ describe("MCP HTTP server E2E", () => {
           DOCS_MCP_STORE_PATH: path.join(projectRoot, "test", ".test-store-http"),
           DOCS_MCP_TELEMETRY: "false",
           LOG_LEVEL: "info",
+          DATABASE_URL: resolvePgBaseUrl(),
         },
       },
     );

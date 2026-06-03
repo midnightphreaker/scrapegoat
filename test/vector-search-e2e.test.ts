@@ -18,6 +18,7 @@ import { PipelineFactory } from "../src/pipeline/PipelineFactory";
 import { EmbeddingConfig, type EmbeddingModelConfig } from "../src/store/embeddings/EmbeddingConfig";
 import { EventBusService } from "../src/events";
 import { loadConfig } from "../src/utils/config";
+import { resolvePgBaseUrl } from "./test-helpers";
 
 // Load environment variables from .env file
 config();
@@ -53,6 +54,7 @@ describe("Vector Search End-to-End Tests", () => {
 
     appConfig.app.storePath = tempDir;
     appConfig.app.embeddingModel = embeddingConfig.modelSpec;
+    appConfig.database.url = resolvePgBaseUrl();
 
     // Initialize DocumentManagementService with temporary directory and embedding config
     const eventBus = new EventBusService();

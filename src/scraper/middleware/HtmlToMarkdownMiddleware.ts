@@ -1,4 +1,3 @@
-// @ts-expect-error
 import { gfm } from "@joplin/turndown-plugin-gfm";
 import TurndownService from "turndown";
 import { logger } from "../../utils/logger";

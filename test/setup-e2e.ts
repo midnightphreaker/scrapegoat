@@ -7,7 +7,11 @@
 
 import { afterAll, afterEach, beforeAll } from "vitest";
 import { vi } from "vitest";
+import { config as dotenvConfig } from "dotenv";
 import { server } from "./mock-server";
+
+// Load environment variables from .env before any tests run
+dotenvConfig();
 
 vi.mock("../src/utils/logger");
 

@@ -17,6 +17,7 @@ import { EventBusService } from "../src/events";
 import { loadConfig } from "../src/utils/config";
 import { ScrapeTool } from "../src/tools/ScrapeTool";
 import { SearchTool } from "../src/tools/SearchTool";
+import { resolvePgBaseUrl } from "./test-helpers";
 
 // Load environment variables from .env file
 config();
@@ -52,6 +53,7 @@ describe("GitHub Private Repository E2E Tests", () => {
 
     appConfig.app.storePath = tempDir;
     appConfig.app.embeddingModel = "";
+    appConfig.database.url = resolvePgBaseUrl();
 
     // Initialize services
     const eventBus = new EventBusService();

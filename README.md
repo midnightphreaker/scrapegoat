@@ -13,8 +13,9 @@ The open-source alternative to **Context7**, **NiA**, and **Ref.Tools**.
 -   🔥 **Reduces Hallucinations:** Grounds LLMs in real documentation.
 -   🔒 **Private & Local:** Runs entirely on your machine; your code never leaves your network.
 -   🐐 **Broad Compatibility:** Works with any MCP-compatible client (Claude, Cline, etc.).
--   📚 **Multiple Sources:** Index websites, GitHub repositories, local folders, and zip archives.
+-   📚 **Multiple Sources:** Index websites, GitHub repositories, local folders, and zip archives — or upload files directly from the browser.
 -   📄 **Rich File Support:** Processes HTML, Markdown, PDF, Office documents (Word, Excel, PowerPoint), OpenDocument, RTF, EPUB, Jupyter Notebooks, and [90+ source code languages](docs/concepts/supported-formats.md).
+-   🛡️ **Built-in Security:** SSRF protection on all outbound fetches, rate limiting on uploads, and tRPC API authentication enforcement.
 
 ---
 
@@ -97,6 +98,14 @@ npx @midnightphreaker/scrapegoat@latest
 
 See **[Connecting Clients](docs/guides/mcp-clients.md)** for VS Code (Cline, Roo) and other setup options.
 
+### Health Check
+
+ScrapeGoat exposes a health endpoint for monitoring and load balancer integrations:
+
+```
+GET /api/health → { "status": "ok" }
+```
+
 <details>
 <summary>Alternative: Run with Docker</summary>
 
@@ -123,9 +132,17 @@ OPENAI_API_KEY="sk-proj-..." npx @midnightphreaker/scrapegoat@latest
 
 See **[Embedding Models](docs/guides/embedding-models.md)** for configuring **Ollama**, **Gemini**, **Azure**, and others.
 
-### 📁 Local Upload (Docker)
+### 📁 Local Upload
 
-ScrapeGoat supports uploading local documentation files through the Web UI. Uploaded files are staged temporarily before being processed.
+ScrapeGoat supports uploading local documentation files through the Web UI. Upload files, folders, or archives directly from the browser — the backend parser validates content, so there are no file extension restrictions.
+
+The source selection modal provides three options:
+
+-   **Add File** — pick individual documents, archives, or code files.
+-   **Add Folder** — select an entire directory.
+-   **Add Virtual Folder** — group files into a named collection.
+
+Uploaded files are staged temporarily before being processed.
 
 **Staging Modes:**
 
@@ -241,6 +258,18 @@ Check your model's documentation for the correct dimension.
 -   **[Authentication](docs/infrastructure/authentication.md)**: Securing your server with OAuth2/OIDC.
 -   **[Telemetry](docs/infrastructure/telemetry.md)**: Privacy-first usage data collection.
 -   **[Architecture](ARCHITECTURE.md)**: Deep dive into the system design.
+
+---
+
+## 🛡️ Security
+
+ScrapeGoat includes several built-in security measures:
+
+-   **SSRF Protection:** All outbound URL fetches are validated against private IP ranges, loopback addresses, link-local addresses, and cloud metadata endpoints. Requests to internal hosts are blocked.
+-   **Rate Limiting:** The upload endpoint enforces per-IP rate limiting (10 requests per minute) to prevent abuse.
+-   **API Authentication:** tRPC API endpoints enforce authentication when OAuth2/OIDC is enabled.
+-   **Configurable Host Binding:** By default, services bind to `127.0.0.1` (localhost only). Bind to `0.0.0.0` or a specific IP using `SCRAPEGOAT_HOST` when exposing to a network.
+-   **Token Safety:** Authentication tokens are excluded from debug logs to prevent credential leakage.
 
 ---
 

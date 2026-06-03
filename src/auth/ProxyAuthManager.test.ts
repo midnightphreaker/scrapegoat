@@ -6,6 +6,7 @@ import type { FastifyInstance } from "fastify";
 import { jwtVerify } from "jose";
 import { HttpResponse, http } from "msw";
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { logger } from "../utils/logger";
 import { ProxyAuthManager } from "./ProxyAuthManager";
 import type { AuthConfig } from "./types";
 
@@ -385,6 +386,100 @@ describe("ProxyAuthManager", () => {
           scopes: new Set(),
         });
       });
+    });
+  });
+
+  describe("debug log security", () => {
+    let debugSpy: ReturnType<typeof vi.spyOn>;
+
+    beforeEach(async () => {
+      debugSpy = vi.spyOn(logger, "debug");
+      authManager = new ProxyAuthManager(validAuthConfig);
+      await authManager.initialize();
+    });
+
+    it("should not include token content in debug logs during verifyAccessToken", async () => {
+      // Mock successful JWT verification
+      mockJwtVerify.mockResolvedValueOnce({
+        payload: {
+          sub: "user123",
+          aud: "https://mcp.example.com",
+          iss: "https://auth.example.com",
+          exp: Math.floor(Date.now() / 1000) + 3600,
+        },
+        protectedHeader: { alg: "RS256" },
+      } as any);
+
+      const sensitiveToken = "sensitive_secret_token_value_abc123xyz";
+      await authManager.createAuthContext(`Bearer ${sensitiveToken}`);
+
+      // Verify no debug log message contains any portion of the actual token
+      for (const [message] of debugSpy.mock.calls) {
+        expect(message).not.toContain(sensitiveToken);
+        expect(message).not.toContain(sensitiveToken.substring(0, 20));
+      }
+    });
+
+    it("should not include token content in debug logs when JWT fails and userinfo succeeds", async () => {
+      // Mock JWT verification failure
+      mockJwtVerify.mockRejectedValueOnce(new Error("Invalid Compact JWS"));
+
+      // Mock successful userinfo response
+      server.use(
+        http.get("https://auth.example.com/oauth/userinfo", () => {
+          return HttpResponse.json({
+            sub: "user456",
+            email: "user@example.com",
+          });
+        }),
+      );
+
+      const sensitiveToken = "opaque_sensitive_token_xyz789def456";
+      await authManager.createAuthContext(`Bearer ${sensitiveToken}`);
+
+      for (const [message] of debugSpy.mock.calls) {
+        expect(message).not.toContain(sensitiveToken);
+        expect(message).not.toContain(sensitiveToken.substring(0, 20));
+      }
+    });
+
+    it("should not include token content in debug logs when all validation fails", async () => {
+      mockJwtVerify.mockRejectedValueOnce(new Error("Invalid Compact JWS"));
+
+      server.use(
+        http.get("https://auth.example.com/oauth/userinfo", () => {
+          return new HttpResponse(null, { status: 401 });
+        }),
+      );
+
+      const sensitiveToken = "totally_invalid_token_should_not_leak";
+      await authManager.createAuthContext(`Bearer ${sensitiveToken}`);
+
+      for (const [message] of debugSpy.mock.calls) {
+        expect(message).not.toContain(sensitiveToken);
+        expect(message).not.toContain(sensitiveToken.substring(0, 20));
+      }
+    });
+
+    it("should not include authorization header content in debug logs", async () => {
+      mockJwtVerify.mockResolvedValueOnce({
+        payload: {
+          sub: "user789",
+          aud: "https://mcp.example.com",
+          iss: "https://auth.example.com",
+          exp: Math.floor(Date.now() / 1000) + 3600,
+        },
+        protectedHeader: { alg: "RS256" },
+      } as any);
+
+      const sensitiveToken = "bearer_auth_header_secret_value";
+      const authHeaderValue = `Bearer ${sensitiveToken}`;
+      await authManager.createAuthContext(authHeaderValue);
+
+      for (const [message] of debugSpy.mock.calls) {
+        expect(message).not.toContain(authHeaderValue);
+        expect(message).not.toContain(sensitiveToken);
+      }
     });
   });
 });

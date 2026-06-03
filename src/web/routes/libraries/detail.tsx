@@ -30,6 +30,18 @@ export function registerLibraryDetailRoutes(
   scrapeTool: ScrapeTool,
   docService: IDocumentManagement
 ) {
+  // Route for version-specific library URL — redirects to detail page with version param
+  server.get(
+    "/libraries/:libraryName/:version",
+    async (
+      request: FastifyRequest<{ Params: { libraryName: string; version: string } }>,
+      reply: FastifyReply
+    ) => {
+      const { libraryName, version } = request.params;
+      reply.redirect(`/libraries/${libraryName}?version=${encodeURIComponent(version)}`);
+    }
+  );
+
   // Route for the library detail page
   server.get(
     "/libraries/:libraryName",

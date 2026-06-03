@@ -181,35 +181,63 @@ export class PipelineClient implements IPipeline {
     }
   }
 
-  async waitForJobCompletion(jobId: string): Promise<void> {
-    return new Promise((resolve, reject) => {
+  /**
+   * Wait for a job to reach a terminal state (completed, failed, or cancelled).
+   * Listens on the event bus for status changes emitted by the remote worker.
+   * Rejects with a timeout error if the job does not complete within the specified duration.
+   *
+   * @param jobId - The ID of the job to wait for.
+   * @param timeoutMs - Maximum time to wait in milliseconds. Defaults to 300000ms (5 minutes).
+   * @returns A promise that resolves when the job completes or rejects on failure/timeout.
+   */
+  async waitForJobCompletion(jobId: string, timeoutMs: number = 300000): Promise<void> {
+    let unsubscribe: (() => void) | null = null;
+    let timeoutId: ReturnType<typeof setTimeout> | null = null;
+
+    const cleanup = () => {
+      if (unsubscribe !== null) {
+        unsubscribe();
+        unsubscribe = null;
+      }
+      if (timeoutId !== null) {
+        clearTimeout(timeoutId);
+        timeoutId = null;
+      }
+    };
+
+    const completionPromise = new Promise<void>((resolve, reject) => {
       // Listen for job status changes on the event bus
       // RemoteEventProxy bridges remote worker events to this local bus
-      const unsubscribe = this.eventBus.on(
-        EventType.JOB_STATUS_CHANGE,
-        (job: PipelineJob) => {
-          // Filter for the specific job we're waiting for
-          if (job.id !== jobId) {
-            return;
-          }
+      unsubscribe = this.eventBus.on(EventType.JOB_STATUS_CHANGE, (job: PipelineJob) => {
+        // Filter for the specific job we're waiting for
+        if (job.id !== jobId) {
+          return;
+        }
 
-          // Check if job reached a terminal state
-          if (
-            job.status === "completed" ||
-            job.status === "failed" ||
-            job.status === "cancelled"
-          ) {
-            unsubscribe();
+        // Check if job reached a terminal state
+        if (
+          job.status === "completed" ||
+          job.status === "failed" ||
+          job.status === "cancelled"
+        ) {
+          cleanup();
 
-            if (job.status === "failed" && job.error) {
-              reject(new Error(job.error.message));
-            } else {
-              resolve();
-            }
+          if (job.status === "failed" && job.error) {
+            reject(new Error(job.error.message));
+          } else {
+            resolve();
           }
-        },
-      );
+        }
+      });
+
+      // Set up timeout
+      timeoutId = setTimeout(() => {
+        cleanup();
+        reject(new Error(`waitForJobCompletion timed out after ${timeoutMs}ms`));
+      }, timeoutMs);
     });
+
+    return completionPromise;
   }
 
   setCallbacks(_callbacks: PipelineManagerCallbacks): void {

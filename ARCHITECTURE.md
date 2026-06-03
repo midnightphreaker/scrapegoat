@@ -51,9 +51,22 @@ src/
 ├── app/                             # Unified server implementation
 │   ├── AppServer.ts                 # Modular service composition
 │   └── AppServerConfig.ts           # Service configuration interface
+├── auth/                            # OAuth2 proxy authentication
+│   ├── ProxyAuthManager.ts          # OAuth2 token management
+│   └── middleware.ts                # Auth middleware for routes
+├── cli/                             # CLI command definitions
+│   ├── main.ts                      # CLI entry and command routing
+│   ├── commands/                    # Individual CLI command handlers
+│   ├── output.ts                    # CLI output formatting
+│   └── services.ts                  # CLI service initialization
+├── events/                          # Event-driven architecture
+│   ├── EventBusService.ts           # Central pub/sub event bus
+│   ├── RemoteEventProxy.ts          # Bridges remote events to local bus
+│   └── trpc/                        # tRPC router for event streaming
 ├── mcp/                             # MCP server implementation
 │   ├── mcpServer.ts                 # MCP protocol server
 │   ├── tools.ts                     # MCP tool definitions
+│   ├── utils.ts                     # MCP utility functions
 │   └── startStdioServer.ts          # Stdio transport setup
 ├── pipeline/                        # Asynchronous job processing
 │   ├── PipelineFactory.ts           # Smart pipeline selection
@@ -73,12 +86,42 @@ src/
 │   ├── SemanticMarkdownSplitter.ts  # Structure-aware markdown splitting
 │   ├── JsonDocumentSplitter.ts      # Hierarchical JSON splitting
 │   ├── TextDocumentSplitter.ts      # Line-based text/code splitting
-│   └── splitters/                   # ContentSplitter implementations (deprecated)
+│   ├── splitters/                   # ContentSplitter implementations
+│   └── treesitter/                  # Tree-sitter source code parsing
+│       ├── TreesitterSourceCodeSplitter.ts  # AST-aware code splitting
+│       ├── LanguageParserRegistry.ts        # Language parser registry
+│       └── parsers/                 # Language-specific parsers
 ├── store/                           # Data storage and retrieval
+│   ├── assembly/                    # Search result reassembly
+│   │   └── strategies/              # Content-type assembly strategies
+│   ├── embeddings/                  # Embedding generation and management
+│   └── trpc/                        # tRPC router for store procedures
+├── telemetry/                       # Privacy-first telemetry
+│   ├── TelemetryService.ts          # Telemetry collection and reporting
+│   ├── TelemetryConfig.ts           # Telemetry configuration
+│   ├── postHogClient.ts             # PostHog analytics client
+│   └── sanitizer.ts                 # Sensitive data sanitization
 ├── tools/                           # Business logic implementations
 ├── types/                           # Shared TypeScript interfaces
+├── upload/                          # File upload and import
+│   ├── UploadStagingService.ts      # Upload staging and processing
+│   ├── ArchiveExtractor.ts          # Archive extraction (zip, tar)
+│   ├── ImportTreeBuilder.ts         # Import tree construction
+│   └── security.ts                  # Upload security validation
 ├── utils/                           # Common utilities
+│   └── archive/                     # Archive handling (zip, tar, tar.gz)
+│       ├── ArchiveFactory.ts        # Archive adapter factory
+│       ├── ZipAdapter.ts            # ZIP archive adapter
+│       └── TarAdapter.ts            # TAR archive adapter
 └── web/                             # Web interface implementation
+    ├── components/                  # Server-side rendered UI components
+    │   └── upload/                  # Upload-related components
+    ├── routes/                      # Route handlers
+    │   ├── jobs/                    # Job status routes
+    │   ├── libraries/               # Library management routes
+    │   └── upload/                  # File upload routes
+    ├── styles/                      # CSS and TailwindCSS styles
+    └── utils/                       # Web-specific utilities
 ```
 
 ## System Architecture

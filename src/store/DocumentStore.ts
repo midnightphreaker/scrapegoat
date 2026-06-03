@@ -1476,7 +1476,7 @@ export class DocumentStore {
            AND COALESCE(v.name, '') = COALESCE($2, '')
            AND p.url = $3
            AND jsonb_array_length((d.metadata)::jsonb->'path') = $4
-           AND (d.metadata)::jsonb->>'path' LIKE $5 || '%'
+           AND (d.metadata)::jsonb->'path' @> $5::jsonb
            AND d.sort_order > (SELECT sort_order FROM documents WHERE id = $6)
          ORDER BY d.sort_order
          LIMIT $7`,
@@ -1527,7 +1527,7 @@ export class DocumentStore {
            AND COALESCE(v.name, '') = COALESCE($2, '')
            AND p.url = $3
            AND d.sort_order < (SELECT sort_order FROM documents WHERE id = $4)
-           AND (d.metadata)::jsonb->>'path' = $5
+           AND (d.metadata)::jsonb->'path' = $5::jsonb
          ORDER BY d.sort_order DESC
          LIMIT $6`,
         [
@@ -1579,7 +1579,7 @@ export class DocumentStore {
            AND COALESCE(v.name, '') = COALESCE($2, '')
            AND p.url = $3
            AND d.sort_order > (SELECT sort_order FROM documents WHERE id = $4)
-           AND (d.metadata)::jsonb->>'path' = $5
+           AND (d.metadata)::jsonb->'path' = $5::jsonb
          ORDER BY d.sort_order
          LIMIT $6`,
         [
@@ -1636,7 +1636,7 @@ export class DocumentStore {
          WHERE l.name = $1
            AND COALESCE(v.name, '') = COALESCE($2, '')
            AND p.url = $3
-           AND (d.metadata)::jsonb->>'path' = $4
+           AND (d.metadata)::jsonb->'path' = $4::jsonb
            AND d.sort_order < (SELECT sort_order FROM documents WHERE id = $5)
          ORDER BY d.sort_order DESC
          LIMIT 1`,

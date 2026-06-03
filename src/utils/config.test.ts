@@ -385,6 +385,8 @@ describe("Quoted configuration environment variable handling (GH-353)", () => {
   beforeEach(() => {
     originalEnv = { ...process.env };
     tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "docs-mcp-config-env-test-"));
+    // Remove higher-priority env vars that would override the test's settings
+    delete process.env.SCRAPEGOAT_EMBEDDING_MODEL;
   });
 
   afterEach(() => {
@@ -511,5 +513,70 @@ describe("Auto-generated Environment Variable Overrides", () => {
     expect(() =>
       loadConfig({}, { configPath: path.join(tmpDir, "rrfk-neg.yaml") }),
     ).toThrow();
+  });
+});
+
+describe("webImport configuration", () => {
+  let tmpDir: string;
+  let originalEnv: NodeJS.ProcessEnv;
+
+  beforeEach(() => {
+    tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "docs-mcp-webimport-test-"));
+    originalEnv = { ...process.env };
+  });
+
+  afterEach(() => {
+    fs.rmSync(tmpDir, { recursive: true, force: true });
+    process.env = originalEnv;
+  });
+
+  it("should include webImport section with correct defaults", () => {
+    const configPath = path.join(tmpDir, "webimport-defaults.yaml");
+    fs.writeFileSync(configPath, "");
+    const config = loadConfig({ config: configPath });
+
+    expect(config.webImport).toBeDefined();
+    expect(config.webImport.stagingMode).toBe("memory");
+    expect(config.webImport.stagingInternalPath).toBe("");
+    expect(config.webImport.maxTotalSizeBytes).toBe(999 * 1024 * 1024);
+    expect(config.webImport.maxFileSizeBytes).toBe(100 * 1024 * 1024);
+    expect(config.webImport.maxFiles).toBe(999);
+    expect(config.webImport.sessionTtlSeconds).toBe(3600);
+    expect(config.webImport.maxArchiveCompressedBytes).toBe(500 * 1024 * 1024);
+    expect(config.webImport.maxDepth).toBe(9);
+    expect(config.webImport.maxFilenameLength).toBe(99);
+    expect(config.webImport.maxPathLength).toBe(255);
+  });
+
+  it("should allow webImport overrides via config file", () => {
+    const configPath = path.join(tmpDir, "webimport-override.yaml");
+    fs.writeFileSync(configPath, "webImport:\n  maxFiles: 50\n  maxDepth: 5\n");
+    const config = loadConfig({ config: configPath });
+
+    expect(config.webImport.maxFiles).toBe(50);
+    expect(config.webImport.maxDepth).toBe(5);
+    // Other defaults remain unchanged
+    expect(config.webImport.stagingMode).toBe("memory");
+    expect(config.webImport.sessionTtlSeconds).toBe(3600);
+  });
+
+  it("should allow webImport overrides via auto-generated env vars", () => {
+    process.env.SCRAPEGOAT_WEB_IMPORT_MAX_FILES = "200";
+    const configPath = path.join(tmpDir, "webimport-env.yaml");
+    fs.writeFileSync(configPath, "");
+    const config = loadConfig({ config: configPath });
+
+    expect(config.webImport.maxFiles).toBe(200);
+  });
+
+  it("should allow webImport overrides via legacy SCRAPEGOAT_WEBUI_IMPORT_* env vars", () => {
+    process.env.SCRAPEGOAT_WEBUI_IMPORT_MAX_FILES = "150";
+    process.env.SCRAPEGOAT_WEBUI_IMPORT_STAGING_MODE = "filesystem";
+    const configPath = path.join(tmpDir, "webimport-legacy-env.yaml");
+    fs.writeFileSync(configPath, "");
+    const config = loadConfig({ config: configPath });
+
+    expect(config.webImport.maxFiles).toBe(150);
+    expect(config.webImport.stagingMode).toBe("filesystem");
   });
 });
