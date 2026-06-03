@@ -61,7 +61,7 @@ export const DEFAULT_CONFIG = {
     audience: "",
   },
   scraper: {
-    maxPages: 9999,,
+    maxPages: 9999,
     maxDepth: 9,
     maxConcurrency: 14,
     pageTimeoutMs: 5000,
