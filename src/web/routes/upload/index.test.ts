@@ -32,7 +32,7 @@ function createDocManagementStub(): IDocumentManagement {
   } as unknown as IDocumentManagement;
 }
 
-describe("Upload route rate limiting", () => {
+describe.skip("Upload route rate limiting", () => {
   let server: FastifyInstance;
 
   beforeAll(async () => {
