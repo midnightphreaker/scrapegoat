@@ -40,13 +40,13 @@ const envBoolean = z
 export const DEFAULT_CONFIG = {
   app: {
     storePath: "",
-    telemetryEnabled: true,
+    telemetryEnabled: false,
     readOnly: false,
     embeddingModel: "text-embedding-3-small",
   },
   server: {
     protocol: "auto",
-    host: "127.0.0.1",
+    host: "0.0.0.0",
     ports: {
       default: 6280,
       worker: 8080,
@@ -61,9 +61,9 @@ export const DEFAULT_CONFIG = {
     audience: "",
   },
   scraper: {
-    maxPages: 1000,
-    maxDepth: 3,
-    maxConcurrency: 3,
+    maxPages: 9999,,
+    maxDepth: 9,
+    maxConcurrency: 14,
     pageTimeoutMs: 5000,
     browserTimeoutMs: 30_000,
     fetcher: {
@@ -91,7 +91,7 @@ export const DEFAULT_CONFIG = {
     batchChars: 50_000,
     requestTimeoutMs: 30_000,
     initTimeoutMs: 30_000,
-    vectorDimension: 1536,
+    vectorDimension: 1024,
     /** Whether to strip newlines from text before generating embeddings (all providers). Env: `SCRAPEGOAT_EMBEDDINGS_STRIP_NEW_LINES` */
     stripNewLines: true,
     /** SDK-level batch size for provider API calls (currently OpenAI-only). Env: `SCRAPEGOAT_EMBEDDINGS_API_BATCH_SIZE` */
@@ -105,12 +105,12 @@ export const DEFAULT_CONFIG = {
   },
   database: {
     url: "",
-    vectorDimension: 1536,
+    vectorDimension: 1024,
     pool: {
-      max: 10,
-      min: 2,
+      max: 32,
+      min: 4,
       idleTimeoutMillis: 10000,
-      connectionTimeoutMillis: 5000,
+      connectionTimeoutMillis: 30000,
     },
   },
   search: {
