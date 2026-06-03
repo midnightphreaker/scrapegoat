@@ -99,6 +99,7 @@ jobs:
 
           docker build \
             --label "org.opencontainers.image.source=https://git.phrk.org/pub/scrapegoat" \
+            --load \
             -t "$IMAGE_REF:latest" \
             -t "$IMAGE_REF:$NEW_VERSION" \
             .
