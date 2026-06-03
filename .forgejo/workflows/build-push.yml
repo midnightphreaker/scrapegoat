@@ -26,7 +26,7 @@ jobs:
           set -euo pipefail
 
           apt-get update
-          apt-get install -y ca-certificates curl
+          apt-get install -y ca-certificates curl jq
 
           install -m 0755 -d /etc/apt/keyrings
           curl -fsSL https://download.docker.com/linux/debian/gpg -o /etc/apt/keyrings/docker.asc
@@ -53,6 +53,7 @@ jobs:
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
+          token: ${{ secrets.AUTH_TOKEN }}
 
       - name: Configure git
         run: |
@@ -103,10 +104,12 @@ jobs:
             .
 
       - name: Login to Forgejo container registry
+        env:
+          AUTH_TOKEN: ${{ secrets.AUTH_TOKEN }}
         run: |
           set -eu
 
-          echo "${{ secrets.AUTH_TOKEN }}" \
+          echo "$AUTH_TOKEN" \
             | docker login "$REGISTRY" \
                 -u "gitbot" \
                 --password-stdin
@@ -129,7 +132,7 @@ jobs:
             exit 0
           fi
 
-          git commit -m "chore: bump Scrapegoat version to $NEW_VERSION [skip ci]"
+          git commit -m "chore: bump scrapegoat version to $NEW_VERSION [skip ci]"
           git push origin HEAD:main
 
       - name: Tag version
@@ -145,3 +148,33 @@ jobs:
 
           git tag -a "$TAG" -m "Scrapegoat $NEW_VERSION"
           git push origin "refs/tags/$TAG"
+
+      - name: Create Forgejo release
+        env:
+          AUTH_TOKEN: ${{ secrets.AUTH_TOKEN }}
+        run: |
+          set -eu
+
+          TAG="v${NEW_VERSION}"
+          RELEASE_NAME="${IMAGE_REF}:${NEW_VERSION}"
+
+          jq -n \
+            --arg tag_name "$TAG" \
+            --arg target_commitish "main" \
+            --arg name "$RELEASE_NAME" \
+            --arg image_ref "$IMAGE_REF" \
+            --arg version "$NEW_VERSION" \
+            '{
+              tag_name: $tag_name,
+              target_commitish: $target_commitish,
+              name: $name,
+              body: "Docker image:\n\n`" + $image_ref + ":" + $version + "`\n\nLatest tag:\n\n`" + $image_ref + ":latest`",
+              draft: false,
+              prerelease: false
+            }' \
+            | curl -fsS \
+                -X POST \
+                -H "Authorization: token ${AUTH_TOKEN}" \
+                -H "Content-Type: application/json" \
+                --data @- \
+                "https://${REGISTRY}/api/v1/repos/${OWNER}/${IMAGE}/releases"
