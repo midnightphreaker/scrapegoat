@@ -11,7 +11,7 @@ const SourceSelectionModal = () => {
       aria-modal="true"
       aria-labelledby="modal-title"
       tabindex="-1"
-      x-data="{ open: true }"
+      x-data="{ open: true, selected: null }"
       x-init="$el.focus()"
       {...{
         "x-on:keydown.escape": "htmx.ajax('GET', '/web/jobs/new-button', { target: '#modal-container', swap: 'innerHTML' })",
@@ -63,10 +63,10 @@ const SourceSelectionModal = () => {
           {/* Remote URL Card */}
           <button
             type="button"
-            hx-get="/web/jobs/new"
-            hx-target="#addJobForm"
-            hx-swap="innerHTML"
-            hx-on="htmx:afterSwap: document.getElementById('modal-container').innerHTML = '';"
+            x-on:click="selected = 'remote'"
+            {...{
+              "x-bind:class": "selected === 'remote' ? 'ring-2 ring-primary-500 border-primary-500 bg-primary-50 dark:bg-primary-900/20' : ''",
+            }}
             class="group p-4 bg-gray-50 dark:bg-gray-900 border-2 border-gray-200 dark:border-gray-700 rounded-lg hover:border-primary-500 dark:hover:border-primary-400 hover:shadow-md transition-all duration-200 text-left cursor-pointer"
           >
             <div class="flex items-center mb-2">
@@ -96,10 +96,10 @@ const SourceSelectionModal = () => {
           {/* Local Documentation Card */}
           <button
             type="button"
-            hx-get="/web/upload"
-            hx-target="#addJobForm"
-            hx-swap="innerHTML"
-            hx-on="htmx:afterSwap: document.getElementById('modal-container').innerHTML = '';"
+            x-on:click="selected = 'local'"
+            {...{
+              "x-bind:class": "selected === 'local' ? 'ring-2 ring-primary-500 border-primary-500 bg-primary-50 dark:bg-primary-900/20' : ''",
+            }}
             class="group p-4 bg-gray-50 dark:bg-gray-900 border-2 border-gray-200 dark:border-gray-700 rounded-lg hover:border-primary-500 dark:hover:border-primary-400 hover:shadow-md transition-all duration-200 text-left cursor-pointer"
           >
             <div class="flex items-center mb-2">
@@ -127,15 +127,24 @@ const SourceSelectionModal = () => {
           </button>
         </div>
 
-        {/* Cancel button */}
+        {/* Proceed button: disabled state — no selection yet */}
         <button
           type="button"
-          hx-get="/web/jobs/new-button"
-          hx-target="#modal-container"
-          hx-swap="innerHTML"
-          class="mt-5 w-full flex justify-center py-2 px-3 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm text-sm font-medium text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-700 hover:bg-gray-50 dark:hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500 transition-colors duration-150"
+          x-show="selected === null"
+          disabled
+          class="mt-5 w-full flex justify-center py-2 px-3 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm text-sm font-medium text-gray-400 dark:text-gray-500 bg-gray-100 dark:bg-gray-800 cursor-not-allowed"
         >
-          Cancel
+          Select a source to continue
+        </button>
+
+        {/* Proceed button: enabled state — load selected panel */}
+        <button
+          type="button"
+          x-show="selected !== null"
+          x-on:click="selected === 'remote' ? htmx.ajax('GET', '/web/jobs/new', { target: '#addJobForm', swap: 'innerHTML' }) : htmx.ajax('GET', '/web/upload', { target: '#addJobForm', swap: 'innerHTML' }); document.getElementById('modal-container').innerHTML = '';"
+          class="mt-5 w-full flex justify-center py-2 px-3 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-primary-600 hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500 transition-colors duration-150"
+        >
+          Proceed with Selection
         </button>
       </div>
     </div>
