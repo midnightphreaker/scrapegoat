@@ -37,7 +37,7 @@ export function registerLibrariesRoutes(
     "/web/libraries/:libraryName/versions/:versionParam",
     async (request, reply) => {
       const { libraryName, versionParam } = request.params;
-      const version = versionParam === "latest" ? undefined : versionParam;
+      const version = versionParam;
       try {
         await removeTool.execute({ library: libraryName, version });
 
