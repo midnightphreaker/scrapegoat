@@ -76,37 +76,8 @@ const LocalUploadPanel = ({ library, version }: LocalUploadPanelProps) => {
 
       {/* Upload area */}
       <div class="p-6">
-        {/* Drop zone */}
-        <div
-          x-ref="dropzone"
-          x-on:dragover="$event.preventDefault(); dragover = true"
-          x-on:dragleave="$event.preventDefault(); dragover = false"
-          x-on:drop="$event.preventDefault(); handleDrop($event)"
-          x-bind:class="dragover ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20' : 'border-gray-300 dark:border-gray-600'"
-          class="flex flex-col items-center justify-center w-full px-6 py-8 border-2 border-dashed rounded-lg cursor-pointer transition-colors"
-          x-on:click="$refs.fileInput.click()"
-        >
-          <svg
-            class="w-10 h-10 mb-3 text-gray-400"
-            aria-hidden="true"
-            xmlns="http://www.w3.org/2000/svg"
-            fill="none"
-            viewBox="0 0 20 16"
-          >
-            <path
-              stroke="currentColor"
-              stroke-linecap="round"
-              stroke-linejoin="round"
-              stroke-width="2"
-              d="M13 13h3a3 3 0 0 0 0-6h-.025A5.56 5.56 0 0 0 16 6.5 5.5 5.5 0 0 0 5.207 5.021C5.137 5.017 5.071 5 5 5a4 4 0 0 0 0 8h2.167M10 15V6m0 0L8 8m2-2 2 2"
-            />
-          </svg>
-          <p class="mb-2 text-sm text-gray-500 dark:text-gray-400">
-            <span class="font-semibold">Click to upload</span> or drag and drop
-          </p>
-          <p class="text-xs text-gray-500 dark:text-gray-400">
-            Documents, archives, code files, or folders
-          </p>
+        {/* Add File / Add Folder / Add Virtual Folder buttons */}
+        <div class="flex gap-2">
           <input
             x-ref="fileInput"
             type="file"
@@ -114,10 +85,6 @@ const LocalUploadPanel = ({ library, version }: LocalUploadPanelProps) => {
             multiple
             x-on:change="handleFiles($event.target.files)"
           />
-        </div>
-
-        {/* Add Folder / Add Virtual Folder buttons */}
-        <div class="mt-3 flex gap-2">
           <button
             type="button"
             class="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 dark:bg-gray-800 dark:text-gray-400 dark:border-gray-600 dark:hover:text-white dark:hover:bg-gray-700"
@@ -195,17 +162,11 @@ const LocalUploadPanel = ({ library, version }: LocalUploadPanelProps) => {
               />{" "}
               file(s) staged
             </span>
-            <button
-              type="button"
-              class="text-sm text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300 font-medium"
-              x-on:click="showTree = !showTree"
-              x-text="showTree ? 'Hide import tree' : 'Review import tree'"
-            />
           </div>
         </template>
 
         {/* Import Tree */}
-        <template x-if="showTree && tree">
+        <template x-if="tree">
           <div class="mt-4">
             <div class="flex items-center justify-between mb-3">
               <h4 class="text-sm font-semibold text-gray-900 dark:text-white">

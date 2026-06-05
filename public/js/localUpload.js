@@ -23,9 +23,8 @@ document.addEventListener("alpine:init", () => {
     tree: null,
     flatNodes: [],
     stats: null,
-    showTree: false,
+    showTree: true,
     committing: false,
-    dragover: false,
     selectedNode: null,
 
     async init() {
@@ -209,14 +208,6 @@ document.addEventListener("alpine:init", () => {
       }
     },
 
-    handleDrop(event) {
-      this.dragover = false;
-      const files = event.dataTransfer?.files;
-      if (files && files.length > 0) {
-        this.handleFiles(files);
-      }
-    },
-
     async refreshTree() {
       if (!this.sessionId) return;
       try {
@@ -356,7 +347,7 @@ document.addEventListener("alpine:init", () => {
           this.tree = null;
           this.flatNodes = [];
           this.stats = null;
-          this.showTree = false;
+          this.showTree = true;
           this.selectedNode = null;
         } else {
           const err = await resp.json().catch(() => ({ error: "Commit failed" }));
@@ -394,7 +385,7 @@ document.addEventListener("alpine:init", () => {
       this.tree = null;
       this.flatNodes = [];
       this.stats = null;
-      this.showTree = false;
+      this.showTree = true;
       this.uploadErrors = [];
       this.selectedNode = null;
     },
