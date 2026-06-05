@@ -56,6 +56,7 @@ export const scraperOptionsInputSchema = z.object({
   isRefresh: z.boolean().optional(),
   clear: z.boolean().optional(),
   preserveHashes: z.boolean().optional(),
+  localImportStagingPath: z.string().min(1).optional(),
 });
 
 const enqueueScrapeInput = z.object({
