@@ -8,12 +8,16 @@ import "./styles/main.css";
 
 import collapse from "@alpinejs/collapse";
 import Alpine from "alpinejs";
+import htmx from "htmx.org";
 
 // Register Alpine.js plugins before exposing globally
 Alpine.plugin(collapse);
 
 // Expose Alpine globally for Idiomorph and other extensions
 (window as unknown as { Alpine: typeof Alpine }).Alpine = Alpine;
+
+// Expose HTMX globally for Alpine inline handlers and public scripts.
+(window as unknown as { htmx: typeof htmx }).htmx = htmx;
 
 import { initFlowbite } from "flowbite";
 import "idiomorph/htmx";
