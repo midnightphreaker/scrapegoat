@@ -153,127 +153,40 @@ const Layout = ({
         {/* Toast notification component */}
         <Toast />
 
-        {/* Full-width header with phrk.org branding */}
+        {/* Full-width header with ScrapeGoat branding */}
         <header
-          class="bg-white border-b border-gray-200 dark:bg-gray-800 dark:border-gray-700"
+          class="bg-white border-b border-gray-200 dark:bg-gray-950 dark:border-gray-800"
           x-data={versionInitializer}
           x-init="queueCheck()"
         >
-          <div class="container max-w-2xl mx-auto px-4 py-4">
-            {/* Large screens: single row layout */}
-            <div class="hidden sm:flex items-center justify-between">
-              <div class="flex items-center gap-3">
+          <div class="container max-w-2xl mx-auto px-4 py-3">
+            <div class="flex items-center justify-between gap-4">
+              <a href="/" class="block shrink-0" aria-label="ScrapeGoat home">
+                <img
+                  src="/ScrapeGoat-Banner.svg"
+                  alt="ScrapeGoat"
+                  class="h-10 sm:h-12 w-auto"
+                />
+              </a>
+              <span
+                x-show="hasUpdate"
+                x-cloak
+                class="inline-flex items-center gap-2 rounded-full bg-gray-100 dark:bg-gray-800 px-3 py-1.5 text-sm font-medium text-gray-700 dark:text-gray-300 border border-gray-200 dark:border-gray-700"
+                role="status"
+                aria-live="polite"
+              >
+                <span class="flex h-4 w-4 items-center justify-center rounded-full bg-gray-500 text-white text-xs font-bold">
+                  !
+                </span>
                 <a
-                  href="https://phrk.org"
+                  x-bind:href="latestReleaseUrl"
                   target="_blank"
                   rel="noopener noreferrer"
-                  class="text-xl font-medium text-gray-900 dark:text-white hover:text-primary-500 dark:hover:text-primary-400 transition-colors font-brand"
+                  class="hover:text-gray-900 dark:hover:text-white transition-colors"
                 >
-                  <span class="text-primary-600 dark:text-primary-300">
-                    phrk
-                  </span>
-                  <span class="text-accent-500">.</span>
-                  <span class="text-gray-900 dark:text-gray-100">org</span>
+                  <span class="mr-1">Update available</span>
                 </a>
-                <span class="text-gray-400 dark:text-gray-400">|</span>
-                <a
-                  href="/"
-                  class="text-lg font-semibold text-gray-900 dark:text-white hover:text-primary-500 dark:hover:text-primary-400 transition-colors font-brand"
-                >
-                  ScrapeGoat
-                </a>
-                {versionString ? (
-                  <span
-                    safe
-                    class="text-sm font-normal text-gray-500 dark:text-slate-400"
-                    title={`Version ${versionString}`}
-                  >
-                    v{versionString}
-                  </span>
-                ) : null}
-              </div>
-              <div>
-                <span
-                  x-show="hasUpdate"
-                  x-cloak
-                  class="inline-flex items-center gap-2 rounded-full bg-amber-100 dark:bg-amber-500/20 px-3 py-1.5 text-sm font-medium text-amber-700 dark:text-amber-300 border border-amber-200 dark:border-amber-500/30"
-                  role="status"
-                  aria-live="polite"
-                >
-                  <span class="flex h-4 w-4 items-center justify-center rounded-full bg-amber-500 text-amber-800 dark:text-amber-900 text-xs font-bold">
-                    !
-                  </span>
-                  <a
-                    x-bind:href="latestReleaseUrl"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    class="hover:text-amber-800 dark:hover:text-amber-200 transition-colors"
-                  >
-                    <span class="mr-1">Update available</span>
-                  </a>
-                </span>
-              </div>
-            </div>
-
-            {/* Small screens: stacked layout */}
-            <div class="sm:hidden space-y-2">
-              {/* Row 1: phrk.org branding */}
-              <div class="flex justify-center">
-                <a
-                  href="https://phrk.org"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  class="text-xl font-medium text-gray-900 dark:text-white hover:text-primary-500 dark:hover:text-primary-400 transition-colors font-brand"
-                >
-                  <span class="text-primary-600 dark:text-primary-300">
-                    phrk
-                  </span>
-                  <span class="text-accent-500">.</span>
-                  <span class="text-gray-900 dark:text-gray-100">org</span>
-                </a>
-              </div>
-
-              {/* Row 2: ScrapeGoat + Version */}
-              <div class="flex items-center justify-center gap-2">
-                <a
-                  href="/"
-                  class="text-lg font-semibold text-gray-900 dark:text-white hover:text-primary-500 dark:hover:text-primary-400 transition-colors font-brand"
-                >
-                  ScrapeGoat
-                </a>
-                {versionString ? (
-                  <span
-                    safe
-                    class="text-sm font-normal text-gray-500 dark:text-slate-400"
-                    title={`Version ${versionString}`}
-                  >
-                    v{versionString}
-                  </span>
-                ) : null}
-              </div>
-
-              {/* Row 3: Update notification */}
-              <div class="flex justify-center">
-                <span
-                  x-show="hasUpdate"
-                  x-cloak
-                  class="inline-flex items-center gap-2 rounded-full bg-amber-100 dark:bg-amber-500/20 px-3 py-1.5 text-sm font-medium text-amber-700 dark:text-amber-300 border border-amber-200 dark:border-amber-500/30"
-                  role="status"
-                  aria-live="polite"
-                >
-                  <span class="flex h-4 w-4 items-center justify-center rounded-full bg-amber-500 text-amber-800 dark:text-amber-900 text-xs font-bold">
-                    !
-                  </span>
-                  <a
-                    x-bind:href="latestReleaseUrl"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    class="hover:text-amber-800 dark:hover:text-amber-200 transition-colors"
-                  >
-                    <span class="mr-1">Update available</span>
-                  </a>
-                </span>
-              </div>
+              </span>
             </div>
           </div>
         </header>

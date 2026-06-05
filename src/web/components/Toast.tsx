@@ -24,10 +24,10 @@ const Toast = () => {
         <div
           class="inline-flex items-center justify-center shrink-0 w-8 h-8 rounded-lg"
           x-bind:class="{
-            'text-green-500 bg-green-100 dark:bg-green-800 dark:text-green-200': $store.toast.type === 'success',
+            'text-gray-500 bg-gray-100 dark:bg-gray-800 dark:text-gray-200': $store.toast.type === 'success',
             'text-red-500 bg-red-100 dark:bg-red-800 dark:text-red-200': $store.toast.type === 'error',
-            'text-orange-500 bg-orange-100 dark:bg-orange-700 dark:text-orange-200': $store.toast.type === 'warning',
-            'text-blue-500 bg-blue-100 dark:bg-blue-800 dark:text-blue-200': $store.toast.type === 'info'
+            'text-gray-500 bg-gray-100 dark:bg-gray-700 dark:text-gray-200': $store.toast.type === 'warning',
+            'text-gray-500 bg-gray-100 dark:bg-gray-800 dark:text-gray-200': $store.toast.type === 'info'
           }"
         >
           {/* Success icon */}

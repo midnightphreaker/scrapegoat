@@ -45,7 +45,7 @@ const LocalUploadPanel = ({ library, version }: LocalUploadPanelProps) => {
           <input
             id="upload-library"
             type="text"
-            class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500"
+            class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-gray-500 focus:border-gray-500 block w-full p-2.5 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-gray-500 dark:focus:border-gray-500"
             x-model="library"
             x-on:blur="createSession()"
             required
@@ -66,7 +66,7 @@ const LocalUploadPanel = ({ library, version }: LocalUploadPanelProps) => {
           <input
             id="upload-version"
             type="text"
-            class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500"
+            class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-gray-500 focus:border-gray-500 block w-full p-2.5 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-gray-500 dark:focus:border-gray-500"
             x-model="version"
             required
             placeholder="e.g., 1.0.0"
@@ -119,17 +119,17 @@ const LocalUploadPanel = ({ library, version }: LocalUploadPanelProps) => {
         <template x-if="uploading">
           <div class="mt-4">
             <div class="flex items-center justify-between mb-1">
-              <span class="text-sm font-medium text-blue-700 dark:text-blue-400">
+              <span class="text-sm font-medium text-gray-700 dark:text-gray-400">
                 Uploading files...
               </span>
               <span
-                class="text-sm font-medium text-blue-700 dark:text-blue-400"
+                class="text-sm font-medium text-gray-700 dark:text-gray-400"
                 x-text="uploadProgress + '%'"
               />
             </div>
             <div class="w-full bg-gray-200 rounded-full h-2.5 dark:bg-gray-700">
               <div
-                class="bg-blue-600 h-2.5 rounded-full transition-all duration-300"
+                class="bg-gray-600 h-2.5 rounded-full transition-all duration-300"
                 x-bind:style="'width: ' + uploadProgress + '%'"
               />
             </div>
@@ -175,7 +175,7 @@ const LocalUploadPanel = ({ library, version }: LocalUploadPanelProps) => {
               <div class="flex gap-2">
                 <button
                   type="button"
-                  class="px-3 py-1 text-xs font-medium text-green-700 bg-green-100 border border-green-200 rounded-lg hover:bg-green-200 dark:bg-green-900/30 dark:text-green-400 dark:border-green-800 dark:hover:bg-green-900/50"
+                  class="px-3 py-1 text-xs font-medium text-gray-700 bg-gray-100 border border-gray-200 rounded-lg hover:bg-gray-200 dark:bg-gray-900/30 dark:text-gray-400 dark:border-gray-800 dark:hover:bg-gray-900/50"
                   x-on:click="refreshTree()"
                 >
                   Refresh
@@ -195,7 +195,7 @@ const LocalUploadPanel = ({ library, version }: LocalUploadPanelProps) => {
                   {/* File/folder icon */}
                   <svg
                     x-show="node.type === 'folder'"
-                    class="w-4 h-4 text-yellow-500 shrink-0"
+                    class="w-4 h-4 text-gray-500 shrink-0"
                     aria-hidden="true"
                     xmlns="http://www.w3.org/2000/svg"
                     fill="currentColor"
@@ -205,7 +205,7 @@ const LocalUploadPanel = ({ library, version }: LocalUploadPanelProps) => {
                   </svg>
                   <svg
                     x-show="node.type === 'file'"
-                    class="w-4 h-4 text-blue-500 shrink-0"
+                    class="w-4 h-4 text-gray-500 shrink-0"
                     aria-hidden="true"
                     xmlns="http://www.w3.org/2000/svg"
                     fill="currentColor"
@@ -231,7 +231,7 @@ const LocalUploadPanel = ({ library, version }: LocalUploadPanelProps) => {
                   <div x-show="node.type === 'file'" class="flex gap-1 shrink-0">
                     <button
                       type="button"
-                      class="p-1 text-gray-400 hover:text-blue-600 dark:hover:text-blue-400"
+                      class="p-1 text-gray-400 hover:text-gray-600 dark:hover:text-gray-400"
                       title="Rename"
                       x-on:click="$event.stopPropagation(); startRename(node)"
                     >
@@ -241,7 +241,7 @@ const LocalUploadPanel = ({ library, version }: LocalUploadPanelProps) => {
                     </button>
                     <button
                       type="button"
-                      class="p-1 text-gray-400 hover:text-green-600 dark:hover:text-green-400"
+                      class="p-1 text-gray-400 hover:text-gray-600 dark:hover:text-gray-400"
                       title="Move"
                       x-on:click="$event.stopPropagation(); moveNode(node)"
                     >
@@ -305,7 +305,7 @@ const LocalUploadPanel = ({ library, version }: LocalUploadPanelProps) => {
         <div class="mt-6 flex items-center gap-3">
           <button
             type="button"
-            class="px-5 py-2.5 text-sm font-medium text-white bg-blue-700 rounded-lg hover:bg-blue-800 focus:ring-4 focus:ring-blue-300 dark:bg-blue-600 dark:hover:bg-blue-700 dark:focus:ring-blue-800 disabled:opacity-50 disabled:cursor-not-allowed"
+            class="px-5 py-2.5 text-sm font-medium text-white bg-gray-700 rounded-lg hover:bg-gray-800 focus:ring-4 focus:ring-gray-300 dark:bg-gray-600 dark:hover:bg-gray-700 dark:focus:ring-gray-800 disabled:opacity-50 disabled:cursor-not-allowed"
             x-bind:disabled="!sessionId || !tree || tree.length === 0 || committing || !library"
             x-on:click="commitImport()"
             x-text="committing ? 'Importing...' : 'Accept & Submit'"
