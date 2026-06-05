@@ -74,7 +74,8 @@ document.addEventListener("alpine:init", () => {
       }
     },
 
-    async handleFiles(fileList) {
+    async handleFiles(eventOrFileList) {
+      const fileList = eventOrFileList?.target?.files ?? eventOrFileList;
       if (fileList.length === 0) return;
       if (!this.sessionId) {
         await this.createSession();
@@ -124,6 +125,9 @@ document.addEventListener("alpine:init", () => {
       } finally {
         this.uploading = false;
         this.uploadProgress = 0;
+        if (eventOrFileList?.target) {
+          eventOrFileList.target.value = "";
+        }
       }
     },
 

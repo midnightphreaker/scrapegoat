@@ -11,6 +11,7 @@ describe("LocalUploadPanel", () => {
     expect(html).toContain("Add Virtual Folder");
     expect(html).toContain('x-ref="fileInput"');
     expect(html).toContain('x-ref="folderInput"');
+    expect(html).toContain('x-on:change="handleFiles($event)"');
     expect(html).not.toContain('x-ref="dropzone"');
     expect(html).not.toContain("Click to upload");
     expect(html).not.toContain("drag and drop");

@@ -83,7 +83,7 @@ const LocalUploadPanel = ({ library, version }: LocalUploadPanelProps) => {
             type="file"
             class="hidden"
             multiple
-            x-on:change="handleFiles($event.target.files)"
+            x-on:change="handleFiles($event)"
           />
           <button
             type="button"
