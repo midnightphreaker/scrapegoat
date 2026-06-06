@@ -80,7 +80,7 @@ set the values you need.
 
 | Variable | Description |
 |----------|-------------|
-| `SCRAPEGOAT_DB_URL` | PostgreSQL connection URL (`postgresql://user:pass@host:5432/db`) |
+| `SCRAPEGOAT_DB_URL` | PostgreSQL connection URL. Auto-generated when using `docker-compose.postgres.yml`. Required only when using `docker-compose.yml` (external PostgreSQL). |
 
 ### Embedding Provider (Choose One)
 
@@ -89,8 +89,8 @@ set the values you need.
 | **OpenAI** (default) | `OPENAI_API_KEY`, optionally `OPENAI_API_BASE` for Ollama/LMStudio |
 | **Google Vertex** | `GOOGLE_APPLICATION_CREDENTIALS` (service account JSON path) |
 | **Google Gemini** | `GOOGLE_API_KEY` |
-| **AWS Bedrock** | `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`, `BEDROCK_AWS_REGION` |
-| **Azure OpenAI** | `AZURE_OPENAI_API_KEY`, `AZURE_OPENAI_API_INSTANCE_NAME`, `AZURE_OPENAI_API_DEPLOYMENT_NAME` |
+| **AWS Bedrock** | `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`, `AWS_REGION` |
+| **Azure OpenAI** | `AZURE_OPENAI_API_KEY`, `AZURE_OPENAI_API_INSTANCE_NAME`, `AZURE_OPENAI_API_DEPLOYMENT_NAME`, `AZURE_OPENAI_API_VERSION` |
 
 ### Key Tuning Variables
 
@@ -105,6 +105,7 @@ set the values you need.
 | `SCRAPEGOAT_SEARCH_WEIGHT_VEC` | `1` | Vector weight in hybrid RRF scoring |
 | `SCRAPEGOAT_SEARCH_WEIGHT_FTS` | `1` | Full-text weight in hybrid RRF scoring |
 | `POSTHOG_API_KEY` | _(none)_ | PostHog analytics key (omit to disable) |
+| `SCRAPEGOAT_READ_ONLY` | `false` | Disable write tools (`scrape_docs`, etc.) |
 
 See `.env.example` for all variables.
 
@@ -125,7 +126,7 @@ file handles this automatically on first run.
 |-----------|------|---------|
 | `scrapegoat-postgres` | `5432` | PostgreSQL with pgvector |
 | `scrapegoat-worker` | `8080` | Scraping and indexing pipeline (tRPC API) |
-| `scrapegoat-server` | `6280` | MCP server endpoint (SSE + Streamable HTTP) |
+| `scrapegoat-mcp` | `6280` | MCP server endpoint (SSE + Streamable HTTP) |
 | `scrapegoat-web` | `6281` | Web management dashboard |
 
 The worker is the authoritative backend. The MCP and web containers connect to

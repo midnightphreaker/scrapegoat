@@ -8,7 +8,7 @@
 ## Repository Context
 
 - **Repository**: `midnightphreaker/scrapegoat`
-- **Core Stack**: Node.js 22.x, TypeScript, Vite, AlpineJS, TailwindCSS, SQLite (better-sqlite3)
+- **Core Stack**: Node.js 22.x, TypeScript, Vite, AlpineJS, TailwindCSS, PostgreSQL (pgvector)
   - **Node Version**: Always use **Node.js v22** for local development and builds, even if `package.json` allows older versions.
 - **Tooling**: Biome (lint/format), Vitest (test), Husky (pre-commit)
 - **Critical Documentation**:

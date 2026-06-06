@@ -9,7 +9,7 @@ Layered architecture with clear separation of concerns:
 - **Entry Layer** (`index.ts`, `app/`, `cli/`) — bootstrap, CLI parsing, service lifecycle
 - **Service Layer** (`services/`, `events/`, `auth/`) — wires components together into runnable servers
 - **Domain Layer** (`scraper/`, `pipeline/`, `splitter/`, `tools/`, `upload/`) — core business logic
-- **Data Layer** (`store/`, `store/embeddings/`) — SQLite-backed document storage with vector search
+- **Data Layer** (`store/`, `store/embeddings/`) — PostgreSQL-backed document storage with vector search
 - **Transport Layer** (`mcp/`, `web/`) — MCP stdio server + Fastify web dashboard
 - **Cross-cutting** (`utils/`, `types/`, `telemetry/`) — shared utilities, config, logging, analytics
 
@@ -26,7 +26,7 @@ Uses dependency injection (constructor injection) throughout. Services are compo
 
 ## Integration
 - Consumed by: `dist/index.js` (compiled entry point), Docker entrypoint
-- Depends on: external packages (Fastify, better-sqlite3, Playwright, tRPC, etc.)
+- Depends on: external packages (Fastify, pg, Playwright, tRPC, etc.)
 
 ## Directory Map
 | Directory | Responsibility | Map |
@@ -40,7 +40,7 @@ Uses dependency injection (constructor injection) throughout. Services are compo
 | `scraper/` | Web scraping engine with strategy pattern | [Map](scraper/codemap.md) |
 | `services/` | Service registration layer for AppServer | [Map](services/codemap.md) |
 | `splitter/` | Document chunking (greedy, semantic, tree-sitter) | [Map](splitter/codemap.md) |
-| `store/` | SQLite document store with pgvector embeddings | [Map](store/codemap.md) |
+| `store/` | PostgreSQL document store with pgvector embeddings | [Map](store/codemap.md) |
 | `telemetry/` | PostHog analytics with PII sanitization | [Map](telemetry/codemap.md) |
 | `tools/` | MCP tool implementations | [Map](tools/codemap.md) |
 | `types/` | Shared type definitions | [Map](types/codemap.md) |

@@ -23,7 +23,7 @@ ScrapeGoat is an MCP (Model Context Protocol) server that provides always-curren
 | `src/scraper/` | Web scraping engine with strategy pattern: fetcher, middleware pipeline, URL discovery strategies. | [View Map](src/scraper/codemap.md) |
 | `src/services/` | Service layer wiring MCP, tRPC, web, and worker services into the AppServer. | [View Map](src/services/codemap.md) |
 | `src/splitter/` | Document chunking: greedy, semantic markdown, JSON, text splitters with tree-sitter support. | [View Map](src/splitter/codemap.md) |
-| `src/store/` | Document storage layer: SQLite (better-sqlite3) with pgvector embedding, CRUD operations, migration support. | [View Map](src/store/codemap.md) |
+| `src/store/` | Document storage layer: PostgreSQL with pgvector embeddings, CRUD operations, migration support. | [View Map](src/store/codemap.md) |
 | `src/telemetry/` | PostHog analytics integration with PII sanitization and opt-out support. | [View Map](src/telemetry/codemap.md) |
 | `src/tools/` | MCP tool implementations: scrape, search, fetch-url, list-libraries, cancel-job, etc. | [View Map](src/tools/codemap.md) |
 | `src/types/` | Shared TypeScript type definitions and ambient module declarations. | [View Map](src/types/codemap.md) |
@@ -38,7 +38,7 @@ entry (src/index.ts, src/cli/main.ts)
   └─► CLI command dispatch
         ├─► "server" / "web" → AppServer (Fastify + tRPC WebSocket + Web UI)
         │     └─► services: MCP, tRPC, web, worker
-        │           └─► DocumentStore (SQLite)
+        │           └─► DocumentStore (PostgreSQL + pgvector)
         │           └─► PipelineWorker (scrape jobs)
         └─► "mcp" → stdio MCP server
               └─► direct DocumentStore access
@@ -49,12 +49,12 @@ ScrapeGoat operates in multiple modes:
 - **MCP stdio mode**: Direct stdio transport for IDE integration (Claude, Cline, etc.)
 - **Web-only mode**: Standalone web dashboard
 
-Data flows from scraping jobs through the pipeline (fetcher → middleware → splitter → embeddings) into SQLite storage, then queried via MCP tools or the web dashboard.
+Data flows from scraping jobs through the pipeline (fetcher → middleware → splitter → embeddings) into PostgreSQL storage, then queried via MCP tools or the web dashboard.
 
 ## Key Technologies
 - **Runtime**: Node.js 22+, ESM
 - **Server**: Fastify + WebSocket (ws) + tRPC subscriptions
-- **Database**: SQLite via better-sqlite3, with pgvector and sqlite-vec extensions
+- **Database**: PostgreSQL with pgvector extension
 - **Scraping**: Playwright (headless browser), Turndown (HTML→Markdown), Cheerio
 - **Embeddings**: OpenAI / Ollama / local providers via embedding factory
 - **Web UI**: AlpineJS, htmx, Tailwind CSS, @kitajs/html (JSX server-side rendering)
