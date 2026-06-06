@@ -1,4 +1,14 @@
-# ScrapeGoat
+<div align="center">
+
+<img src="assets/ScrapeGoat-Banner.svg" alt="ScrapeGoat Logo" width="700">
+
+<br>
+
+**ScrapeGoat: The A.I. Documentation GOAT!**
+
+<br>
+
+</div>
 
 Always-current documentation indexing for AI coding assistants. ScrapeGoat is an
 MCP server that fetches official docs from websites, GitHub repositories, npm,
