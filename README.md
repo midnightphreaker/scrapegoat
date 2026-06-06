@@ -1,4 +1,4 @@
-	<div align="center">
+<div align="center">
 
 <img src="assets/ScrapeGoat-Banner.svg" alt="ScrapeGoat Logo" width="700">
 
