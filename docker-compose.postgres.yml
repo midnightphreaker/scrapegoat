@@ -115,7 +115,16 @@ services:
       context: .
       dockerfile: Dockerfile
     command:
-      ["web", "--host", "0.0.0.0", "--port", "6281", "--no-logo"]
+      [
+        "web",
+        "--host",
+        "0.0.0.0",
+        "--port",
+        "6281",
+        "--server-url",
+        "http://worker:8080/api",
+        "--no-logo",
+      ]
     container_name: scrapegoat-web
     restart: unless-stopped
     ports:
@@ -133,6 +142,9 @@ services:
       - scrapegoat-data:/data
       # Local upload staging volume (uncomment for filesystem staging mode)
       # - scrapegoat-staging:/data/staging
+    depends_on:
+      worker:
+        condition: service_healthy
     deploy:
       resources:
         limits:
