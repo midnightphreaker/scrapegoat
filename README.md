@@ -46,28 +46,6 @@ See **[Supported Formats](docs/concepts/supported-formats.md)** for the complete
 
 ## 🐐 Quick Start
 
-### CLI First
-
-For agents and scripts, the CLI is usually the simplest way to use ScrapeGoat.
-
-**1. Index documentation** (requires Node.js 22+):
-
-```bash
-npx @midnightphreaker/scrapegoat@latest scrape react https://react.dev/reference/react
-```
-
-**2. Query the index:**
-
-```bash
-npx @midnightphreaker/scrapegoat@latest search react "useEffect cleanup" --output yaml
-```
-
-**3. Fetch a single page as Markdown:**
-
-```bash
-npx @midnightphreaker/scrapegoat@latest fetch-url https://react.dev/reference/react/useEffect
-```
-
 ### Output Behavior
 
 - Structured commands default to clean JSON on stdout in non-interactive runs.
