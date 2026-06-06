@@ -1,78 +1,212 @@
-<div align="center">
+# ScrapeGoat
 
-<img src="assets/ScrapeGoat-Banner.svg" alt="ScrapeGoat Logo" width="700">
+Always-current documentation indexing for AI coding assistants. ScrapeGoat is an
+MCP server that fetches official docs from websites, GitHub repositories, npm,
+PyPI, and local files, then indexes them for instant retrieval by LLMs. It is
+the open-source alternative to Context7, NiA, and Ref.Tools.
 
-<br>
+## Requirements
 
-**ScrapeGoat: The A.I. Documentation GOAT!**
+- **Node.js** 22 or later
+- **PostgreSQL** with [pgvector](https://github.com/pgvector/pgvector) extension
+- **Playwright** Chromium browser (auto-installed on first run)
+- **Embedding provider** credentials (optional; required for semantic search)
 
-<br>
-
-</div>
-
-
-**ScrapeGoat** solves the problem of AI hallucinations and outdated knowledge by providing a personal, always-current documentation index for your AI coding assistant. It fetches official docs from websites, GitHub, npm, PyPI, and local files, allowing your AI to query the exact version you are using.
-
-## ❄️ Why ScrapeGoat?
-
-The open-source alternative to **Context7**, **NiA**, and **Ref.Tools**.
-
--   ❄️ **Up-to-Date Context:** Fetches documentation directly from official sources on demand.
--   📦 **Version-Specific:** Queries target the exact library versions in your project.
--   🔥 **Reduces Hallucinations:** Grounds LLMs in real documentation.
--   🔒 **Private & Local:** Runs entirely on your machine; your code never leaves your network.
--   🐐 **Broad Compatibility:** Works with any MCP-compatible client (Claude, Cline, etc.).
--   📚 **Multiple Sources:** Index websites, GitHub repositories, local folders, and zip archives — or upload files directly from the browser.
--   📄 **Rich File Support:** Processes HTML, Markdown, PDF, Office documents (Word, Excel, PowerPoint), OpenDocument, RTF, EPUB, Jupyter Notebooks, and [90+ source code languages](docs/concepts/supported-formats.md).
--   🛡️ **Built-in Security:** SSRF protection on all outbound fetches and tRPC API authentication enforcement.
-
----
-
-## 📄 Supported Formats
-
-| Category | Formats |
-|----------|---------|
-| **Documents** | PDF, Word (.docx/.doc), Excel (.xlsx/.xls), PowerPoint (.pptx/.ppt), OpenDocument (.odt/.ods/.odp), RTF, EPUB, FictionBook, Jupyter Notebooks |
-| **Archives** | ZIP, TAR, gzipped TAR (contents are extracted and processed individually) |
-| **Web** | HTML, XHTML |
-| **Markup** | Markdown, MDX, reStructuredText, AsciiDoc, Org Mode, Textile, R Markdown |
-| **Source Code** | TypeScript, JavaScript, Python, Go, Rust, C/C++, Java, Kotlin, Ruby, PHP, Swift, C#, and [many more](docs/concepts/supported-formats.md#source-code) |
-| **Data** | JSON, YAML, TOML, CSV, XML, SQL, GraphQL, Protocol Buffers |
-| **Config** | Dockerfile, Makefile, Terraform/HCL, INI, dotenv, Bazel |
-
-See **[Supported Formats](docs/concepts/supported-formats.md)** for the complete reference including MIME types and processing details.
-
----
-
-## 🐐 Quick Start
-
-### Output Behavior
-
-- Structured commands default to clean JSON on stdout in non-interactive runs.
-- Use `--output json|yaml|toon` to pick a structured format.
-- Plain-text commands such as `fetch-url` keep their text payload on stdout.
-- Diagnostics go through the shared logger and are kept off stdout in non-interactive runs.
-- Use `--quiet` to suppress non-error diagnostics or `--verbose` to enable debug output.
-
-### Agent Skills
-
-The [`skills/`](skills/) directory contains [Agent Skills](https://agentskills.io) that teach AI coding assistants how to use the CLI — covering documentation search, index management, and URL fetching.
-
-### MCP Server
-
-If you want a long-running MCP endpoint for Claude, Cline, Copilot, Gemini CLI, or other MCP clients:
-
-**1. Start the server:**
+## Quick Start
 
 ```bash
-npx @midnightphreaker/scrapegoat@latest
+cp .env.example .env
+npm install
+npm run build
+
+# Single-command server (web + MCP + worker):
+npm start
+
+# Or run individual modes (see CLI Modes below)
 ```
 
-**2. Open the Web UI** at **[http://localhost:6280](http://localhost:6280)** to add documentation.
+## CLI Modes
 
-**3. Connect your AI client** by adding this to your MCP settings (e.g., `claude_desktop_config.json`):
+ScrapeGoat runs in several modes, selectable by the first argument:
 
-```json
+| Command | Description |
+|---------|-------------|
+| `scrapegoat` or `scrapegoat server` | Unified server: web dashboard, MCP, tRPC API, and background worker |
+| `scrapegoat mcp` | MCP server only (stdio or HTTP transport) |
+| `scrapegoat web` | Web dashboard only |
+| `scrapegoat worker` | External pipeline worker (HTTP API only) |
+| `scrapegoat scrape <lib> <url>` | Download and index documentation from a URL |
+| `scrapegoat refresh <lib>` | Re-scrape a library using ETags for changed pages |
+| `scrapegoat search <lib> <query>` | Full-text + vector search across indexed docs |
+| `scrapegoat list` | List all indexed libraries and versions |
+| `scrapegoat fetch-url <url>` | Fetch a URL and convert to Markdown |
+| `scrapegoat config` | View or modify configuration |
+
+Run `scrapegoat --help` for all options.
+
+## MCP Tools
+
+Registered on the MCP server (`scrape_docs`, `search_docs`, etc.) and available
+to any MCP-compatible AI coding tool.
+
+### Read Tools (Always Available)
+
+| Tool | Description |
+|------|-------------|
+| `search_docs` | Search indexed documentation by library, version, and query |
+| `list_libraries` | List all indexed libraries |
+| `find_version` | Find the best matching version for a library |
+| `fetch_url` | Fetch a single URL and return its Markdown content |
+
+### Write Tools (Disabled in Read-Only Mode)
+
+| Tool | Description |
+|------|-------------|
+| `scrape_docs` | Scrape and index documentation from a URL |
+| `refresh_version` | Re-scrape a library version (ETag-aware, only changed pages) |
+| `list_jobs` | List all indexing jobs, optionally filtered by status |
+| `get_job_info` | Get details for a specific indexing job |
+| `cancel_job` | Cancel a queued or running job |
+| `clear_completed_jobs` | Remove completed/failed/cancelled jobs from the queue |
+| `remove_docs` | Delete indexed documentation for a library |
+
+### MCP Resources
+
+| URI | Description |
+|-----|-------------|
+| `docs://libraries` | List all indexed libraries |
+| `docs://libraries/{library}/versions` | List all indexed versions for a library |
+| `docs://jobs` | List indexing jobs (supports `?status=running` filter) |
+| `docs://jobs/{jobId}` | Get details for a specific job |
+
+## Configuration
+
+All settings are read from environment variables, YAML/JSON config files, and
+CLI flags, in order of increasing priority. Copy `.env.example` to `.env` and
+set the values you need.
+
+### Required
+
+| Variable | Description |
+|----------|-------------|
+| `SCRAPEGOAT_DB_URL` | PostgreSQL connection URL (`postgresql://user:pass@host:5432/db`) |
+
+### Embedding Provider (Choose One)
+
+| Provider | Environment Variables |
+|----------|----------------------|
+| **OpenAI** (default) | `OPENAI_API_KEY`, optionally `OPENAI_API_BASE` for Ollama/LMStudio |
+| **Google Vertex** | `GOOGLE_APPLICATION_CREDENTIALS` (service account JSON path) |
+| **Google Gemini** | `GOOGLE_API_KEY` |
+| **AWS Bedrock** | `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`, `BEDROCK_AWS_REGION` |
+| **Azure OpenAI** | `AZURE_OPENAI_API_KEY`, `AZURE_OPENAI_API_INSTANCE_NAME`, `AZURE_OPENAI_API_DEPLOYMENT_NAME` |
+
+### Key Tuning Variables
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `SCRAPEGOAT_EMBEDDING_MODEL` | `text-embedding-3-small` | Provider:model spec |
+| `SCRAPEGOAT_DB_VECTOR_SIZE` | `1536` | Embedding vector dimension |
+| `SCRAPEGOAT_SCRAPER_MAX_CONCURRENCY` | `3` | Concurrent page fetches per job |
+| `SCRAPEGOAT_SPLITTER_MIN_CHUNK_SIZE` | `500` | Min chunk size (chars) before merging |
+| `SCRAPEGOAT_SPLITTER_PREFERRED_CHUNK_SIZE` | `1500` | Target chunk size |
+| `SCRAPEGOAT_SPLITTER_MAX_CHUNK_SIZE` | `5000` | Hard chunk size limit |
+| `SCRAPEGOAT_SEARCH_WEIGHT_VEC` | `1` | Vector weight in hybrid RRF scoring |
+| `SCRAPEGOAT_SEARCH_WEIGHT_FTS` | `1` | Full-text weight in hybrid RRF scoring |
+| `POSTHOG_API_KEY` | _(none)_ | PostHog analytics key (omit to disable) |
+
+See `.env.example` for all variables.
+
+## Deployment
+
+ScrapeGoat can be deployed as a single process or as a distributed system with
+separate worker, MCP, and web containers connected via tRPC.
+
+### Standalone (Single Container)
+
+A single container runs the full server (web dashboard + MCP + worker):
+
+```bash
+docker compose up -d
+```
+
+This mode expects an external PostgreSQL instance reachable at the
+`SCRAPEGOAT_DB_URL` you configure in `.env`.
+
+### Distributed (PostgreSQL + Worker + MCP + Web)
+
+A full distributed deployment with a managed PostgreSQL container:
+
+```bash
+cp .env.example .env
+# Edit .env with your embedding provider credentials
+docker compose -f docker-compose.postgres.yml up -d
+```
+
+This starts four containers:
+
+| Container | Port | Purpose |
+|-----------|------|---------|
+| `scrapegoat-postgres` | `5432` | PostgreSQL with pgvector |
+| `scrapegoat-worker` | `8080` | Scraping and indexing pipeline (tRPC API) |
+| `scrapegoat-server` | `6280` | MCP server endpoint (SSE + Streamable HTTP) |
+| `scrapegoat-web` | `6281` | Web management dashboard |
+
+The worker is the authoritative backend. The MCP and web containers connect to
+it via `--server-url http://worker:8080/api`. The worker depends on PostgreSQL;
+MCP and web depend on the worker being healthy.
+
+### Service Memory Limits
+
+Set in `.env` (applies to Docker Compose only):
+
+```
+SCRAPEGOAT_WORKER_MEMORY_LIMIT=2G
+SCRAPEGOAT_WORKER_MEMORY_RESERVATION=1G
+SCRAPEGOAT_MCP_MEMORY_LIMIT=512M
+SCRAPEGOAT_MCP_MEMORY_RESERVATION=256M
+SCRAPEGOAT_WEB_MEMORY_LIMIT=512M
+SCRAPEGOAT_WEB_MEMORY_RESERVATION=256M
+```
+
+## Connecting AI Coding Tools
+
+ScrapeGoat supports three MCP transport protocols: **stdio** (for local tools),
+**SSE** (Server-Sent Events), and **Streamable HTTP** (MCP 2025).
+
+### HTTP Endpoints (Server Mode)
+
+When running in server/mcp mode with `--protocol http`:
+
+| Endpoint | Transport | Use |
+|----------|-----------|-----|
+| `http://<host>:6280/sse` | SSE | Older MCP clients (Claude Desktop, Continue) |
+| `http://<host>:6280/messages` | SSE POST endpoint | Paired with `/sse` |
+| `http://<host>:6280/mcp` | Streamable HTTP | Modern MCP clients (MCP 2025 spec) |
+
+### OpenCode
+
+OpenCode uses the `opencode.json` or `opencode.jsonc` config file. Add an MCP
+server entry:
+
+```jsonc
+{
+  "mcpServers": {
+    "scrapegoat": {
+      "command": "npx",
+      "args": ["@midnightphreaker/scrapegoat", "mcp"],
+      "env": {
+        "SCRAPEGOAT_DB_URL": "postgresql://scrapegoat:scrapegoat@localhost:5432/scrapegoat",
+        "OPENAI_API_KEY": "${OPENAI_API_KEY}"
+      }
+    }
+  }
+}
+```
+
+For remote server mode:
+
+```jsonc
 {
   "mcpServers": {
     "scrapegoat": {
@@ -83,187 +217,180 @@ npx @midnightphreaker/scrapegoat@latest
 }
 ```
 
-See **[Connecting Clients](docs/guides/mcp-clients.md)** for VS Code (Cline, Roo) and other setup options.
+### Claude Code
 
-### Health Check
+In `.claude/settings.json` or the project `.claude.json`:
 
-ScrapeGoat exposes a health endpoint for monitoring and load balancer integrations:
-
+```json
+{
+  "mcpServers": {
+    "scrapegoat": {
+      "command": "npx",
+      "args": ["-y", "@midnightphreaker/scrapegoat", "mcp"],
+      "env": {
+        "SCRAPEGOAT_DB_URL": "postgresql://scrapegoat:scrapegoat@localhost:5432/scrapegoat",
+        "OPENAI_API_KEY": "${OPENAI_API_KEY}"
+      }
+    }
+  }
+}
 ```
-GET /api/health → { "status": "ok" }
+
+### Codex CLI
+
+In `~/.codex/config.toml`:
+
+```toml
+[mcp_servers.scrapegoat]
+command = "npx"
+args = ["-y", "@midnightphreaker/scrapegoat", "mcp"]
+env = { SCRAPEGOAT_DB_URL = "postgresql://scrapegoat:scrapegoat@localhost:5432/scrapegoat", OPENAI_API_KEY = "${OPENAI_API_KEY}" }
 ```
 
-<details>
-<summary>Alternative: Run with Docker</summary>
+### Cursor
+
+In `.cursor/mcp.json`:
+
+```json
+{
+  "mcpServers": {
+    "scrapegoat": {
+      "command": "npx",
+      "args": ["-y", "@midnightphreaker/scrapegoat", "mcp"],
+      "env": {
+        "SCRAPEGOAT_DB_URL": "postgresql://scrapegoat:scrapegoat@localhost:5432/scrapegoat",
+        "OPENAI_API_KEY": "${OPENAI_API_KEY}"
+      }
+    }
+  }
+}
+```
+
+### Read-Only Mode
+
+All tools support a `--read-only` flag that disables write operations
+(`scrape_docs`, `refresh_version`, `remove_docs`, job management). This is
+useful for shared servers where AI clients should only search:
 
 ```bash
-docker run --rm \
-  -v scrapegoat-data:/data \
-  -v scrapegoat-config:/config \
-  -p 6280:6280 \
-  ghcr.io/midnightphreaker/scrapegoat:latest \
-  --protocol http --host 0.0.0.0 --port 6280
+scrapegoat mcp --protocol http --read-only
 ```
 
-</details>
+## Architecture
 
-### 🧠 Configure Embedding Model (Recommended)
+```
+src/index.ts (entry)
+  └─► src/cli/main.ts (CLI dispatch)
+        ├─► "server" / "mcp" / "web" / "worker" commands
+        │     └─► AppServer (Fastify + tRPC + WebSocket)
+        │           ├─► MCP service (SSE + Streamable HTTP routes)
+        │           ├─► tRPC service (pipeline + store + events routers)
+        │           ├─► Web service (AlpineJS + htmx dashboard)
+        │           └─► Worker service (PipelineManager)
+        │                 └─► PipelineWorker → ScraperService → ScraperRegistry
+        │                       ├─► WebScraperStrategy (HTTP docs sites)
+        │                       ├─► GitHubScraperStrategy (GitHub repos)
+        │                       ├─► LocalFileStrategy (local files/archives)
+        │                       ├─► NpmScraperStrategy (npm packages)
+        │                       └─► PyPiScraperStrategy (PyPI packages)
+        │                             └─► ContentFetcher → ContentPipeline → Splitter
+        │                                   └─► DocumentStore (PostgreSQL + pgvector)
+        └─► "mcp" (stdio) → StdioServerTransport
+              └─► McpServer (tools + resources)
+```
 
-Using an embedding model is **optional** but dramatically improves search quality by enabling semantic vector search.
+### Scraping Pipeline
 
-**Example: Enable OpenAI Embeddings**
+1. **Fetcher** retrieves raw content (HTTP, file://, headless browser fallback)
+2. **Middleware chain** processes content: Playwright render → Cheerio parse
+   → metadata extraction → link extraction → sanitization → normalization
+   → Turndown (HTML→Markdown)
+3. **Splitter** decomposes Markdown into semantically meaningful chunks
+   (headings, code blocks, tables, lists) with tree-sitter AST splitting for
+   source code
+4. **Greedy merger** combines undersized chunks while preserving section
+   boundaries
+5. **Embedding** generates vector embeddings via configured provider
+6. **Storage** writes chunks to PostgreSQL with pgvector indexing
+
+### Search
+
+Hybrid search combines vector similarity and PostgreSQL full-text search using
+Reciprocal Rank Fusion (RRF). Results are assembled with content-type-aware
+strategies that cluster nearby chunks and expand context (parents, siblings,
+children).
+
+### Distributed Mode
+
+In distributed mode, the worker container runs pipeline operations and exposes a
+tRPC API. The MCP and web containers connect as tRPC clients. Events
+(job status changes, progress updates) propagate from the worker to clients via
+tRPC WebSocket subscriptions through the `RemoteEventProxy`.
+
+## Development
 
 ```bash
-OPENAI_API_KEY="sk-proj-..." npx @midnightphreaker/scrapegoat@latest
+npm install
+npm run dev              # Parallel: server in watch mode + web build watch
+npm run build            # Build server + web assets
+npm test                 # Run all tests
+npm run test:unit        # Unit tests only
+npm run test:e2e         # End-to-end tests (requires build first)
+npm run lint             # Biome check
+npm run typecheck        # TypeScript type check
+npm run format           # Biome format
 ```
 
-See **[Embedding Models](docs/guides/embedding-models.md)** for configuring **Ollama**, **Gemini**, **Azure**, and others.
+### Key Technologies
 
-### 📁 Local Upload
+- **Runtime**: Node.js 22 (ESM)
+- **Server**: Fastify 5 with WebSocket
+- **RPC**: tRPC 11 with superjson serialization
+- **Database**: PostgreSQL with pgvector extension
+- **Scraping**: Playwright (headless Chromium), Cheerio, Turndown (HTML→Markdown)
+- **Embeddings**: LangChain integrations (OpenAI, Google Vertex/Gemini, AWS Bedrock, Azure)
+- **Chunking**: remark (Markdown AST), tree-sitter (source code AST), greedy size optimization
+- **Web UI**: Fastify server-side JSX (@kitajs/html), AlpineJS, htmx, Tailwind CSS 4
+- **Build**: Vite 7
+- **Lint/Format**: Biome
+- **Testing**: Vitest, promptfoo (search evaluation)
 
-ScrapeGoat supports uploading local documentation files through the Web UI. Upload files, folders, or archives directly from the browser — the backend parser validates content, so there are no file extension restrictions.
-
-The source selection modal provides three options:
-
--   **Add File** — pick individual documents, archives, or code files.
--   **Add Folder** — select an entire directory.
--   **Add Virtual Folder** — group files into a named collection.
-
-Uploaded files are staged temporarily before being processed.
-
-**Staging Modes:**
-
-| Mode | Description |
-|------|-------------|
-| `memory` (default) | Files are held in process-local temporary staging. This is suitable for single-process or embedded use where the Web UI and worker share the same filesystem. |
-| `filesystem` | Files are written to a staging directory on disk. This is required when the Web UI and worker run in separate containers or hosts. |
-
-The provided Docker Compose files run the Web UI and worker as separate
-containers, so they enable filesystem staging by default and mount the same
-`scrapegoat-staging` volume at `/data/staging` in both services.
-
-For custom split-service Docker deployments, configure both the **worker** and
-**web** services with the same staging path and shared volume:
-
-```yaml
-environment:
-  SCRAPEGOAT_WEBUI_IMPORT_STAGING_MODE: filesystem
-  SCRAPEGOAT_WEBUI_IMPORT_STAGING_INTERNAL_PATH: /data/staging
-volumes:
-  - scrapegoat-staging:/data/staging
-```
-
-**Relevant environment variables:**
-
-| Variable | Default | Description |
-|----------|---------|-------------|
-| `SCRAPEGOAT_WEBUI_IMPORT_STAGING_MODE` | `memory` | Staging mode: `memory` or `filesystem` |
-| `SCRAPEGOAT_WEBUI_IMPORT_STAGING_INTERNAL_PATH` | — | Container path for filesystem staging (e.g. `/data/staging`) |
-
-### 🔄 Switching Embedding Models or Dimensions
-
-When you change the embedding model or vector dimensions (e.g., from 1536 to 768), ScrapeGoat throws an `EmbeddingModelChangedError` because existing vectors are incompatible. This requires manual confirmation and invalidates all stored embeddings — full-text search continues to work, but vector search won't return results until libraries are re-scraped.
-
-> **⚠️ Always back up your database before changing dimensions.**
-
-#### Interactive (non-Docker) usage
-
-Start the server normally — it will detect the change and prompt for confirmation:
+### Project Structure
 
 ```
-Embedding dimension mismatch: stored=1536, configured=768
-This will invalidate all existing vectors. Continue? (y/N):
+src/
+├── app/          Fastify AppServer with modular service composition
+├── auth/         OAuth2/OIDC proxy authentication middleware
+├── cli/          Yargs-based CLI with command dispatch and lifecycle
+├── events/       EventBus (Node EventEmitter) + tRPC remote proxy
+├── mcp/          MCP server factory, stdio/SSE/HTTP transports, tool registration
+├── pipeline/     Job queue, worker pool, tRPC-backed remote pipeline
+├── scraper/      Scraping engine: strategy pattern, fetchers, middleware, pipelines
+├── services/     Service registration layer for AppServer composition
+├── splitter/     Chunk splitting: semantic Markdown, AST (tree-sitter), JSON, greedy merge
+├── store/        PostgreSQL document store, pgvector embeddings, hybrid search, migrations
+├── telemetry/    PostHog analytics with PII sanitization
+├── tools/        MCP tool implementations (ScrapeTool, SearchTool, etc.)
+├── types/        Shared type definitions
+├── upload/       File upload staging, archive extraction, import tree builder
+├── utils/        Config, logging, URLs, MIME types, SSRF protection
+└── web/          Web dashboard: Fastify routes, AlpineJS components, htmx
 ```
 
-Type `y` to confirm. Then re-scrape libraries to regenerate vectors:
+## Attribution
 
-```bash
-scrapegoat scrape <library> <version>
-```
+ScrapeGoat began as a fork of
+[docs-mcp-server](https://github.com/arabold/docs-mcp-server) by
+[arabold](https://github.com/arabold) and
+[grounded](https://github.com/grounded). That project established the
+foundation — MCP stdio server, documentation scraping, SQLite-backed storage,
+and the initial tool set — from which ScrapeGoat grew into its current
+PostgreSQL-based, distributed form.
 
-#### Docker usage
-
-The worker runs non-interactively and can't prompt for confirmation. Use one of these approaches:
-
-**Option A — Run the worker interactively once:**
-
-```bash
-docker compose run --rm -it worker
-# Type y when prompted, then Ctrl+C
-docker compose up -d
-```
-
-**Option B — Direct database migration:**
-
-```bash
-# 1. Stop the worker
-docker compose stop worker
-
-# 2. Connect to postgres
-docker exec -it scrapegoat-postgres psql -U scrapegoat -d scrapegoat
-
-# 3. Nullify existing vectors
-UPDATE documents SET embedding = NULL;
-
-# 4. Alter the column type (replace NEW_DIMENSION, e.g. 768)
-ALTER TABLE documents ALTER COLUMN embedding TYPE vector(NEW_DIMENSION);
-
-# 5. Update metadata
-INSERT INTO metadata (key, value) VALUES ('embedding_dimension', 'NEW_DIMENSION')
-  ON CONFLICT (key) DO UPDATE SET value = 'NEW_DIMENSION';
-
-# 6. Restart
-docker compose up -d
-```
-
-Then re-scrape libraries to regenerate vectors.
-
-#### Common dimensions
-
-| Model | Dimensions |
-|-------|-----------|
-| `text-embedding-3-small` | 1536 |
-| `text-embedding-3-large` | 3072 |
-| `nomic-embed-text` | 768 |
-| `all-MiniLM-L6-v2` | 384 |
-
-Check your model's documentation for the correct dimension.
-
----
-
-## 📜 Documentation
-
-### Getting Started
--   **[Installation](docs/setup/installation.md)**: Detailed setup guides for Docker, Node.js (npm), and Embedded mode.
--   **[Connecting Clients](docs/guides/mcp-clients.md)**: How to connect Claude, VS Code (Cline/Roo), and other MCP clients.
--   **[Basic Usage](docs/guides/basic-usage.md)**: Using the Web UI, CLI, and scraping local files.
--   **[Configuration](docs/setup/configuration.md)**: Full reference for config files and environment variables.
--   **[Supported Formats](docs/concepts/supported-formats.md)**: Complete file format and MIME type reference.
--   **[Embedding Models](docs/guides/embedding-models.md)**: Configure OpenAI, Ollama, Gemini, and other providers.
-
-### Key Concepts & Architecture
--   **[Deployment Modes](docs/infrastructure/deployment-modes.md)**: Standalone vs. Distributed (Docker Compose).
--   **[Authentication](docs/infrastructure/authentication.md)**: Securing your server with OAuth2/OIDC.
--   **[Telemetry](docs/infrastructure/telemetry.md)**: Privacy-first usage data collection.
--   **[Architecture](ARCHITECTURE.md)**: Deep dive into the system design.
-
----
-
-## 🛡️ Security
-
-ScrapeGoat includes several built-in security measures:
-
--   **SSRF Protection:** All outbound URL fetches are validated against private IP ranges, loopback addresses, link-local addresses, and cloud metadata endpoints. Requests to internal hosts are blocked.
--   **API Authentication:** tRPC API endpoints enforce authentication when OAuth2/OIDC is enabled.
--   **Configurable Host Binding:** By default, services bind to `127.0.0.1` (localhost only). Bind to `0.0.0.0` or a specific IP using `SCRAPEGOAT_HOST` when exposing to a network.
--   **Token Safety:** Authentication tokens are excluded from debug logs to prevent credential leakage.
-
----
-
-## ❤️ Contributing
-
-We welcome contributions! Please see **[CONTRIBUTING.md](CONTRIBUTING.md)** for development guidelines and setup instructions.
+If you prefer a lighter, single-user SQLite-based documentation indexer that
+runs without infrastructure, try the original:
+[docs-mcp-server](https://github.com/arabold/docs-mcp-server).
 
 ## License
 
-This project is licensed under the MIT License. See [LICENSE](LICENSE) for details.
+MIT
