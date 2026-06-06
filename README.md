@@ -1,6 +1,12 @@
-<div align="center">
+	<div align="center">
 
-<img src="assets/ScrapeGoat_promo.png" alt="ScrapeGoat Logo" width="700">
+<img src="assets/ScrapeGoat-Banner.svg" alt="ScrapeGoat Logo" width="700">
+
+<br>
+
+**ScrapeGoat: The A.I. Documentation GOAT!**
+
+<br>
 
 </div>
 
