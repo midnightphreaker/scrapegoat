@@ -21,7 +21,7 @@ demand. It is the open-source alternative to Context7, NiA, and Ref.Tools.
 ## Quick Start
 
 ```bash
-git clone https://git.phrk.org/pub/scrapegoat.git
+git clone https://github.com/midnightphreaker/scrapegoat.git
 cd scrapegoat
 cp .env.example .env
 # Edit .env with your embedding provider credentials
