@@ -140,16 +140,82 @@ SCRAPEGOAT_WEB_MEMORY_RESERVATION=256M
 
 ### Reverse Proxy with nginx
 
-To serve ScrapeGoat behind a domain with HTTPS, use the provided
-[nginx config](docs/infrastructure/nginx-reverse-proxy.conf). It proxies the
-web dashboard (port 6281) and MCP endpoints (port 6280), redirects HTTP to
+To serve ScrapeGoat behind a domain with HTTPS, use the config below. It proxies
+the web dashboard (port 6281) and MCP endpoints (port 6280), redirects HTTP to
 HTTPS, and allows uploads up to 1 GB.
 
-1. Copy the config to `/etc/nginx/sites-available/scrapegoat`:
+```nginx
+map $http_upgrade $connection_upgrade {
+    default upgrade;
+    ""      close;
+}
 
-   ```bash
-   cp docs/infrastructure/nginx-reverse-proxy.conf /etc/nginx/sites-available/scrapegoat
-   ```
+upstream scrapegoat_web {
+    server 127.0.0.1:6281;
+    keepalive 32;
+}
+
+upstream scrapegoat_mcp {
+    server 127.0.0.1:6280;
+}
+
+server {
+    listen 80 default_server;
+    server_name _;
+
+    return 301 https://$host$request_uri;
+}
+
+server {
+    listen 443 ssl default_server;
+    http2 on;
+    server_name scrapegoat.example.com;
+
+    client_max_body_size 1024M;
+
+    ssl_certificate /path/to/certificate.pem;
+    ssl_certificate_key /path/to/private.key;
+    ssl_protocols TLSv1.2 TLSv1.3;
+    ssl_session_cache shared:SSL:10m;
+    ssl_session_timeout 1d;
+
+    proxy_http_version 1.1;
+    proxy_set_header Host $host;
+    proxy_set_header X-Real-IP $remote_addr;
+    proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+    proxy_set_header X-Forwarded-Proto $scheme;
+    proxy_set_header Upgrade $http_upgrade;
+    proxy_set_header Connection $connection_upgrade;
+    proxy_read_timeout 3600s;
+    proxy_send_timeout 3600s;
+
+    location /mcp {
+        proxy_buffering off;
+        proxy_set_header Connection close;
+        proxy_pass http://scrapegoat_mcp;
+    }
+
+    location /sse {
+        proxy_buffering off;
+        proxy_cache off;
+        proxy_set_header Connection close;
+        proxy_pass http://scrapegoat_mcp;
+    }
+
+    location /messages {
+        proxy_buffering off;
+        proxy_set_header Connection close;
+        proxy_pass http://scrapegoat_mcp;
+    }
+
+    location / {
+        proxy_pass http://scrapegoat_web;
+    }
+}
+```
+
+1. Save the config to `/etc/nginx/sites-available/scrapegoat` (the standalone
+   file is also at `docs/infrastructure/nginx-reverse-proxy.conf`).
 
 2. Replace the placeholders with your own values:
 
