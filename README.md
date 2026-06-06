@@ -31,28 +31,7 @@ npm run build
 
 # Single-command server (web + MCP + worker):
 npm start
-
-# Or run individual modes (see CLI Modes below)
 ```
-
-## CLI Modes
-
-ScrapeGoat runs in several modes, selectable by the first argument:
-
-| Command | Description |
-|---------|-------------|
-| `scrapegoat` or `scrapegoat server` | Unified server: web dashboard, MCP, tRPC API, and background worker |
-| `scrapegoat mcp` | MCP server only (stdio or HTTP transport) |
-| `scrapegoat web` | Web dashboard only |
-| `scrapegoat worker` | External pipeline worker (HTTP API only) |
-| `scrapegoat scrape <lib> <url>` | Download and index documentation from a URL |
-| `scrapegoat refresh <lib>` | Re-scrape a library using ETags for changed pages |
-| `scrapegoat search <lib> <query>` | Full-text + vector search across indexed docs |
-| `scrapegoat list` | List all indexed libraries and versions |
-| `scrapegoat fetch-url <url>` | Fetch a URL and convert to Markdown |
-| `scrapegoat config` | View or modify configuration |
-
-Run `scrapegoat --help` for all options.
 
 ## MCP Tools
 
