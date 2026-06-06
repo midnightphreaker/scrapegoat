@@ -10,20 +10,26 @@
 
 </div>
 
-Always-current documentation indexing for AI coding assistants. ScrapeGoat runs
-as a server via Docker, exposing a built-in remote HTTP/SSE/Streamable MCP
-endpoint that AI coding tools connect to. It fetches official docs from
-websites, GitHub repositories, npm, PyPI, and local files, indexes them into
-PostgreSQL with pgvector embeddings, and serves them on demand. It is the
-open-source alternative to Context7, NiA, and Ref.Tools.
+Always-current documentation indexing for AI coding assistants. ScrapeGoat is
+deployed via `git clone` and `docker compose` -- containers are built locally, no
+images are published to any registry. It exposes a built-in remote
+HTTP/SSE/Streamable MCP endpoint that AI coding tools connect to. It fetches
+official docs from websites, GitHub repositories, npm, PyPI, and local files,
+indexes them into PostgreSQL with pgvector embeddings, and serves them on
+demand. It is the open-source alternative to Context7, NiA, and Ref.Tools.
 
 ## Quick Start
 
 ```bash
+git clone https://git.phrk.org/pub/scrapegoat.git
+cd scrapegoat
 cp .env.example .env
 # Edit .env with your embedding provider credentials
 docker compose -f docker-compose.postgres.yml up -d
 ```
+
+On first launch, Docker Compose builds the container images locally. Subsequent
+starts use the cached images unless you rebuild with `--build`.
 
 This starts PostgreSQL with pgvector, a background worker for scraping and
 indexing, and an MCP server listening on port 6280. AI clients connect to
@@ -104,9 +110,9 @@ See `.env.example` for all variables.
 
 ## Deployment Options
 
-The recommended deployment uses the distributed Compose file (postgres + worker
-+ MCP + web). The standalone file is available for setups with an existing
-PostgreSQL instance.
+ScrapeGoat images are built locally via Docker Compose -- they are not published
+to Docker Hub or any container registry. The `build` section in each Compose
+file handles this automatically on first run.
 
 | File | Use Case |
 |------|----------|
