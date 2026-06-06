@@ -241,8 +241,8 @@ server {
 
 ## Connecting AI Coding Tools
 
-The MCP server exposes two remote transport endpoints and also supports local
-stdio for direct process execution.
+The MCP server exposes two remote transport endpoints. Connect over HTTP after
+starting the Docker containers.
 
 ### Remote (HTTP/SSE) -- Recommended
 
@@ -308,46 +308,6 @@ In `.cursor/mcp.json`:
 }
 ```
 
-### Local (stdio) -- Alternative
-
-For development or single-machine use without Docker, ScrapeGoat can run as a
-local process via stdio. Set `SCRAPEGOAT_DB_URL` in the environment.
-
-OpenCode (`opencode.jsonc`, under `mcp`):
-
-```jsonc
-{
-  "mcp": {
-    "scrapegoat": {
-      "type": "local",
-      "command": ["npx", "-y", "@midnightphreaker/scrapegoat", "mcp"],
-      "environment": {
-        "SCRAPEGOAT_DB_URL": "postgresql://scrapegoat:scrapegoat@localhost:5432/scrapegoat",
-        "OPENAI_API_KEY": "${OPENAI_API_KEY}"
-      },
-      "enabled": true
-    }
-  }
-}
-```
-
-Claude Code, Codex, Cursor (each uses their own `mcpServers` config block):
-
-```jsonc
-{
-  "mcpServers": {
-    "scrapegoat": {
-      "command": "npx",
-      "args": ["-y", "@midnightphreaker/scrapegoat", "mcp"],
-      "env": {
-        "SCRAPEGOAT_DB_URL": "postgresql://scrapegoat:scrapegoat@localhost:5432/scrapegoat",
-        "OPENAI_API_KEY": "${OPENAI_API_KEY}"
-      }
-    }
-  }
-}
-```
-
 ### Read-Only Mode
 
 Set `SCRAPEGOAT_READ_ONLY=true` in the environment to disable write operations
@@ -373,8 +333,6 @@ src/index.ts (entry)
         │                       └─► PyPiScraperStrategy (PyPI packages)
         │                             └─► ContentFetcher → ContentPipeline → Splitter
         │                                   └─► DocumentStore (PostgreSQL + pgvector)
-        └─► "mcp" (stdio) → StdioServerTransport
-              └─► McpServer (tools + resources)
 ```
 
 ### Scraping Pipeline
@@ -407,16 +365,7 @@ tRPC WebSocket subscriptions through the `RemoteEventProxy`.
 
 ## Development
 
-For local development without Docker:
-
-```bash
-cp .env.example .env
-npm install
-npm run build
-npm start                 # Full server (MCP + web + worker)
-```
-
-Standard dev workflow:
+Standard workflow for building and testing locally:
 
 ```bash
 npm install
