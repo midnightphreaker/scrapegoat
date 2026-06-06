@@ -256,14 +256,15 @@ When ScrapeGoat is running via Docker, AI tools connect over HTTP:
 
 #### OpenCode
 
-In `opencode.json` or `opencode.jsonc`:
+In `opencode.json` or `opencode.jsonc`, under the top-level `mcp` key:
 
 ```jsonc
 {
-  "mcpServers": {
+  "mcp": {
     "scrapegoat": {
-      "type": "sse",
-      "url": "http://localhost:6280/sse"
+      "type": "remote",
+      "url": "http://localhost:6280/mcp",
+      "enabled": true
     }
   }
 }
@@ -310,7 +311,27 @@ In `.cursor/mcp.json`:
 ### Local (stdio) -- Alternative
 
 For development or single-machine use without Docker, ScrapeGoat can run as a
-local process via stdio. Set `SCRAPEGOAT_DB_URL` in the environment:
+local process via stdio. Set `SCRAPEGOAT_DB_URL` in the environment.
+
+OpenCode (`opencode.jsonc`, under `mcp`):
+
+```jsonc
+{
+  "mcp": {
+    "scrapegoat": {
+      "type": "local",
+      "command": ["npx", "-y", "@midnightphreaker/scrapegoat", "mcp"],
+      "environment": {
+        "SCRAPEGOAT_DB_URL": "postgresql://scrapegoat:scrapegoat@localhost:5432/scrapegoat",
+        "OPENAI_API_KEY": "${OPENAI_API_KEY}"
+      },
+      "enabled": true
+    }
+  }
+}
+```
+
+Claude Code, Codex, Cursor (each uses their own `mcpServers` config block):
 
 ```jsonc
 {
@@ -326,9 +347,6 @@ local process via stdio. Set `SCRAPEGOAT_DB_URL` in the environment:
   }
 }
 ```
-
-The same pattern works across all tools -- replace the `url`/`type` block with
-the `command`/`args` block above.
 
 ### Read-Only Mode
 
