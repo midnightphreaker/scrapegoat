@@ -29,15 +29,6 @@ This starts PostgreSQL with pgvector, a background worker for scraping and
 indexing, and an MCP server listening on port 6280. AI clients connect to
 `http://<host>:6280/mcp` (Streamable HTTP) or `http://<host>:6280/sse` (SSE).
 
-For a local dev build without Docker:
-
-```bash
-cp .env.example .env
-npm install
-npm run build
-npm start
-```
-
 ## MCP Tools
 
 Registered on the MCP server (`scrape_docs`, `search_docs`, etc.) and available
@@ -111,33 +102,18 @@ set the values you need.
 
 See `.env.example` for all variables.
 
-## Deployment
+## Deployment Options
 
-ScrapeGoat can be deployed as a single process or as a distributed system with
-separate worker, MCP, and web containers connected via tRPC.
+The recommended deployment uses the distributed Compose file (postgres + worker
++ MCP + web). The standalone file is available for setups with an existing
+PostgreSQL instance.
 
-### Standalone (Single Container)
+| File | Use Case |
+|------|----------|
+| `docker-compose.postgres.yml` | Full stack with managed PostgreSQL (recommended) |
+| `docker-compose.yml` | Standalone: requires external PostgreSQL at `SCRAPEGOAT_DB_URL` |
 
-A single container runs the full server (web dashboard + MCP + worker):
-
-```bash
-docker compose up -d
-```
-
-This mode expects an external PostgreSQL instance reachable at the
-`SCRAPEGOAT_DB_URL` you configure in `.env`.
-
-### Distributed (PostgreSQL + Worker + MCP + Web)
-
-A full distributed deployment with a managed PostgreSQL container:
-
-```bash
-cp .env.example .env
-# Edit .env with your embedding provider credentials
-docker compose -f docker-compose.postgres.yml up -d
-```
-
-This starts four containers:
+### Containers
 
 | Container | Port | Purpose |
 |-----------|------|---------|
@@ -147,12 +123,11 @@ This starts four containers:
 | `scrapegoat-web` | `6281` | Web management dashboard |
 
 The worker is the authoritative backend. The MCP and web containers connect to
-it via `--server-url http://worker:8080/api`. The worker depends on PostgreSQL;
-MCP and web depend on the worker being healthy.
+it via `--server-url http://worker:8080/api` and depend on worker health.
 
-### Service Memory Limits
+### Memory Limits
 
-Set in `.env` (applies to Docker Compose only):
+Set in `.env`:
 
 ```
 SCRAPEGOAT_WORKER_MEMORY_LIMIT=2G
@@ -165,40 +140,22 @@ SCRAPEGOAT_WEB_MEMORY_RESERVATION=256M
 
 ## Connecting AI Coding Tools
 
-ScrapeGoat supports three MCP transport protocols: **stdio** (for local tools),
-**SSE** (Server-Sent Events), and **Streamable HTTP** (MCP 2025).
+The MCP server exposes two remote transport endpoints and also supports local
+stdio for direct process execution.
 
-### HTTP Endpoints (Server Mode)
+### Remote (HTTP/SSE) -- Recommended
 
-When running in server/mcp mode with `--protocol http`:
+When ScrapeGoat is running via Docker, AI tools connect over HTTP:
 
 | Endpoint | Transport | Use |
 |----------|-----------|-----|
-| `http://<host>:6280/sse` | SSE | Older MCP clients (Claude Desktop, Continue) |
-| `http://<host>:6280/messages` | SSE POST endpoint | Paired with `/sse` |
 | `http://<host>:6280/mcp` | Streamable HTTP | Modern MCP clients (MCP 2025 spec) |
+| `http://<host>:6280/sse` | SSE | Older clients (Claude Desktop, Continue) |
+| `http://<host>:6280/messages` | SSE POST endpoint | Paired with `/sse` |
 
-### OpenCode
+#### OpenCode
 
-OpenCode uses the `opencode.json` or `opencode.jsonc` config file. Add an MCP
-server entry:
-
-```jsonc
-{
-  "mcpServers": {
-    "scrapegoat": {
-      "command": "npx",
-      "args": ["@midnightphreaker/scrapegoat", "mcp"],
-      "env": {
-        "SCRAPEGOAT_DB_URL": "postgresql://scrapegoat:scrapegoat@localhost:5432/scrapegoat",
-        "OPENAI_API_KEY": "${OPENAI_API_KEY}"
-      }
-    }
-  }
-}
-```
-
-For remote server mode:
+In `opencode.json` or `opencode.jsonc`:
 
 ```jsonc
 {
@@ -211,37 +168,31 @@ For remote server mode:
 }
 ```
 
-### Claude Code
+#### Claude Code
 
-In `.claude/settings.json` or the project `.claude.json`:
+In `.claude/settings.json` or `.claude.json`:
 
 ```json
 {
   "mcpServers": {
     "scrapegoat": {
-      "command": "npx",
-      "args": ["-y", "@midnightphreaker/scrapegoat", "mcp"],
-      "env": {
-        "SCRAPEGOAT_DB_URL": "postgresql://scrapegoat:scrapegoat@localhost:5432/scrapegoat",
-        "OPENAI_API_KEY": "${OPENAI_API_KEY}"
-      }
+      "type": "url",
+      "url": "http://localhost:6280/mcp"
     }
   }
 }
 ```
 
-### Codex CLI
+#### Codex CLI
 
 In `~/.codex/config.toml`:
 
 ```toml
 [mcp_servers.scrapegoat]
-command = "npx"
-args = ["-y", "@midnightphreaker/scrapegoat", "mcp"]
-env = { SCRAPEGOAT_DB_URL = "postgresql://scrapegoat:scrapegoat@localhost:5432/scrapegoat", OPENAI_API_KEY = "${OPENAI_API_KEY}" }
+url = "http://localhost:6280/mcp"
 ```
 
-### Cursor
+#### Cursor
 
 In `.cursor/mcp.json`:
 
@@ -249,6 +200,21 @@ In `.cursor/mcp.json`:
 {
   "mcpServers": {
     "scrapegoat": {
+      "url": "http://localhost:6280/mcp"
+    }
+  }
+}
+```
+
+### Local (stdio) -- Alternative
+
+For development or single-machine use without Docker, ScrapeGoat can run as a
+local process via stdio. Set `SCRAPEGOAT_DB_URL` in the environment:
+
+```jsonc
+{
+  "mcpServers": {
+    "scrapegoat": {
       "command": "npx",
       "args": ["-y", "@midnightphreaker/scrapegoat", "mcp"],
       "env": {
@@ -260,15 +226,14 @@ In `.cursor/mcp.json`:
 }
 ```
 
+The same pattern works across all tools -- replace the `url`/`type` block with
+the `command`/`args` block above.
+
 ### Read-Only Mode
 
-All tools support a `--read-only` flag that disables write operations
+Set `SCRAPEGOAT_READ_ONLY=true` in the environment to disable write operations
 (`scrape_docs`, `refresh_version`, `remove_docs`, job management). This is
-useful for shared servers where AI clients should only search:
-
-```bash
-scrapegoat mcp --protocol http --read-only
-```
+useful for shared servers where clients should only search.
 
 ## Architecture
 
@@ -322,6 +287,17 @@ tRPC API. The MCP and web containers connect as tRPC clients. Events
 tRPC WebSocket subscriptions through the `RemoteEventProxy`.
 
 ## Development
+
+For local development without Docker:
+
+```bash
+cp .env.example .env
+npm install
+npm run build
+npm start                 # Full server (MCP + web + worker)
+```
+
+Standard dev workflow:
 
 ```bash
 npm install
