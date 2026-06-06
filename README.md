@@ -138,6 +138,41 @@ SCRAPEGOAT_WEB_MEMORY_LIMIT=512M
 SCRAPEGOAT_WEB_MEMORY_RESERVATION=256M
 ```
 
+### Reverse Proxy with nginx
+
+To serve ScrapeGoat behind a domain with HTTPS, use the provided
+[nginx config](docs/infrastructure/nginx-reverse-proxy.conf). It proxies the
+web dashboard (port 6281) and MCP endpoints (port 6280), redirects HTTP to
+HTTPS, and allows uploads up to 1 GB.
+
+1. Copy the config to `/etc/nginx/sites-available/scrapegoat`:
+
+   ```bash
+   cp docs/infrastructure/nginx-reverse-proxy.conf /etc/nginx/sites-available/scrapegoat
+   ```
+
+2. Replace the placeholders with your own values:
+
+   | Placeholder | Replace With |
+   |-------------|-------------|
+   | `127.0.0.1:6281` | IP and port of the web container |
+   | `127.0.0.1:6280` | IP and port of the MCP container |
+   | `scrapegoat.example.com` | Your domain name |
+   | `/path/to/certificate.pem` | Path to your TLS certificate |
+   | `/path/to/private.key` | Path to your private key |
+
+3. Enable the site and test the config:
+
+   ```bash
+   ln -s /etc/nginx/sites-available/scrapegoat /etc/nginx/sites-enabled/scrapegoat
+   nginx -t
+   systemctl reload nginx
+   ```
+
+4. AI tools then connect at `https://scrapegoat.example.com/mcp` (Streamable
+   HTTP) or `https://scrapegoat.example.com/sse` (SSE). The web dashboard is at
+   `https://scrapegoat.example.com/`.
+
 ## Connecting AI Coding Tools
 
 The MCP server exposes two remote transport endpoints and also supports local
