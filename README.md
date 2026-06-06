@@ -157,22 +157,23 @@ Uploaded files are staged temporarily before being processed.
 
 | Mode | Description |
 |------|-------------|
-| `memory` (default) | Files are held in memory during the upload session. No volume mount required. |
-| `filesystem` | Files are written to a staging directory on disk. Requires a Docker volume mount. |
+| `memory` (default) | Files are held in process-local temporary staging. This is suitable for single-process or embedded use where the Web UI and worker share the same filesystem. |
+| `filesystem` | Files are written to a staging directory on disk. This is required when the Web UI and worker run in separate containers or hosts. |
 
-**To enable filesystem staging mode in Docker:**
+The provided Docker Compose files run the Web UI and worker as separate
+containers, so they enable filesystem staging by default and mount the same
+`scrapegoat-staging` volume at `/data/staging` in both services.
 
-1. Uncomment the staging volume mount and environment variables in `docker-compose.yml` (or `docker-compose.postgres.yml`) for the **worker** and **web** services:
+For custom split-service Docker deployments, configure both the **worker** and
+**web** services with the same staging path and shared volume:
 
-   ```yaml
-   environment:
-     SCRAPEGOAT_WEBUI_IMPORT_STAGING_MODE: filesystem
-     SCRAPEGOAT_WEBUI_IMPORT_STAGING_INTERNAL_PATH: /data/staging
-   volumes:
-     - scrapegoat-staging:/data/staging
-   ```
-
-2. Uncomment the `scrapegoat-staging` volume definition at the bottom of the compose file.
+```yaml
+environment:
+  SCRAPEGOAT_WEBUI_IMPORT_STAGING_MODE: filesystem
+  SCRAPEGOAT_WEBUI_IMPORT_STAGING_INTERNAL_PATH: /data/staging
+volumes:
+  - scrapegoat-staging:/data/staging
+```
 
 **Relevant environment variables:**
 

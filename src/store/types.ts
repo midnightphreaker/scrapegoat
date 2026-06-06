@@ -117,6 +117,9 @@ export interface VersionScraperOptions {
   // Processing options
   scrapeMode?: ScrapeMode;
   headers?: Record<string, string>;
+
+  // Local WebUI upload/import options
+  localImportStagingPath?: string;
 }
 
 /**

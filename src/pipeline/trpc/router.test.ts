@@ -35,6 +35,20 @@ describe("Pipeline tRPC router input validation", () => {
       expect(result.success).toBe(true);
     });
 
+    it("preserves local import staging path for remote worker jobs", () => {
+      const result = scraperOptionsInputSchema.safeParse({
+        url: "file:///import/warhammer/latest/",
+        library: "warhammer",
+        version: "latest",
+        localImportStagingPath: "/data/staging/session-123",
+      });
+
+      expect(result.success).toBe(true);
+      expect(result.data).toMatchObject({
+        localImportStagingPath: "/data/staging/session-123",
+      });
+    });
+
     it("rejects a string where an object is expected", () => {
       const result = scraperOptionsInputSchema.safeParse("not an object");
       expect(result.success).toBe(false);

@@ -23,24 +23,36 @@ document.addEventListener("alpine:init", () => {
     tree: null,
     flatNodes: [],
     stats: null,
-    showTree: false,
+    showTree: true,
     committing: false,
-    dragover: false,
     selectedNode: null,
 
     async init() {
-      // Session creation is deferred until Library Name is provided (REQ-001).
+      // Session creation is deferred until files or folders are added.
       // See createSession().
     },
 
     async createSession() {
       if (this.sessionId) return;
-      if (!this.library || this.library.trim() === "") return;
+      if (
+        !this.library ||
+        this.library.trim() === "" ||
+        !this.version ||
+        this.version.trim() === ""
+      ) {
+        this.uploadErrors = [
+          {
+            path: "session",
+            error: "Library Name and Version are required before upload",
+          },
+        ];
+        return;
+      }
       try {
         const resp = await fetch("/web/upload/start", {
           method: "POST",
           headers: { "Content-Type": "application/x-www-form-urlencoded" },
-          body: `library=${encodeURIComponent(this.library)}&version=${encodeURIComponent(this.version)}`,
+          body: `library=${encodeURIComponent(this.library.trim())}&version=${encodeURIComponent(this.version.trim())}`,
         });
         if (!resp.ok) {
           const err = await resp.json().catch(() => ({ error: "Failed to create session" }));
@@ -75,7 +87,8 @@ document.addEventListener("alpine:init", () => {
       }
     },
 
-    async handleFiles(fileList) {
+    async handleFiles(eventOrFileList) {
+      const fileList = eventOrFileList?.target?.files ?? eventOrFileList;
       if (fileList.length === 0) return;
       if (!this.sessionId) {
         await this.createSession();
@@ -125,6 +138,9 @@ document.addEventListener("alpine:init", () => {
       } finally {
         this.uploading = false;
         this.uploadProgress = 0;
+        if (eventOrFileList?.target) {
+          eventOrFileList.target.value = "";
+        }
       }
     },
 
@@ -186,7 +202,10 @@ document.addEventListener("alpine:init", () => {
     },
 
     async createVirtualFolder() {
-      if (!this.sessionId) return;
+      if (!this.sessionId) {
+        await this.createSession();
+        if (!this.sessionId) return;
+      }
       const name = window.prompt("Enter folder name:");
       if (!name || name.trim() === "") return;
       try {
@@ -206,14 +225,6 @@ document.addEventListener("alpine:init", () => {
         }
       } catch (e) {
         this.uploadErrors = [{ path: "virtual-folder", error: e.message || "Failed to create folder" }];
-      }
-    },
-
-    handleDrop(event) {
-      this.dragover = false;
-      const files = event.dataTransfer?.files;
-      if (files && files.length > 0) {
-        this.handleFiles(files);
       }
     },
 
@@ -356,8 +367,9 @@ document.addEventListener("alpine:init", () => {
           this.tree = null;
           this.flatNodes = [];
           this.stats = null;
-          this.showTree = false;
+          this.showTree = true;
           this.selectedNode = null;
+          await this.closePanel();
         } else {
           const err = await resp.json().catch(() => ({ error: "Commit failed" }));
           this.uploadErrors = [{ path: "commit", error: err.error }];
@@ -394,7 +406,7 @@ document.addEventListener("alpine:init", () => {
       this.tree = null;
       this.flatNodes = [];
       this.stats = null;
-      this.showTree = false;
+      this.showTree = true;
       this.uploadErrors = [];
       this.selectedNode = null;
     },

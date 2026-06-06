@@ -5,17 +5,21 @@
  * Swapped into #modal-container via HTMX.
  */
 const SourceSelectionModal = () => {
+  const closeModal = "document.getElementById('modal-container').innerHTML = ''";
+  const proceed =
+    "if (selectedSource === null) return; const url = selectedSource === 'remote' ? '/web/jobs/new' : '/web/upload'; htmx.ajax('GET', url, { target: '#addJobForm', swap: 'innerHTML' }); selectedSource = null; document.getElementById('modal-container').innerHTML = ''";
+
   return (
     <div
       role="dialog"
       aria-modal="true"
       aria-labelledby="modal-title"
       tabindex="-1"
-      x-data="{ open: true }"
+      x-data="{ selectedSource: null }"
       x-init="$el.focus()"
       {...{
-        "x-on:keydown.escape": "htmx.ajax('GET', '/web/jobs/new-button', { target: '#modal-container', swap: 'innerHTML' })",
-        "x-on:click.self": "htmx.ajax('GET', '/web/jobs/new-button', { target: '#modal-container', swap: 'innerHTML' })",
+        "x-on:keydown.escape": closeModal,
+        "x-on:click.self": closeModal,
       }}
       class="fixed inset-0 z-50 flex items-center justify-center bg-gray-900/60 backdrop-blur-sm transition-opacity duration-200"
     >
@@ -27,11 +31,10 @@ const SourceSelectionModal = () => {
         {/* Close button */}
         <button
           type="button"
-          hx-get="/web/jobs/new-button"
-          hx-target="#modal-container"
-          hx-swap="innerHTML"
+          x-on:click={closeModal}
           class="absolute top-3 right-3 p-1.5 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 rounded-full hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors duration-150"
           title="Close"
+          aria-label="Close"
         >
           <svg
             class="w-5 h-5"
@@ -63,15 +66,15 @@ const SourceSelectionModal = () => {
           {/* Remote URL Card */}
           <button
             type="button"
-            hx-get="/web/jobs/new"
-            hx-target="#addJobForm"
-            hx-swap="innerHTML"
-            hx-on="htmx:afterSwap: document.getElementById('modal-container').innerHTML = '';"
-            class="group p-4 bg-gray-50 dark:bg-gray-900 border-2 border-gray-200 dark:border-gray-700 rounded-lg hover:border-primary-500 dark:hover:border-primary-400 hover:shadow-md transition-all duration-200 text-left cursor-pointer"
+            x-on:click="selectedSource = 'remote'"
+            x-bind:aria-pressed="selectedSource === 'remote'"
+            x-bind:class="selectedSource === 'remote' ? 'border-primary-500 dark:border-primary-400 shadow-md bg-primary-50 dark:bg-primary-900/20' : 'border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900'"
+            class="group p-4 border-2 rounded-lg hover:border-primary-500 dark:hover:border-primary-400 hover:shadow-md focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2 dark:focus:ring-offset-gray-800 transition-all duration-200 text-left cursor-pointer"
           >
             <div class="flex items-center mb-2">
               <svg
-                class="w-6 h-6 text-gray-500 dark:text-gray-400 group-hover:text-primary-600 dark:group-hover:text-primary-400 transition-colors"
+                x-bind:class="selectedSource === 'remote' ? 'text-primary-600 dark:text-primary-400' : 'text-gray-500 dark:text-gray-400'"
+                class="w-6 h-6 group-hover:text-primary-600 dark:group-hover:text-primary-400 transition-colors"
                 fill="none"
                 stroke="currentColor"
                 viewBox="0 0 24 24"
@@ -84,7 +87,10 @@ const SourceSelectionModal = () => {
                   d="M21 12a9 9 0 01-9 9m9-9a9 9 0 00-9-9m9 9H3m9 9a9 9 0 01-9-9m9 9c1.657 0 3-4.03 3-9s-1.343-9-3-9m0 18c-1.657 0-3-4.03-3-9s1.343-9 3-9m-9 9a9 9 0 019-9"
                 />
               </svg>
-              <span class="ml-2 text-base font-semibold text-gray-900 dark:text-white group-hover:text-primary-600 dark:group-hover:text-primary-400 transition-colors">
+              <span
+                x-bind:class="selectedSource === 'remote' ? 'text-primary-600 dark:text-primary-400' : 'text-gray-900 dark:text-white'"
+                class="ml-2 text-base font-semibold group-hover:text-primary-600 dark:group-hover:text-primary-400 transition-colors"
+              >
                 Remote URL
               </span>
             </div>
@@ -96,15 +102,15 @@ const SourceSelectionModal = () => {
           {/* Local Documentation Card */}
           <button
             type="button"
-            hx-get="/web/upload"
-            hx-target="#addJobForm"
-            hx-swap="innerHTML"
-            hx-on="htmx:afterSwap: document.getElementById('modal-container').innerHTML = '';"
-            class="group p-4 bg-gray-50 dark:bg-gray-900 border-2 border-gray-200 dark:border-gray-700 rounded-lg hover:border-primary-500 dark:hover:border-primary-400 hover:shadow-md transition-all duration-200 text-left cursor-pointer"
+            x-on:click="selectedSource = 'local'"
+            x-bind:aria-pressed="selectedSource === 'local'"
+            x-bind:class="selectedSource === 'local' ? 'border-primary-500 dark:border-primary-400 shadow-md bg-primary-50 dark:bg-primary-900/20' : 'border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900'"
+            class="group p-4 border-2 rounded-lg hover:border-primary-500 dark:hover:border-primary-400 hover:shadow-md focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2 dark:focus:ring-offset-gray-800 transition-all duration-200 text-left cursor-pointer"
           >
             <div class="flex items-center mb-2">
               <svg
-                class="w-6 h-6 text-gray-500 dark:text-gray-400 group-hover:text-primary-600 dark:group-hover:text-primary-400 transition-colors"
+                x-bind:class="selectedSource === 'local' ? 'text-primary-600 dark:text-primary-400' : 'text-gray-500 dark:text-gray-400'"
+                class="w-6 h-6 group-hover:text-primary-600 dark:group-hover:text-primary-400 transition-colors"
                 fill="none"
                 stroke="currentColor"
                 viewBox="0 0 24 24"
@@ -117,7 +123,10 @@ const SourceSelectionModal = () => {
                   d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z"
                 />
               </svg>
-              <span class="ml-2 text-base font-semibold text-gray-900 dark:text-white group-hover:text-primary-600 dark:group-hover:text-primary-400 transition-colors">
+              <span
+                x-bind:class="selectedSource === 'local' ? 'text-primary-600 dark:text-primary-400' : 'text-gray-900 dark:text-white'"
+                class="ml-2 text-base font-semibold group-hover:text-primary-600 dark:group-hover:text-primary-400 transition-colors"
+              >
                 Local Documentation
               </span>
             </div>
@@ -127,15 +136,14 @@ const SourceSelectionModal = () => {
           </button>
         </div>
 
-        {/* Cancel button */}
+        {/* Proceed button */}
         <button
           type="button"
-          hx-get="/web/jobs/new-button"
-          hx-target="#modal-container"
-          hx-swap="innerHTML"
-          class="mt-5 w-full flex justify-center py-2 px-3 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm text-sm font-medium text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-700 hover:bg-gray-50 dark:hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500 transition-colors duration-150"
+          x-on:click={proceed}
+          x-bind:disabled="selectedSource === null"
+          class="mt-5 w-full flex justify-center py-2 px-3 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-primary-600 hover:bg-primary-700 disabled:bg-gray-300 disabled:text-gray-500 disabled:cursor-not-allowed dark:disabled:bg-gray-700 dark:disabled:text-gray-500 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500 transition-colors duration-150"
         >
-          Cancel
+          Proceed
         </button>
       </div>
     </div>
