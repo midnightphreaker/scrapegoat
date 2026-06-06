@@ -4,7 +4,7 @@
 
 <br>
 
-**ScrapeGoat: Your AI's Documentation GOAT!**
+**ScrapeGoat: The A.I. Documentation GOAT!**
 
 <br>
 
