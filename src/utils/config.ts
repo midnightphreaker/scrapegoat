@@ -61,19 +61,19 @@ export const DEFAULT_CONFIG = {
     audience: "",
   },
   scraper: {
-    maxPages: 1000,
-    maxDepth: 3,
-    maxConcurrency: 3,
+    maxPages: 3800,
+    maxDepth: 9,
+    maxConcurrency: 14,
     pageTimeoutMs: 5000,
     browserTimeoutMs: 30_000,
     fetcher: {
-      maxRetries: 6,
+      maxRetries: 9,
       baseDelayMs: 1000,
       maxCacheItems: 200,
       maxCacheItemSizeBytes: 500 * 1024,
     },
     document: {
-      maxSize: 10 * 1024 * 1024, // 10MB max size for PDF/Office documents
+      maxSize: 52 * 1024 * 1024, // 10MB max size for PDF/Office documents
     },
   },
   splitter: {
@@ -134,9 +134,9 @@ export const DEFAULT_CONFIG = {
   webImport: {
     stagingMode: "memory" as const,
     stagingInternalPath: "",
-    maxTotalSizeBytes: 999 * 1024 * 1024,
-    maxFileSizeBytes: 100 * 1024 * 1024,
-    maxFiles: 999,
+    maxTotalSizeBytes: 3800 * 1024 * 1024,
+    maxFileSizeBytes: 512 * 1024 * 1024,
+    maxFiles: 3800,
     sessionTtlSeconds: 3600,
     maxArchiveCompressedBytes: 500 * 1024 * 1024,
     maxDepth: 9,
