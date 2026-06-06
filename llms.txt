@@ -1,0 +1,62 @@
+# ScrapeGoat
+
+> ScrapeGoat is an MCP server that indexes documentation for AI coding
+> assistants. It fetches official docs from websites, GitHub, npm, and PyPI,
+> stores them in PostgreSQL with pgvector embeddings, and serves them via
+> HTTP/SSE/Streamable MCP endpoints. Deployed via git clone + docker compose,
+> containers are built locally. No images are published to any registry.
+
+## Docs
+
+- [README](https://git.phrk.org/pub/scrapegoat/src/branch/main/README.md):
+  Full project overview, quick start, configuration, deployment, and AI tool
+  connection guide
+- [Architecture](https://git.phrk.org/pub/scrapegoat/src/branch/main/codemap.md):
+  Repository atlas with system entry points, directory map, and architecture
+  diagram
+- [nginx reverse proxy config](https://git.phrk.org/pub/scrapegoat/src/branch/main/docs/infrastructure/nginx-reverse-proxy.conf):
+  Production nginx config with HTTP→HTTPS redirect, SSE streaming, and 1 GB
+  upload support
+
+## Source
+
+- [AppServer](https://git.phrk.org/pub/scrapegoat/src/branch/main/src/app/codemap.md):
+  Fastify server with modular MCP, tRPC, web, and worker service composition
+- [MCP server](https://git.phrk.org/pub/scrapegoat/src/branch/main/src/mcp/codemap.md):
+  Tool registration, stdio/SSE/HTTP transports, resource handlers
+- [Store](https://git.phrk.org/pub/scrapegoat/src/branch/main/src/store/codemap.md):
+  PostgreSQL document store with pgvector embeddings, hybrid search (RRF), and
+  schema migrations
+- [Pipeline](https://git.phrk.org/pub/scrapegoat/src/branch/main/src/pipeline/codemap.md):
+  Job queue, worker pool, tRPC-backed remote pipeline with recovery
+- [Scraper](https://git.phrk.org/pub/scrapegoat/src/branch/main/src/scraper/codemap.md):
+  Strategy-based scraping engine: web, GitHub, local files, npm, PyPI strategies
+  with content processing middleware chains
+- [Splitter](https://git.phrk.org/pub/scrapegoat/src/branch/main/src/splitter/codemap.md):
+  Semantic document chunking: markdown, JSON, text splitters with tree-sitter AST
+  source code splitting
+- [CLI](https://git.phrk.org/pub/scrapegoat/src/branch/main/src/cli/codemap.md):
+  Yargs-based command dispatch and service lifecycle management
+- [Web UI](https://git.phrk.org/pub/scrapegoat/src/branch/main/src/web/codemap.md):
+  AlpineJS + htmx dashboard with SSE event streaming and Tailwind CSS
+
+## Config
+
+- [.env.example](https://git.phrk.org/pub/scrapegoat/src/branch/main/.env.example):
+  All environment variables with defaults and descriptions
+- [docker-compose.postgres.yml](https://git.phrk.org/pub/scrapegoat/src/branch/main/docker-compose.postgres.yml):
+  Recommended deployment (PostgreSQL + worker + MCP + web)
+- [docker-compose.yml](https://git.phrk.org/pub/scrapegoat/src/branch/main/docker-compose.yml):
+  Standalone deployment (external PostgreSQL required)
+
+## Optional
+
+- [Embedding factory](https://git.phrk.org/pub/scrapegoat/src/branch/main/src/store/embeddings/codemap.md):
+  Provider configuration for OpenAI, Google Vertex/Gemini, AWS Bedrock, Azure
+- [Telemetry](https://git.phrk.org/pub/scrapegoat/src/branch/main/src/telemetry/codemap.md):
+  PostHog analytics with PII sanitization and opt-out support
+- [Auth](https://git.phrk.org/pub/scrapegoat/src/branch/main/src/auth/codemap.md):
+  OAuth2/OIDC proxy authentication middleware for MCP endpoints
+- [Upload](https://git.phrk.org/pub/scrapegoat/src/branch/main/src/upload/codemap.md):
+  File upload pipeline: archive extraction, import tree builder, security
+  validation
