@@ -28,10 +28,37 @@ describe("LocalUploadPanel", () => {
     expect(html).not.toContain('x-if="showTree && tree"');
   });
 
+  it("defers session creation until an add action", async () => {
+    const html = String(await LocalUploadPanel({ library: "docs", version: "1.0" }));
+
+    expect(html).not.toContain('x-on:blur="createSession()"');
+  });
+
   it("keeps the upload component tree-visible by default", () => {
     const script = readFileSync("public/js/localUpload.js", "utf8");
 
     expect(script).toContain("showTree: true");
     expect(script).not.toContain("showTree: false");
+  });
+
+  it("requires library and version before creating an upload session", () => {
+    const script = readFileSync("public/js/localUpload.js", "utf8");
+
+    expect(script).toContain("Library Name and Version are required before upload");
+    expect(script).toContain("!this.version");
+    expect(script).toContain('this.version.trim() === ""');
+  });
+
+  it("creates an upload session before adding a virtual folder", () => {
+    const script = readFileSync("public/js/localUpload.js", "utf8");
+
+    expect(script).toContain("async createVirtualFolder()");
+    expect(script).toContain("await this.createSession()");
+  });
+
+  it("closes the panel after a successful commit", () => {
+    const script = readFileSync("public/js/localUpload.js", "utf8");
+
+    expect(script).toContain("await this.closePanel()");
   });
 });

@@ -24,15 +24,15 @@ services:
       - .env
     environment:
       SCRAPEGOAT_DB_URL: ${SCRAPEGOAT_DB_URL:-postgresql://scrapegoat:scrapegoat@localhost:5432/scrapegoat}
-      # Local upload configuration (uncomment for filesystem staging mode)
-      # SCRAPEGOAT_WEBUI_IMPORT_STAGING_MODE: filesystem
-      # SCRAPEGOAT_WEBUI_IMPORT_STAGING_INTERNAL_PATH: /data/staging
+      # Web and worker run in separate containers, so local uploads need a
+      # shared staging volume the worker can read.
+      SCRAPEGOAT_WEBUI_IMPORT_STAGING_MODE: filesystem
+      SCRAPEGOAT_WEBUI_IMPORT_STAGING_INTERNAL_PATH: /data/staging
     volumes:
       - scrapegoat-data:/data
       - scrapegoat-config:/config
       - /import:/import
-      # Local upload staging volume (uncomment for filesystem staging mode)
-      # - scrapegoat-staging:/data/staging
+      - scrapegoat-staging:/data/staging
     healthcheck:
       test: 'node -e ''require("net").connect(8080, "127.0.0.1").on("connect",()=>process.exit(0)).on("error",()=>process.exit(1))'''
       interval: 5s
@@ -111,14 +111,14 @@ services:
       - .env
     environment:
       SCRAPEGOAT_DB_URL: ${SCRAPEGOAT_DB_URL:-postgresql://scrapegoat:scrapegoat@localhost:5432/scrapegoat}
-      # Local upload configuration (uncomment for filesystem staging mode)
-      # SCRAPEGOAT_WEBUI_IMPORT_STAGING_MODE: filesystem
-      # SCRAPEGOAT_WEBUI_IMPORT_STAGING_INTERNAL_PATH: /data/staging
+      # Web and worker run in separate containers, so local uploads need a
+      # shared staging volume the worker can read.
+      SCRAPEGOAT_WEBUI_IMPORT_STAGING_MODE: filesystem
+      SCRAPEGOAT_WEBUI_IMPORT_STAGING_INTERNAL_PATH: /data/staging
     volumes:
       - scrapegoat-config:/config
       - /import:/import
-      # Local upload staging volume (uncomment for filesystem staging mode)
-      # - scrapegoat-staging:/data/staging
+      - scrapegoat-staging:/data/staging
     depends_on:
       worker:
         condition: service_healthy
@@ -134,6 +134,5 @@ volumes:
     name: scrapegoat-data
   scrapegoat-config:
     name: scrapegoat-config
-  # Local upload staging volume (uncomment for filesystem staging mode)
-  # scrapegoat-staging:
-  #   name: scrapegoat-staging
+  scrapegoat-staging:
+    name: scrapegoat-staging

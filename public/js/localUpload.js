@@ -28,18 +28,31 @@ document.addEventListener("alpine:init", () => {
     selectedNode: null,
 
     async init() {
-      // Session creation is deferred until Library Name is provided (REQ-001).
+      // Session creation is deferred until files or folders are added.
       // See createSession().
     },
 
     async createSession() {
       if (this.sessionId) return;
-      if (!this.library || this.library.trim() === "") return;
+      if (
+        !this.library ||
+        this.library.trim() === "" ||
+        !this.version ||
+        this.version.trim() === ""
+      ) {
+        this.uploadErrors = [
+          {
+            path: "session",
+            error: "Library Name and Version are required before upload",
+          },
+        ];
+        return;
+      }
       try {
         const resp = await fetch("/web/upload/start", {
           method: "POST",
           headers: { "Content-Type": "application/x-www-form-urlencoded" },
-          body: `library=${encodeURIComponent(this.library)}&version=${encodeURIComponent(this.version)}`,
+          body: `library=${encodeURIComponent(this.library.trim())}&version=${encodeURIComponent(this.version.trim())}`,
         });
         if (!resp.ok) {
           const err = await resp.json().catch(() => ({ error: "Failed to create session" }));
@@ -189,7 +202,10 @@ document.addEventListener("alpine:init", () => {
     },
 
     async createVirtualFolder() {
-      if (!this.sessionId) return;
+      if (!this.sessionId) {
+        await this.createSession();
+        if (!this.sessionId) return;
+      }
       const name = window.prompt("Enter folder name:");
       if (!name || name.trim() === "") return;
       try {
@@ -353,6 +369,7 @@ document.addEventListener("alpine:init", () => {
           this.stats = null;
           this.showTree = true;
           this.selectedNode = null;
+          await this.closePanel();
         } else {
           const err = await resp.json().catch(() => ({ error: "Commit failed" }));
           this.uploadErrors = [{ path: "commit", error: err.error }];

@@ -78,10 +78,8 @@ export async function registerUploadRoutes(
       const library = body?.library?.trim();
       const version = body?.version?.trim();
       if (!library) return reply.code(400).send({ error: "library is required" });
-      const session = await getStagingService().createSession(
-        library,
-        version || "latest",
-      );
+      if (!version) return reply.code(400).send({ error: "version is required" });
+      const session = await getStagingService().createSession(library, version);
       return {
         sessionId: session.id,
         library: session.library,

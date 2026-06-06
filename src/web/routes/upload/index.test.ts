@@ -77,6 +77,17 @@ describe("Upload routes", () => {
     await server.close();
   });
 
+  it("requires a version when starting an upload session", async () => {
+    const response = await server.inject({
+      method: "POST",
+      url: "/web/upload/start",
+      payload: { library: "missing-version" },
+    });
+
+    expect(response.statusCode).toBe(400);
+    expect(response.json<{ error: string }>().error).toBe("version is required");
+  });
+
   it("accepts repeated upload session starts", async () => {
     const totalRequests = 11;
     let lastStatus = 0;
@@ -85,7 +96,7 @@ describe("Upload routes", () => {
       const response = await server.inject({
         method: "POST",
         url: "/web/upload/start",
-        payload: { library: `upload-session-${i}` },
+        payload: { library: `upload-session-${i}`, version: `${i}.0.0` },
       });
       lastStatus = response.statusCode;
     }
