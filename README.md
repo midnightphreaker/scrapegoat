@@ -10,26 +10,31 @@
 
 </div>
 
-Always-current documentation indexing for AI coding assistants. ScrapeGoat is an
-MCP server that fetches official docs from websites, GitHub repositories, npm,
-PyPI, and local files, then indexes them for instant retrieval by LLMs. It is
-the open-source alternative to Context7, NiA, and Ref.Tools.
-
-## Requirements
-
-- **Node.js** 22 or later
-- **PostgreSQL** with [pgvector](https://github.com/pgvector/pgvector) extension
-- **Playwright** Chromium browser (auto-installed on first run)
-- **Embedding provider** credentials (optional; required for semantic search)
+Always-current documentation indexing for AI coding assistants. ScrapeGoat runs
+as a server via Docker, exposing a built-in remote HTTP/SSE/Streamable MCP
+endpoint that AI coding tools connect to. It fetches official docs from
+websites, GitHub repositories, npm, PyPI, and local files, indexes them into
+PostgreSQL with pgvector embeddings, and serves them on demand. It is the
+open-source alternative to Context7, NiA, and Ref.Tools.
 
 ## Quick Start
 
 ```bash
 cp .env.example .env
+# Edit .env with your embedding provider credentials
+docker compose -f docker-compose.postgres.yml up -d
+```
+
+This starts PostgreSQL with pgvector, a background worker for scraping and
+indexing, and an MCP server listening on port 6280. AI clients connect to
+`http://<host>:6280/mcp` (Streamable HTTP) or `http://<host>:6280/sse` (SSE).
+
+For a local dev build without Docker:
+
+```bash
+cp .env.example .env
 npm install
 npm run build
-
-# Single-command server (web + MCP + worker):
 npm start
 ```
 
