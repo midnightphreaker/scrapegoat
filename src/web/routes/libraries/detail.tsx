@@ -4,8 +4,6 @@ import type { ScrapeTool } from "../../../tools/ScrapeTool";
 import type { SearchTool } from "../../../tools/SearchTool";
 import type { IDocumentManagement } from "../../../store/trpc/interfaces";
 import { logger } from "../../../utils/logger";
-import AddVersionButton from "../../components/AddVersionButton";
-import UploadVersionButton from "../../components/UploadVersionButton";
 import Alert from "../../components/Alert";
 import Layout from "../../components/Layout";
 import LibraryDetailCard from "../../components/LibraryDetailCard";
@@ -13,7 +11,6 @@ import VersionDetailsRow from "../../components/VersionDetailsRow";
 import LibrarySearchCard from "../../components/LibrarySearchCard";
 import SearchResultList from "../../components/SearchResultList";
 import SearchResultSkeletonItem from "../../components/SearchResultSkeletonItem";
-import ScrapeFormContent from "../../components/ScrapeFormContent";
 
 /**
  * Registers the route for displaying library details.
@@ -207,117 +204,4 @@ export function registerLibraryDetailRoutes(
     }
   );
 
-  // GET route for add-version button (closes the form and shows the button again)
-  server.get<{ Params: { libraryName: string } }>(
-    "/web/libraries/:libraryName/add-version-button",
-    async (request, reply) => {
-      const { libraryName } = request.params;
-      reply.type("text/html; charset=utf-8");
-      return <AddVersionButton libraryName={libraryName} />;
-    }
-  );
-
-  // GET route for upload-version button (returns the upload button)
-  server.get<{ Params: { libraryName: string } }>(
-    "/web/libraries/:libraryName/upload-version-button",
-    async (request, reply) => {
-      const { libraryName } = request.params;
-      reply.type("text/html; charset=utf-8");
-      return <UploadVersionButton libraryName={libraryName} />;
-    }
-  );
-
-  // GET route for add-version form (pre-filled with latest version's config)
-  server.get<{ Params: { libraryName: string } }>(
-    "/web/libraries/:libraryName/add-version-form",
-    async (request, reply) => {
-      const { libraryName } = request.params;
-      try {
-        // Fetch library info to get the latest version
-        const result = await listLibrariesTool.execute();
-        const libraryInfo = result.libraries.find(
-          (lib) => lib.name.toLowerCase() === libraryName.toLowerCase()
-        );
-
-        if (!libraryInfo) {
-          reply.status(404).send("Library not found");
-          return;
-        }
-
-        // Get the latest version (versions are sorted descending, first is latest)
-        const versions = libraryInfo.versions || [];
-        const latestVersion = versions[0];
-
-        let initialValues: {
-          library: string;
-          url?: string;
-          maxPages?: number;
-          maxDepth?: number;
-          scope?: string;
-          includePatterns?: string;
-          excludePatterns?: string;
-          scrapeMode?: string;
-          headers?: Array<{ name: string; value: string }>;
-          followRedirects?: boolean;
-          ignoreErrors?: boolean;
-        } = {
-          library: libraryName,
-        };
-
-        // If there's a latest version, fetch its scraper options
-        if (latestVersion) {
-          const summaries = await docService.listLibraries();
-          const libSummary = summaries.find(
-            (s) => s.library.toLowerCase() === libraryName.toLowerCase()
-          );
-          if (libSummary) {
-            const versionSummary = libSummary.versions.find(
-              (v) =>
-                v.ref.version === (latestVersion.version || "") ||
-                (!latestVersion.version && v.ref.version === "")
-            );
-            if (versionSummary) {
-              const scraperConfig = await docService.getScraperOptions(
-                versionSummary.id
-              );
-              if (scraperConfig) {
-                const opts = scraperConfig.options;
-                initialValues = {
-                  library: libraryName,
-                  url: scraperConfig.sourceUrl,
-                  maxPages: opts.maxPages,
-                  maxDepth: opts.maxDepth,
-                  scope: opts.scope,
-                  includePatterns: opts.includePatterns?.join("\n"),
-                  excludePatterns: opts.excludePatterns?.join("\n"),
-                  scrapeMode: opts.scrapeMode,
-                  headers: opts.headers
-                    ? Object.entries(opts.headers).map(([name, value]) => ({
-                        name,
-                        value,
-                      }))
-                    : undefined,
-                  followRedirects: opts.followRedirects,
-                  ignoreErrors: opts.ignoreErrors,
-                };
-              }
-            }
-          }
-        }
-
-        reply.type("text/html; charset=utf-8");
-        return (
-          <ScrapeFormContent initialValues={initialValues} mode="add-version" />
-        );
-      } catch (error) {
-        logger.error(
-          `Failed to load add-version form for ${libraryName}: ${error}`
-        );
-        reply.type("text/html; charset=utf-8");
-        return (
-          <Alert type="error" message="Failed to load the add version form." />
-        );
-      }
-    }
-  );
 }
