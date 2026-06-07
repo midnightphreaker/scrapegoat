@@ -538,11 +538,11 @@ describe("webImport configuration", () => {
     expect(config.webImport).toBeDefined();
     expect(config.webImport.stagingMode).toBe("memory");
     expect(config.webImport.stagingInternalPath).toBe("");
-    expect(config.webImport.maxTotalSizeBytes).toBe(999 * 1024 * 1024);
-    expect(config.webImport.maxFileSizeBytes).toBe(100 * 1024 * 1024);
-    expect(config.webImport.maxFiles).toBe(999);
+    expect(config.webImport.maxTotalSizeBytes).toBe(2048 * 1024 * 1024);
+    expect(config.webImport.maxFileSizeBytes).toBe(128 * 1024 * 1024);
+    expect(config.webImport.maxFiles).toBe(9999);
     expect(config.webImport.sessionTtlSeconds).toBe(3600);
-    expect(config.webImport.maxArchiveCompressedBytes).toBe(500 * 1024 * 1024);
+    expect(config.webImport.maxArchiveCompressedBytes).toBe(512 * 1024 * 1024);
     expect(config.webImport.maxDepth).toBe(9);
     expect(config.webImport.maxFilenameLength).toBe(99);
     expect(config.webImport.maxPathLength).toBe(255);

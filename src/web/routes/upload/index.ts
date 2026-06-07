@@ -61,9 +61,11 @@ export async function registerUploadRoutes(
   pipelineManager = pipeline;
   docService = docs;
 
+  const config = loadConfig();
+
   await server.register(multipart, {
     limits: {
-      fileSize: DEFAULT_UPLOAD_CONFIG.maxFileSizeBytes,
+      fileSize: config.webImport.maxFileSizeBytes,
       files: 50,
     },
   });
