@@ -7,6 +7,7 @@
  * promise rejection warnings when a job fails before a consumer awaits it.
  */
 
+import { promises as fs } from "node:fs";
 import { v4 as uuidv4 } from "uuid";
 import type { EventBusService } from "../events/EventBusService";
 import { EventType } from "../events/types";
@@ -686,6 +687,7 @@ export class PipelineManager implements IPipeline {
   private async _runJob(job: InternalPipelineJob): Promise<void> {
     const { id: jobId, abortController } = job;
     const signal = abortController.signal; // Get signal for error checking
+    let errorCount = 0;
 
     // Instantiate a worker for this job.
     // Dependencies (store, scraperService) are held by the manager.
@@ -699,9 +701,9 @@ export class PipelineManager implements IPipeline {
           await this.updateJobProgress(internalJob, progress);
         },
         onJobError: async (internalJob, error, document) => {
-          // Log job errors
+          errorCount++;
           logger.warn(
-            `⚠️  Job ${internalJob.id} error ${document ? `on document ${document.url}` : ""}: ${error.message}`,
+            `⚠️  Job ${internalJob.id} error (${errorCount} total) ${document ? `on document ${document.url}` : ""}: ${error.message}`,
           );
         },
       });
@@ -712,12 +714,36 @@ export class PipelineManager implements IPipeline {
         throw new CancellationError("Job cancelled just before completion");
       }
 
-      // Mark as completed
-      await this.updateJobStatus(job, PipelineJobStatus.COMPLETED);
-      job.finishedAt = new Date();
-      job.resolveCompletion();
-
-      logger.info(`✅ Job completed: ${jobId}`);
+      // After worker completes without throwing, decide final status
+      if (errorCount > 0) {
+        const totalPages = job.progressMaxPages ?? 0;
+        // If error count equals or exceeds total pages, all docs failed
+        if (totalPages > 0 && errorCount >= totalPages) {
+          const errorMessage = `Job failed: ${errorCount}/${totalPages} documents could not be processed`;
+          await this.updateJobStatus(job, PipelineJobStatus.FAILED, errorMessage);
+          job.error = new Error(errorMessage);
+          job.finishedAt = new Date();
+          logger.error(
+            `❌ Job failed (all documents errored): ${jobId}: ${errorMessage}`,
+          );
+          job.rejectCompletion(job.error);
+        } else {
+          // Partial success — some documents failed but not all
+          logger.warn(
+            `⚠️  Job ${jobId} completed with ${errorCount} document errors out of ${totalPages} total pages`,
+          );
+          await this.updateJobStatus(job, PipelineJobStatus.COMPLETED);
+          job.finishedAt = new Date();
+          job.resolveCompletion();
+          logger.info(`✅ Job completed (with errors): ${jobId}`);
+        }
+      } else {
+        // No errors — clean completion
+        await this.updateJobStatus(job, PipelineJobStatus.COMPLETED);
+        job.finishedAt = new Date();
+        job.resolveCompletion();
+        logger.info(`✅ Job completed: ${jobId}`);
+      }
     } catch (error) {
       // Handle errors thrown by the worker, including CancellationError
       if (error instanceof CancellationError || signal.aborted) {
@@ -743,11 +769,31 @@ export class PipelineManager implements IPipeline {
         job.rejectCompletion(job.error);
       }
     } finally {
+      // Clean up staging directory if this was a local import job
+      await this.cleanupStagingDirectory(job);
+
       // Ensure worker slot is freed and queue processing continues
       this.activeWorkers.delete(jobId);
       this._processQueue().catch((error) => {
         logger.error(`❌ Error in processQueue after job cleanup: ${error}`);
       });
+    }
+  }
+
+  /**
+   * Cleans up the staging directory after a local import job completes.
+   * Only runs if a staging path was provided in the scraper options.
+   */
+  private async cleanupStagingDirectory(job: InternalPipelineJob): Promise<void> {
+    const stagingPath = job.scraperOptions?.localImportStagingPath;
+    if (!stagingPath) return;
+
+    try {
+      await fs.rm(stagingPath, { recursive: true, force: true });
+      logger.info(`🧹 Cleaned up staging directory: ${stagingPath}`);
+    } catch (err) {
+      // Log but don't fail — cleanup is best-effort
+      logger.warn(`⚠️  Failed to clean up staging directory ${stagingPath}: ${err}`);
     }
   }
 

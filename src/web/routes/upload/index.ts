@@ -311,9 +311,6 @@ export async function registerUploadRoutes(
           `📦 Import job enqueued: ${jobId} for ${session.library}@${session.version}`,
         );
 
-        // Set up cleanup listener for staging directory
-        registerStagingCleanup(pipelineManager, jobId, session.stagingPath, sessionId);
-
         const stats = service.getSessionStats(sessionId);
 
         return {
@@ -409,48 +406,6 @@ export async function registerUploadRoutes(
         version: session.version,
         stats: service.getSessionStats(sessionId),
       };
-    },
-  );
-}
-
-/**
- * Registers a one-time listener on the pipeline event bus to clean up the staging
- * directory after the import job finishes.
- *
- * - On success or cancellation: removes the staging directory.
- * - On failure: keeps the staging directory for debugging.
- */
-function registerStagingCleanup(
-  pipeline: IPipeline,
-  jobId: string,
-  stagingPath: string,
-  sessionId: string,
-): void {
-  // We use the job's completion promise to trigger cleanup.
-  // This is more reliable than listening to event bus events since we
-  // have direct access to the job via PipelineManager.
-  const job = pipeline.getJob(jobId);
-  if (!job) {
-    logger.warn(`Cannot register cleanup for unknown job: ${jobId}`);
-    return;
-  }
-
-  // Use waitForJobCompletion which resolves on success/cancel and rejects on failure
-  pipeline.waitForJobCompletion(jobId).then(
-    () => {
-      // Success or cancellation — remove staging dir
-      logger.info(
-        `🧹 Cleaning up staging directory for session ${sessionId}: ${stagingPath}`,
-      );
-      fs.rm(stagingPath, { recursive: true, force: true }).catch((err) => {
-        logger.warn(`Failed to clean up staging directory ${stagingPath}: ${err}`);
-      });
-    },
-    () => {
-      // Failure — keep staging directory for debugging
-      logger.info(
-        `Keeping staging directory for failed import session ${sessionId}: ${stagingPath}`,
-      );
     },
   );
 }

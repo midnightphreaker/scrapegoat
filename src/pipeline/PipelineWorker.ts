@@ -46,7 +46,6 @@ export class PipelineWorker {
   async executeJob(job: InternalPipelineJob, callbacks: WorkerCallbacks): Promise<void> {
     const { id: jobId, library, version, scraperOptions, abortController } = job;
     const signal = abortController.signal;
-
     logger.debug(`[${jobId}] Worker starting job for ${library}@${version}`);
 
     try {
@@ -127,8 +126,7 @@ export class PipelineWorker {
                 docError instanceof Error ? docError : new Error(String(docError)),
                 progress.result,
               );
-              // Decide if a single document error should fail the whole job
-              // For now, we log and continue. To fail, re-throw here.
+              // Error tracked via onJobError callback. Worker continues processing remaining documents.
             }
           }
         },
