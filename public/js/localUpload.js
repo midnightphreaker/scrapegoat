@@ -32,6 +32,24 @@ document.addEventListener("alpine:init", () => {
       // See createSession().
     },
 
+    /**
+     * Authoritative file count from backend stats.
+     * Falls back to local stagedFiles.length if stats haven't loaded yet.
+     */
+    get authoritativeFileCount() {
+      if (this.stats && typeof this.stats.fileCount === "number") {
+        return this.stats.fileCount;
+      }
+      return this.stagedFiles.length;
+    },
+
+    /**
+     * Whether there are any staged files (per backend stats or local accumulator).
+     */
+    get hasStagedFiles() {
+      return this.authoritativeFileCount > 0;
+    },
+
     async createSession() {
       if (this.sessionId) return;
       if (

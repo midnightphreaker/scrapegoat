@@ -14,7 +14,7 @@ vi.mock("../../utils/config", async (importOriginal) => {
     loadConfig: vi.fn(() => ({
       scraper: {
         maxPages: 1000,
-        document: { maxSize: 10485760 },
+        document: { maxSize: 1048576000 },
         fetcher: { maxRetries: 6 },
       },
       app: { telemetryEnabled: true },

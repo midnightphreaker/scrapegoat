@@ -738,11 +738,26 @@ export class PipelineManager implements IPipeline {
           logger.info(`✅ Job completed (with errors): ${jobId}`);
         }
       } else {
-        // No errors — clean completion
-        await this.updateJobStatus(job, PipelineJobStatus.COMPLETED);
-        job.finishedAt = new Date();
-        job.resolveCompletion();
-        logger.info(`✅ Job completed: ${jobId}`);
+        // No errors reported — but check for zero-processing despite discovered files
+        // This catches cases where files were discovered (e.g., from an archive) but
+        // none were successfully processed (e.g., extraction limits, missing staging files)
+        const totalPages = job.progressMaxPages ?? 0;
+        const pagesScraped = job.progressPages ?? 0;
+        if (totalPages > 0 && pagesScraped === 0) {
+          const errorMessage = `Local import failed: 0 of ${totalPages} files were successfully processed. Files may not have been extracted from the archive due to size/count limits.`;
+          await this.updateJobStatus(job, PipelineJobStatus.FAILED, errorMessage);
+          job.error = new Error(errorMessage);
+          job.finishedAt = new Date();
+          logger.error(
+            `❌ Job ${jobId} failed: zero files processed out of ${totalPages} discovered`,
+          );
+          job.rejectCompletion(job.error);
+        } else {
+          await this.updateJobStatus(job, PipelineJobStatus.COMPLETED);
+          job.finishedAt = new Date();
+          job.resolveCompletion();
+          logger.info(`✅ Job completed: ${jobId}`);
+        }
       }
     } catch (error) {
       // Handle errors thrown by the worker, including CancellationError

@@ -73,7 +73,7 @@ export const DEFAULT_CONFIG = {
       maxCacheItemSizeBytes: 500 * 1024,
     },
     document: {
-      maxSize: 52 * 1024 * 1024, // 10MB max size for PDF/Office documents
+      maxSize: 1_048_576_000, // ~1GB max size for PDF/Office documents
     },
   },
   splitter: {

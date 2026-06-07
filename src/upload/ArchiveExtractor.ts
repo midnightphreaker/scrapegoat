@@ -36,6 +36,8 @@ export interface ExtractionResult {
   files: ExtractedFile[];
   errors: Array<{ path: string; error: string }>;
   totalExtractedSize: number;
+  /** Whether extraction was aborted early (e.g. maxEntries exceeded) */
+  aborted: boolean;
 }
 
 // ---------------------------------------------------------------------------
@@ -170,6 +172,7 @@ export class ArchiveExtractor {
       const errors: Array<{ path: string; error: string }> = [];
       let totalSize = 0;
       let entryCount = 0;
+      let aborted = false;
 
       yauzl.fromBuffer(buffer, { lazyEntries: true }, (err, zipfile) => {
         if (err) {
@@ -177,6 +180,7 @@ export class ArchiveExtractor {
             files: [],
             errors: [{ path: "<archive>", error: err.message }],
             totalExtractedSize: 0,
+            aborted: false,
           });
           return;
         }
@@ -186,7 +190,7 @@ export class ArchiveExtractor {
         });
 
         zipfile.on("end", () => {
-          resolve({ files, errors, totalExtractedSize: totalSize });
+          resolve({ files, errors, totalExtractedSize: totalSize, aborted });
         });
 
         zipfile.on("entry", (entry) => {
@@ -196,7 +200,7 @@ export class ArchiveExtractor {
             return;
           }
 
-          // Enforce entry count
+          // Enforce entry count — abort immediately when exceeded
           entryCount++;
           try {
             validateArchiveEntryCount(entryCount, this.maxEntries);
@@ -205,7 +209,9 @@ export class ArchiveExtractor {
               path: entry.fileName,
               error: e instanceof Error ? e.message : String(e),
             });
-            zipfile.readEntry();
+            aborted = true;
+            // Resolve immediately — do not continue reading entries
+            resolve({ files, errors, totalExtractedSize: totalSize, aborted: true });
             return;
           }
 
@@ -389,6 +395,7 @@ export class ArchiveExtractor {
     const errors: Array<{ path: string; error: string }> = [];
     let totalSize = 0;
     let entryCount = 0;
+    let aborted = false;
 
     // Collect entries first for validation
     const entries: Array<{ path: string; size: number }> = [];
@@ -408,6 +415,7 @@ export class ArchiveExtractor {
             path: entryPath,
             error: e instanceof Error ? e.message : String(e),
           });
+          aborted = true;
           return;
         }
 
@@ -423,6 +431,11 @@ export class ArchiveExtractor {
       },
     });
 
+    // If aborted during listing, skip extraction and return early
+    if (aborted) {
+      return { files, errors, totalExtractedSize: totalSize, aborted: true };
+    }
+
     // Validate total uncompressed size
     const sumSize = entries.reduce((s, e) => s + e.size, 0);
     try {
@@ -432,7 +445,7 @@ export class ArchiveExtractor {
         path: "<archive>",
         error: e instanceof Error ? e.message : String(e),
       });
-      return { files: [], errors, totalExtractedSize: 0 };
+      return { files: [], errors, totalExtractedSize: 0, aborted: false };
     }
 
     // Now extract
@@ -506,6 +519,6 @@ export class ArchiveExtractor {
       });
     }
 
-    return { files, errors, totalExtractedSize: totalSize };
+    return { files, errors, totalExtractedSize: totalSize, aborted: false };
   }
 }

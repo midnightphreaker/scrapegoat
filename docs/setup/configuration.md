@@ -22,7 +22,7 @@ scraper:
   maxPages: 1000
   maxDepth: 3
   document:
-    maxSize: 10485760  # 10MB
+    maxSize: 1048576000  # ~1GB
 
 splitter:
   preferredChunkSize: 1500
@@ -196,7 +196,7 @@ Settings controlling the web scraping behavior.
 | `browserTimeoutMs` | `30000` | Timeout for the browser instance (ms). |
 | `fetcher.maxRetries` | `6` | Number of retries for failed requests. |
 | `fetcher.baseDelayMs` | `1000` | Initial delay for exponential backoff (ms). |
-| `document.maxSize` | `10485760` | Maximum size (bytes) for PDF/Office documents. |
+| `document.maxSize` | `1048576000` | Maximum size (bytes) for PDF/Office documents (~1GB). |
 
 _Note: Scraper settings are often overridden per-job via CLI arguments like `--max-pages`._
 

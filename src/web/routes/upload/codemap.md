@@ -32,7 +32,9 @@ Registers the `@fastify/multipart` plugin and all upload API endpoints. Uses a l
 Registers `GET /web/upload` returning an HTML fragment rendered by `LocalUploadPanel`. Accepts optional `library` and `version` query parameters for pre-filling. Returns a bare fragment (no Layout wrapper) since it's swapped into an existing page via HTMX innerHTML.
 
 ### Key Patterns
-- **Staging cleanup**: `registerStagingCleanup()` attaches a one-shot listener via `pipeline.waitForJobCompletion()` — removes staging directory on success/cancel, preserves on failure for debugging.
+- **Staging cleanup (two-tier)**:
+  1. **Primary cleanup** — `PipelineManager._runJob()` calls `cleanupStagingDirectory()` in its `finally` block. This runs **after** the terminal `JOB_STATUS_CHANGE` event is emitted (via `updateJobStatus` in the try/catch body), guaranteeing that staging files still exist when any `JOB_STATUS_CHANGE` listeners fire. Cleanup runs on all terminal states (completed, failed, cancelled).
+  2. **Safety-net cleanup** — `UploadStagingService` runs a periodic TTL-based `cleanupExpiredSessions()` sweep (default TTL: 3600 s) that removes stale staging directories for sessions that were never committed or whose pipeline job was lost (e.g., server crash before job start).
 - **Archive handling**: Files are checked with `ArchiveExtractor.isArchiveBuffer()`; archives are extracted to a temp dir, files are staged individually, then temp dir is cleaned up.
 - **Duplicate prevention**: Commit checks `docService.versionExists()` before enqueuing, returning HTTP 409 on conflict.
 - **Error tracking**: Failed and renamed files are tracked per-session for downloadable reports.
@@ -42,9 +44,9 @@ Registers `GET /web/upload` returning an HTML fragment rendered by `LocalUploadP
 2. Library name entered → `POST /web/upload/start` creates session.
 3. Files dropped → `POST /web/upload/files` stages files (with archive extraction).
 4. User reviews/modifies tree via tree manipulation endpoints.
-5. User commits → `POST /web/upload/commit` → duplicate check → pipeline job enqueued → staging cleanup registered.
-6. Pipeline processes import; staging directory cleaned on completion.
+5. User commits → `POST /web/upload/commit` → duplicate check → pipeline job enqueued with `localImportStagingPath`.
+6. Pipeline processes import; `updateJobStatus` emits `JOB_STATUS_CHANGE`; finally block cleans staging directory.
 
 ## Integration
 - Consumed by: `src/web/web.ts` (calls `registerUploadRoutes`)
-- Depends on: `fastify`, `@fastify/multipart`, `src/upload/UploadStagingService`, `src/upload/ArchiveExtractor`, `src/upload/types`, `src/pipeline/trpc/interfaces` (IPipeline), `src/store/trpc/interfaces` (IDocumentManagement), `src/utils/config`, `src/utils/logger`, `src/web/components/upload/LocalUploadPanel` (via page.tsx)
+- Depends on: `fastify`, `@fastify/multipart`, `src/upload/UploadStagingService`, `src/upload/ArchiveExtractor`, `src/upload/types`, `src/pipeline/PipelineManager` (staging cleanup in `_runJob` finally block), `src/pipeline/trpc/interfaces` (IPipeline), `src/store/trpc/interfaces` (IDocumentManagement), `src/utils/config`, `src/utils/logger`, `src/web/components/upload/LocalUploadPanel` (via page.tsx)

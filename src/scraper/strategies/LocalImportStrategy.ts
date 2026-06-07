@@ -11,6 +11,7 @@ import fs from "node:fs/promises";
 import path from "node:path";
 import { ensureWithinBase } from "../../upload/security";
 import type { AppConfig } from "../../utils/config";
+import { ScraperError } from "../../utils/errors";
 import { logger } from "../../utils/logger";
 import { MimeTypeUtils } from "../../utils/mimeTypeUtils";
 import { FileFetcher } from "../fetcher";
@@ -127,8 +128,10 @@ export class LocalImportStrategy extends BaseScraperStrategy {
     try {
       stats = await fs.stat(resolvedPath);
     } catch {
-      logger.info(`File not found or not available: ${resolvedPath}`);
-      return { url: item.url, links: [], status: FetchStatus.NOT_FOUND };
+      throw new ScraperError(
+        `Local import file not found: ${resolvedPath}. The file may not have been extracted from the archive.`,
+        false, // non-retryable — the file won't appear on retry
+      );
     }
 
     if (stats.isDirectory()) {

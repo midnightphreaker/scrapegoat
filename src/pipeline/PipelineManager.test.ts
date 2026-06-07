@@ -1273,6 +1273,89 @@ describe("PipelineManager", () => {
     });
   });
 
+  // --- Zero-Processing Detection Tests (DES-003) ---
+  describe("Zero-processing detection", () => {
+    it("should mark job as FAILED when zero pages were processed out of discovered files", async () => {
+      // Simulate a worker that completes without errors but processes zero pages
+      // This matches the local import bug: files discovered but none successfully processed
+      mockWorkerInstance.executeJob.mockImplementation(async (job, callbacks) => {
+        // Simulate progress update showing files were discovered but none scraped
+        await callbacks.onJobProgress?.(job, {
+          pagesScraped: 0,
+          totalPages: 10,
+          currentUrl: "file:///import/doc.pdf",
+          depth: 0,
+          maxDepth: 0,
+          totalDiscovered: 10,
+          result: null,
+        });
+        // executeJob completes without throwing — no onJobError callbacks fired
+      });
+
+      const options = {
+        url: "file:///import/",
+        library: "local-lib",
+        version: "1.0",
+        localImportStagingPath: "/tmp/staging-test",
+      };
+      const jobId = await manager.enqueueScrapeJob("local-lib", "1.0", options);
+      await manager.start();
+      await vi.advanceTimersByTimeAsync(1);
+      await manager.waitForJobCompletion(jobId).catch(() => {});
+
+      const job = await manager.getJob(jobId);
+      expect(job?.status).toBe(PipelineJobStatus.FAILED);
+      expect(job?.error?.message).toMatch(/0 of \d+ files were successfully processed/);
+    });
+
+    it("should NOT mark job as FAILED when zero pages were processed but no pages were expected", async () => {
+      // Simulate a job where no pages were expected (e.g., empty site, no files discovered)
+      mockWorkerInstance.executeJob.mockImplementation(async (job, callbacks) => {
+        await callbacks.onJobProgress?.(job, {
+          pagesScraped: 0,
+          totalPages: 0,
+          currentUrl: "https://empty.com",
+          depth: 0,
+          maxDepth: 0,
+          totalDiscovered: 0,
+          result: null,
+        });
+      });
+
+      const options = { url: "https://empty.com", library: "empty-lib", version: "1.0" };
+      const jobId = await manager.enqueueScrapeJob("empty-lib", "1.0", options);
+      await manager.start();
+      await vi.advanceTimersByTimeAsync(1);
+      await manager.waitForJobCompletion(jobId);
+
+      const job = await manager.getJob(jobId);
+      expect(job?.status).toBe(PipelineJobStatus.COMPLETED);
+    });
+
+    it("should mark job as FAILED when progressMaxPages > 0 but progressPages remains 0", async () => {
+      // Worker completes without any errors or progress callbacks
+      mockWorkerInstance.executeJob.mockImplementation(async (job) => {
+        // Manually set progress fields to simulate discovered but unprocessed state
+        job.progressPages = 0;
+        job.progressMaxPages = 5;
+      });
+
+      const options = {
+        url: "http://archive.com",
+        library: "archive-lib",
+        version: "1.0",
+      };
+      const jobId = await manager.enqueueScrapeJob("archive-lib", "1.0", options);
+      await manager.start();
+      await vi.advanceTimersByTimeAsync(1);
+      await manager.waitForJobCompletion(jobId).catch(() => {});
+
+      const job = await manager.getJob(jobId);
+      expect(job?.status).toBe(PipelineJobStatus.FAILED);
+      expect(job?.error?.message).toMatch(/0 of \d+ files were successfully processed/);
+    });
+  });
+
   // --- DB Status Update Retry Tests ---
   describe("DB status update retry logic", () => {
     it("should retry DB update up to 3 times on failure", async () => {

@@ -9,6 +9,7 @@
  *  - Generate canonical source URIs: file:///import/<library>/<version>/<path>
  */
 
+import { stat } from "node:fs/promises";
 import type { ImportFolder, ImportTreeNode, RenamedFileEntry, StagedFile } from "./types";
 
 // ---------------------------------------------------------------------------
@@ -105,6 +106,79 @@ export class ImportTreeBuilder {
 
     // Sort recursively: folders first, then alphabetical
     return this.sortTree(root);
+  }
+
+  // ---------------------------------------------------------------------------
+  // Disk verification
+  // ---------------------------------------------------------------------------
+
+  /**
+   * Verify that every file node in the tree actually exists on disk.
+   * Removes entries whose files cannot be stat'd (e.g. ENOENT).
+   * Prunes empty folders left behind after file removal.
+   * Logs a warning for each removed entry.
+   */
+  async verifyTree(
+    tree: ImportTreeNode[],
+    files: StagedFile[],
+  ): Promise<ImportTreeNode[]> {
+    // Build a set of relative paths that exist on disk
+    const results = await Promise.allSettled(
+      files.map(async (f) => {
+        await stat(f.absolutePath);
+        return f.relativePath;
+      }),
+    );
+
+    const existingPaths = new Set<string>();
+    const removedPaths = new Set<string>();
+
+    for (const result of results) {
+      if (result.status === "fulfilled") {
+        existingPaths.add(result.value);
+      } else {
+        // stat failed — file does not exist
+        const failedFile = files[results.indexOf(result)];
+        removedPaths.add(failedFile.relativePath);
+        console.warn(
+          `Import tree entry removed: file not found in staging. path=${failedFile.relativePath}`,
+        );
+      }
+    }
+
+    // Filter the tree recursively
+    return this.pruneTree(tree, existingPaths);
+  }
+
+  /**
+   * Recursively remove file nodes whose relativePath is not in `existingPaths`.
+   * Remove folders that become empty after pruning.
+   */
+  private pruneTree(
+    nodes: ImportTreeNode[],
+    existingPaths: Set<string>,
+  ): ImportTreeNode[] {
+    const result: ImportTreeNode[] = [];
+
+    for (const node of nodes) {
+      if (node.type === "folder") {
+        // Recurse into children first
+        const prunedChildren = node.children
+          ? this.pruneTree(node.children, existingPaths)
+          : [];
+        // Keep folder only if it still has children
+        if (prunedChildren.length > 0) {
+          result.push({ ...node, children: prunedChildren });
+        }
+      } else {
+        // File node — keep only if it exists on disk
+        if (existingPaths.has(node.relativePath)) {
+          result.push(node);
+        }
+      }
+    }
+
+    return result;
   }
 
   // ---------------------------------------------------------------------------

@@ -284,7 +284,7 @@ describe("Config CLI Helpers", () => {
     const mockConfig = {
       scraper: {
         maxPages: 1000,
-        document: { maxSize: 10485760 },
+        document: { maxSize: 1048576000 },
       },
       app: { telemetryEnabled: true },
     };
@@ -295,7 +295,7 @@ describe("Config CLI Helpers", () => {
 
     it("gets nested object", () => {
       expect(getConfigValue(mockConfig as any, "scraper.document")).toEqual({
-        maxSize: 10485760,
+        maxSize: 1048576000,
       });
     });
 

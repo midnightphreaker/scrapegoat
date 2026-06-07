@@ -960,6 +960,135 @@ describe("BaseScraperStrategy", () => {
     });
   });
 
+  describe("NOT_FOUND handling for local imports vs web scraping", () => {
+    beforeEach(() => {
+      strategy = new TestScraperStrategy(loadConfig());
+      strategy.processItem.mockClear();
+    });
+
+    it("should throw ScraperError when local import returns NOT_FOUND", async () => {
+      const options: ScraperOptions = {
+        url: "file:///import/mylib/1.0.0/missing.html",
+        library: "mylib",
+        version: "1.0.0",
+        maxPages: 3,
+        maxDepth: 1,
+        localImportStagingPath: "/tmp/staging-abc123",
+        initialQueue: [
+          { url: "file:///import/mylib/1.0.0/missing.html", depth: 1, pageId: 101 },
+        ],
+      };
+      const progressCallback = vi.fn<ProgressCallback<ScraperProgressEvent>>();
+
+      strategy.processItem.mockImplementation(async (item: QueueItem) => {
+        if (item.url === "file:///import/mylib/1.0.0/missing.html") {
+          return { url: item.url, links: [], status: FetchStatus.NOT_FOUND };
+        }
+        return {
+          content: {
+            textContent: "root",
+            metadata: {},
+            links: [],
+            errors: [],
+            chunks: [],
+          },
+          links: [],
+          status: FetchStatus.SUCCESS,
+        };
+      });
+
+      await expect(strategy.scrape(options, progressCallback)).rejects.toThrow(
+        "Local import file not found",
+      );
+    });
+
+    it("should NOT call progressCallback with deleted=true for local import NOT_FOUND", async () => {
+      const options: ScraperOptions = {
+        url: "file:///import/mylib/1.0.0/missing.html",
+        library: "mylib",
+        version: "1.0.0",
+        maxPages: 3,
+        maxDepth: 1,
+        localImportStagingPath: "/tmp/staging-abc123",
+        initialQueue: [
+          { url: "file:///import/mylib/1.0.0/missing.html", depth: 1, pageId: 101 },
+        ],
+      };
+      const progressCallback = vi.fn<ProgressCallback<ScraperProgressEvent>>();
+
+      strategy.processItem.mockImplementation(async (item: QueueItem) => {
+        if (item.url === "file:///import/mylib/1.0.0/missing.html") {
+          return { url: item.url, links: [], status: FetchStatus.NOT_FOUND };
+        }
+        return {
+          content: {
+            textContent: "root",
+            metadata: {},
+            links: [],
+            errors: [],
+            chunks: [],
+          },
+          links: [],
+          status: FetchStatus.SUCCESS,
+        };
+      });
+
+      try {
+        await strategy.scrape(options, progressCallback);
+      } catch {
+        // Expected to throw
+      }
+
+      // No progress callback should have been called with deleted=true
+      const deletedCalls = progressCallback.mock.calls.filter(
+        (call) => call[0].deleted === true,
+      );
+      expect(deletedCalls).toHaveLength(0);
+    });
+
+    it("should preserve existing web scraping 404 behavior (deleted page) when no localImportStagingPath", async () => {
+      const options: ScraperOptions = {
+        url: "https://example.com/",
+        library: "test",
+        version: "1.0.0",
+        maxPages: 2,
+        maxDepth: 1,
+        // No localImportStagingPath — this is web scraping
+        initialQueue: [
+          { url: "https://example.com/deleted", depth: 1, pageId: 101, etag: "etag1" },
+        ],
+      };
+      const progressCallback = vi.fn<ProgressCallback<ScraperProgressEvent>>();
+
+      strategy.processItem.mockImplementation(async (item: QueueItem) => {
+        if (item.url === "https://example.com/") {
+          return {
+            content: {
+              textContent: "root",
+              metadata: {},
+              links: [],
+              errors: [],
+              chunks: [],
+            },
+            links: [],
+            status: FetchStatus.SUCCESS,
+          };
+        }
+        return { content: null, links: [], status: FetchStatus.NOT_FOUND };
+      });
+
+      await strategy.scrape(options, progressCallback);
+
+      // Web scraping 404 should still call progress with deleted=true
+      const progress404 = progressCallback.mock.calls.find(
+        (call) => call[0].currentUrl === "https://example.com/deleted",
+      );
+      expect(progress404).toBeDefined();
+      expect(progress404![0].deleted).toBe(true);
+      expect(progress404![0].result).toBeNull();
+    });
+  });
+
   describe("Progress callbacks with different statuses", () => {
     beforeEach(() => {
       strategy = new TestScraperStrategy(loadConfig());

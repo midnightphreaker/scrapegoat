@@ -19,7 +19,7 @@ The system SHALL organize document processing settings under `scraper.document.*
 
 - **GIVEN** no custom configuration for `scraper.document.maxSize`
 - **WHEN** the configuration is loaded
-- **THEN** the default value of `10485760` (10MB) SHALL be used
+- **THEN** the default value of `1048576000` (~1GB) SHALL be used
 
 ### Requirement: Generic Environment Variable Overrides
 

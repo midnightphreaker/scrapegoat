@@ -2,6 +2,7 @@ import { URL } from "node:url";
 import { CancellationError } from "../../pipeline/errors";
 import type { ProgressCallback } from "../../types";
 import type { AppConfig } from "../../utils/config";
+import { ScraperError } from "../../utils/errors";
 import { logger } from "../../utils/logger";
 import { normalizeUrl, type UrlNormalizerOptions } from "../../utils/url";
 import { FetchStatus } from "../fetcher/types";
@@ -171,7 +172,14 @@ export abstract class BaseScraperStrategy implements ScraperStrategy {
           }
 
           if (result.status === FetchStatus.NOT_FOUND) {
-            // File/page was deleted, count as processed
+            // Local import — file not found is an error (not a deleted web page)
+            if (options.localImportStagingPath) {
+              throw new ScraperError(
+                `Local import file not found: ${item.url}`,
+                false, // non-retryable
+              );
+            }
+            // Web scraping — 404 means the page was deleted
             logger.debug(`Page deleted (404): ${item.url}`);
             if (shouldCount) {
               await progressCallback({

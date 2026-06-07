@@ -151,13 +151,13 @@ const LocalUploadPanel = ({ library, version }: LocalUploadPanelProps) => {
           </div>
         </template>
 
-        {/* Staged files count */}
-        <template x-if="stagedFiles.length > 0">
+        {/* Staged files count — uses backend stats when available */}
+        <template x-if="hasStagedFiles">
           <div class="mt-4 flex items-center justify-between">
             <span class="text-sm text-gray-600 dark:text-gray-400">
               <span
                 class="font-semibold text-gray-900 dark:text-white"
-                x-text="stagedFiles.length"
+                x-text="authoritativeFileCount"
               />{" "}
               file(s) staged
             </span>
@@ -315,7 +315,7 @@ const LocalUploadPanel = ({ library, version }: LocalUploadPanelProps) => {
             type="button"
             class="px-5 py-2.5 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 dark:bg-gray-800 dark:text-gray-400 dark:border-gray-600 dark:hover:text-white dark:hover:bg-gray-700"
             x-on:click="cancelImport()"
-            x-show="stagedFiles.length > 0"
+            x-show="hasStagedFiles"
           >
             Cancel
           </button>
