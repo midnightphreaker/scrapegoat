@@ -528,15 +528,20 @@ export class UploadStagingService {
   // ---------------------------------------------------------------------------
 
   /** Build the import tree for a session. */
-  getImportTree(sessionId: UploadSessionId): {
+  async getImportTree(sessionId: UploadSessionId): Promise<{
     tree: ImportTreeNode[];
     failedFiles: FailedFileEntry[];
-  } {
+  }> {
     const session = this.requireSession(sessionId);
     const files = Array.from(session.files.values());
     const folders = Array.from(session.folders.values());
+    const rawTree = this.treeBuilder.buildTree(files, folders);
+
+    // Verify tree against actual disk contents to prune phantom entries
+    const verifiedTree = await this.treeBuilder.verifyTree(rawTree, files);
+
     return {
-      tree: this.treeBuilder.buildTree(files, folders),
+      tree: verifiedTree,
       failedFiles: session.failedFiles,
     };
   }
@@ -548,6 +553,7 @@ export class UploadStagingService {
     failedFiles: number;
     renamedFiles: number;
     folderCount: number;
+    extractionAborted: boolean;
   } {
     const session = this.requireSession(sessionId);
     const files = Array.from(session.files.values());
@@ -557,7 +563,17 @@ export class UploadStagingService {
       failedFiles: session.failedFiles.length,
       renamedFiles: session.renamedFiles.length,
       folderCount: session.folders.size,
+      extractionAborted: !!session.extractionAborted,
     };
+  }
+
+  /** Mark the session's extraction as aborted (e.g. archive exceeded entry limit). */
+  setExtractionAborted(sessionId: UploadSessionId, truncatedAt?: string): void {
+    const session = this.requireSession(sessionId);
+    session.extractionAborted = true;
+    if (truncatedAt) {
+      session.extractionTruncatedAt = truncatedAt;
+    }
   }
 
   // ---------------------------------------------------------------------------

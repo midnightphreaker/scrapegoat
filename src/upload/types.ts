@@ -83,6 +83,10 @@ export interface UploadSession {
   failedFiles: FailedFileEntry[];
   /** Files that were renamed during import */
   renamedFiles: RenamedFileEntry[];
+  /** Whether archive extraction was aborted early (e.g. maxEntries exceeded) */
+  extractionAborted?: boolean;
+  /** Relative path of the last file extracted before abort (for progress indication) */
+  extractionTruncatedAt?: string;
 }
 
 /** Record of a file that failed to upload */

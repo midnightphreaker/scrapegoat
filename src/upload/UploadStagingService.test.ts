@@ -1,10 +1,12 @@
 /**
  * Tests for UploadStagingService — virtual folder tracking and stats.
  */
+import assert from "node:assert";
 import fs from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import type { ImportTreeNode, StagedFile } from "./types";
 import { UploadStagingService } from "./UploadStagingService";
 
 describe("UploadStagingService", () => {
@@ -75,13 +77,15 @@ describe("UploadStagingService", () => {
     it("includes virtual folders in the tree output", async () => {
       const sessionId = await createTestSession();
       await service.createVirtualFolder(sessionId, "docs");
+      // Stage a file inside the virtual folder so it survives verifyTree pruning
+      await service.stageFile(sessionId, "docs/guide.md", Buffer.from("# Guide"));
 
-      const { tree } = service.getImportTree(sessionId);
+      const { tree } = await service.getImportTree(sessionId);
 
       // Should have at least one node — the virtual folder
       expect(tree.length).toBeGreaterThanOrEqual(1);
 
-      const folderNode = tree.find((n) => n.name === "docs");
+      const folderNode = tree.find((n: { name: string }) => n.name === "docs");
       expect(folderNode).toBeDefined();
       expect(folderNode?.type).toBe("folder");
       expect(folderNode?.relativePath).toBe("docs");
@@ -91,13 +95,96 @@ describe("UploadStagingService", () => {
       const sessionId = await createTestSession();
       await service.stageFile(sessionId, "readme.md", Buffer.from("# Hello"));
       await service.createVirtualFolder(sessionId, "guides");
+      // Stage a file inside the virtual folder so it survives verifyTree pruning
+      await service.stageFile(sessionId, "guides/intro.md", Buffer.from("# Intro"));
 
-      const { tree } = service.getImportTree(sessionId);
+      const { tree } = await service.getImportTree(sessionId);
 
-      const folderNode = tree.find((n) => n.name === "guides");
-      const fileNode = tree.find((n) => n.name === "readme.md");
+      const folderNode = tree.find((n: { name: string }) => n.name === "guides");
+      const fileNode = tree.find((n: { name: string }) => n.name === "readme.md");
       expect(folderNode).toBeDefined();
       expect(fileNode).toBeDefined();
+    });
+
+    it("should prune phantom entries from tree (files not on disk)", async () => {
+      const session = await service.createSession("phantom-test", "1.0");
+
+      // Stage a file (this writes to disk)
+      await service.stageFile(session.id, "real.md", Buffer.from("# Real"));
+
+      // Stage another file
+      await service.stageFile(session.id, "ghost.md", Buffer.from("# Ghost"));
+
+      // Verify both appear initially
+      const beforeDelete = await service.getImportTree(session.id);
+      expect(beforeDelete.tree.length).toBe(2);
+
+      // Now delete the "ghost" file from disk to simulate a phantom entry
+      const ghostFile = Array.from(service.getSession(session.id)!.files.values()).find(
+        (f: StagedFile) => f.relativePath === "ghost.md",
+      );
+      assert(ghostFile, "ghost file should exist in session");
+      await fs.unlink(ghostFile.absolutePath);
+
+      // getImportTree should prune the phantom entry
+      const result = await service.getImportTree(session.id);
+      const fileNames = result.tree
+        .filter((n: ImportTreeNode) => n.type === "file")
+        .map((n: ImportTreeNode) => n.name);
+      expect(fileNames).toContain("real.md");
+      expect(fileNames).not.toContain("ghost.md");
+    });
+  });
+
+  // ---------------------------------------------------------------------------
+  // setExtractionAborted
+  // ---------------------------------------------------------------------------
+  describe("setExtractionAborted", () => {
+    it("should set extractionAborted flag on session", async () => {
+      const session = await service.createSession("abort-test", "1.0");
+
+      expect(session.extractionAborted).toBeUndefined();
+
+      service.setExtractionAborted(session.id);
+
+      const updated = service.getSession(session.id);
+      expect(updated?.extractionAborted).toBe(true);
+    });
+
+    it("should set extractionTruncatedAt when provided", async () => {
+      const session = await service.createSession("abort-trunc", "1.0");
+
+      service.setExtractionAborted(session.id, "some/path.md");
+
+      const updated = service.getSession(session.id);
+      expect(updated?.extractionAborted).toBe(true);
+      expect(updated?.extractionTruncatedAt).toBe("some/path.md");
+    });
+
+    it("should include extractionAborted in session stats", async () => {
+      const session = await service.createSession("abort-stats", "1.0");
+
+      // Before setting aborted
+      const statsBefore = service.getSessionStats(session.id);
+      expect(statsBefore.extractionAborted).toBe(false);
+
+      service.setExtractionAborted(session.id);
+
+      // After setting aborted
+      const statsAfter = service.getSessionStats(session.id);
+      expect(statsAfter.extractionAborted).toBe(true);
+    });
+
+    it("should throw for unknown session", () => {
+      const service2 = new UploadStagingService({
+        stagingMode: "filesystem",
+        stagingPath: tmpBase,
+        sessionTtlSeconds: 0,
+      });
+      expect(() => service2.setExtractionAborted("nonexistent")).toThrow(
+        "Upload session not found",
+      );
+      service2.dispose();
     });
   });
 

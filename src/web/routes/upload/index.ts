@@ -140,6 +140,14 @@ export async function registerUploadRoutes(
                   mimeType: staged.mimeType,
                 });
               }
+              // Flag the session if extraction was truncated
+              if (result.aborted) {
+                const lastFile = result.files[result.files.length - 1];
+                service.setExtractionAborted(sessionId, lastFile?.relativePath);
+                logger.warn(
+                  `⚠ Extraction aborted for session ${sessionId}. ${result.files.length} files extracted before abort.`,
+                );
+              }
               // Clean up extraction temp dir (TAR archives write to disk; ZIP does not)
               await fs.rm(extractDir, { recursive: true, force: true }).catch(() => {});
             } else {
@@ -165,7 +173,11 @@ export async function registerUploadRoutes(
           }
         }
       }
-      return { stagedFiles, errors };
+      return {
+        stagedFiles,
+        errors,
+        extractionAborted: !!session?.extractionAborted,
+      };
     },
   );
 
@@ -175,7 +187,7 @@ export async function registerUploadRoutes(
     const service = getStagingService();
     if (!service.getSession(sessionId))
       return reply.code(404).send({ error: "Session not found" });
-    const { tree, failedFiles } = service.getImportTree(sessionId);
+    const { tree, failedFiles } = await service.getImportTree(sessionId);
     return {
       sessionId,
       tree,

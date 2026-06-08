@@ -154,6 +154,12 @@ document.addEventListener("alpine:init", () => {
         if (result.errors && result.errors.length > 0) {
           this.uploadErrors = result.errors;
         }
+        if (result.extractionAborted) {
+          this.uploadErrors = [
+            ...this.uploadErrors,
+            { path: "extraction", error: "Archive extraction was aborted — some files may be missing. The import tree only shows verified files." },
+          ];
+        }
 
         await this.refreshTree();
       } catch (e) {
@@ -211,6 +217,12 @@ document.addEventListener("alpine:init", () => {
         }
         if (result.errors && result.errors.length > 0) {
           this.uploadErrors = result.errors;
+        }
+        if (result.extractionAborted) {
+          this.uploadErrors = [
+            ...this.uploadErrors,
+            { path: "extraction", error: "Archive extraction was aborted — some files may be missing. The import tree only shows verified files." },
+          ];
         }
 
         await this.refreshTree();
