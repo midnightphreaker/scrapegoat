@@ -431,21 +431,22 @@ export class ArchiveExtractor {
       },
     });
 
-    // If aborted during listing, skip extraction and return early
-    if (aborted) {
-      return { files, errors, totalExtractedSize: totalSize, aborted: true };
-    }
+    // If aborted during listing, still proceed with extraction of entries
+    // collected before the limit. The entries array only contains items up to
+    // the point of abort, so we extract those.
 
-    // Validate total uncompressed size
-    const sumSize = entries.reduce((s, e) => s + e.size, 0);
-    try {
-      validateUncompressedSize(totalSize, sumSize, this.maxUncompressedBytes);
-    } catch (e: unknown) {
-      errors.push({
-        path: "<archive>",
-        error: e instanceof Error ? e.message : String(e),
-      });
-      return { files: [], errors, totalExtractedSize: 0, aborted: false };
+    // Validate total uncompressed size (skip if already aborted due to entry count)
+    if (!aborted) {
+      const sumSize = entries.reduce((s, e) => s + e.size, 0);
+      try {
+        validateUncompressedSize(totalSize, sumSize, this.maxUncompressedBytes);
+      } catch (e: unknown) {
+        errors.push({
+          path: "<archive>",
+          error: e instanceof Error ? e.message : String(e),
+        });
+        return { files: [], errors, totalExtractedSize: 0, aborted: false };
+      }
     }
 
     // Now extract
@@ -519,6 +520,6 @@ export class ArchiveExtractor {
       });
     }
 
-    return { files, errors, totalExtractedSize: totalSize, aborted: false };
+    return { files, errors, totalExtractedSize: totalSize, aborted };
   }
 }

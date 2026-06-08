@@ -175,9 +175,11 @@ export async function registerUploadRoutes(
     const service = getStagingService();
     if (!service.getSession(sessionId))
       return reply.code(404).send({ error: "Session not found" });
+    const { tree, failedFiles } = service.getImportTree(sessionId);
     return {
       sessionId,
-      tree: service.getImportTree(sessionId),
+      tree,
+      failedFiles,
       stats: service.getSessionStats(sessionId),
     };
   });
@@ -277,6 +279,15 @@ export async function registerUploadRoutes(
           .send({ error: `Session is not active (status: ${session.status})` });
       }
 
+      // Validate session has files
+      const stats = service.getSessionStats(sessionId);
+      if (stats.fileCount === 0) {
+        return reply.code(400).send({
+          error:
+            "Cannot commit an empty upload session. Please add files before submitting.",
+        });
+      }
+
       try {
         // Check for duplicate library/version
         const duplicateExists = await docService.versionExists(
@@ -310,8 +321,6 @@ export async function registerUploadRoutes(
         logger.info(
           `📦 Import job enqueued: ${jobId} for ${session.library}@${session.version}`,
         );
-
-        const stats = service.getSessionStats(sessionId);
 
         return {
           success: true,

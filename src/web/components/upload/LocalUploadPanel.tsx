@@ -151,6 +151,24 @@ const LocalUploadPanel = ({ library, version }: LocalUploadPanelProps) => {
           </div>
         </template>
 
+        {/* Failed files */}
+        <template x-if="failedFiles && failedFiles.length > 0">
+          <div class="mt-4 p-4 bg-amber-50 border border-amber-200 rounded-lg dark:bg-amber-900/20 dark:border-amber-800">
+            <div class="flex items-center justify-between mb-2">
+              <h4 class="text-sm font-medium text-amber-800 dark:text-amber-400">
+                <span x-text="failedFiles.length" /> file(s) failed to upload:
+              </h4>
+            </div>
+            <ul class="text-sm text-amber-700 dark:text-amber-300 list-disc list-inside max-h-32 overflow-auto">
+              <template x-for="f in failedFiles" x-bind:key="f.relativePath">
+                <li>
+                  <span x-text="f.relativePath" /> — <span x-text="f.error" />
+                </li>
+              </template>
+            </ul>
+          </div>
+        </template>
+
         {/* Staged files count — uses backend stats when available */}
         <template x-if="hasStagedFiles">
           <div class="mt-4 flex items-center justify-between">
@@ -305,7 +323,7 @@ const LocalUploadPanel = ({ library, version }: LocalUploadPanelProps) => {
           <button
             type="button"
             class="px-5 py-2.5 text-sm font-medium text-white bg-gray-700 rounded-lg hover:bg-gray-800 focus:ring-4 focus:ring-gray-300 dark:bg-gray-600 dark:hover:bg-gray-700 dark:focus:ring-gray-800 disabled:opacity-50 disabled:cursor-not-allowed"
-            x-bind:disabled="!sessionId || !tree || tree.length === 0 || committing || !library"
+            x-bind:disabled="!sessionId || !hasStagedFiles || committing || !library"
             x-on:click="commitImport()"
             x-text="committing ? 'Importing...' : 'Accept & Submit'"
           >

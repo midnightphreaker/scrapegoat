@@ -11,7 +11,7 @@ describe("Docker Compose local upload staging", () => {
       expect(content).toContain(
         "SCRAPEGOAT_WEBUI_IMPORT_STAGING_INTERNAL_PATH: /data/staging",
       );
-      expect(content.match(/scrapegoat-staging:\/data\/staging/g)).toHaveLength(2);
+      expect(content.match(/scrapegoat-staging:\/data\/staging/g)).toHaveLength(3);
       expect(content).toContain("scrapegoat-staging:\n    name: scrapegoat-staging");
     },
   );

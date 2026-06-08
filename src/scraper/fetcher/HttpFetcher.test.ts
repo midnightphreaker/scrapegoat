@@ -143,8 +143,8 @@ describe("HttpFetcher", () => {
         }),
       ).rejects.toThrow(ScraperError);
 
-      // Should call initial attempt + 6 retries (default SCRAPER_FETCHER_MAX_RETRIES = 6)
-      expect(mockedAxios.get).toHaveBeenCalledTimes(7);
+      // Should call initial attempt + 9 retries (default SCRAPER_FETCHER_MAX_RETRIES = 9)
+      expect(mockedAxios.get).toHaveBeenCalledTimes(10);
     });
 
     it("should respect custom maxRetries option", async () => {

@@ -784,6 +784,18 @@ export class PipelineManager implements IPipeline {
         job.rejectCompletion(job.error);
       }
     } finally {
+      // Clean up empty library/version records when job failed with no processed documents
+      if (job.error && (job.progressPages ?? 0) === 0) {
+        try {
+          await this.store.removeVersion(job.library, job.version);
+          logger.info(
+            `🧹 Cleaned up empty library/version: ${job.library}@${job.version}`,
+          );
+        } catch (cleanupErr) {
+          logger.warn(`⚠️ Failed to cleanup ${job.library}@${job.version}: ${cleanupErr}`);
+        }
+      }
+
       // Clean up staging directory if this was a local import job
       await this.cleanupStagingDirectory(job);
 

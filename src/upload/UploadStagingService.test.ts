@@ -76,7 +76,7 @@ describe("UploadStagingService", () => {
       const sessionId = await createTestSession();
       await service.createVirtualFolder(sessionId, "docs");
 
-      const tree = service.getImportTree(sessionId);
+      const { tree } = service.getImportTree(sessionId);
 
       // Should have at least one node — the virtual folder
       expect(tree.length).toBeGreaterThanOrEqual(1);
@@ -92,7 +92,7 @@ describe("UploadStagingService", () => {
       await service.stageFile(sessionId, "readme.md", Buffer.from("# Hello"));
       await service.createVirtualFolder(sessionId, "guides");
 
-      const tree = service.getImportTree(sessionId);
+      const { tree } = service.getImportTree(sessionId);
 
       const folderNode = tree.find((n) => n.name === "guides");
       const fileNode = tree.find((n) => n.name === "readme.md");

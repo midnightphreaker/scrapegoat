@@ -116,6 +116,19 @@ export class PipelineWorker {
                 progress.result,
               );
               logger.debug(`[${jobId}] Stored processed content: ${progress.currentUrl}`);
+
+              // Check for pipeline-returned errors (size limits, extraction failures, etc.)
+              if (progress.result.errors && progress.result.errors.length > 0) {
+                for (const pipelineError of progress.result.errors) {
+                  await callbacks.onJobError?.(
+                    job,
+                    pipelineError instanceof Error
+                      ? pipelineError
+                      : new Error(String(pipelineError)),
+                    progress.result,
+                  );
+                }
+              }
             } catch (docError) {
               logger.error(
                 `❌ [${jobId}] Failed to process content ${progress.currentUrl}: ${docError}`,

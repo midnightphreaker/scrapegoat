@@ -23,6 +23,7 @@ document.addEventListener("alpine:init", () => {
     tree: null,
     flatNodes: [],
     stats: null,
+    failedFiles: [],
     showTree: true,
     committing: false,
     selectedNode: null,
@@ -48,6 +49,10 @@ document.addEventListener("alpine:init", () => {
      */
     get hasStagedFiles() {
       return this.authoritativeFileCount > 0;
+    },
+
+    get failedFilesCount() {
+      return this.failedFiles ? this.failedFiles.length : 0;
     },
 
     async createSession() {
@@ -254,6 +259,7 @@ document.addEventListener("alpine:init", () => {
           const data = await resp.json();
           this.tree = data.tree;
           this.stats = data.stats;
+          this.failedFiles = data.failedFiles || [];
           this.flatNodes = this.flattenTree(data.tree, 0);
         }
       } catch (e) {

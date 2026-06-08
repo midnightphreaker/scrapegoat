@@ -10,6 +10,8 @@ vi.mock("./TelemetryConfig", () => ({
   TelemetryConfig: {
     getInstance: vi.fn(() => ({
       isEnabled: vi.fn(() => true),
+      isUserEnabled: vi.fn(() => true),
+      setEnabled: vi.fn(),
     })),
   },
   generateInstallationId: vi.fn(() => "test-installation-id"),
@@ -35,6 +37,8 @@ describe("Telemetry", () => {
     // Reset TelemetryConfig mock to default enabled state
     const mockConfig = {
       isEnabled: vi.fn(() => true),
+      isUserEnabled: vi.fn(() => true),
+      setEnabled: vi.fn(),
     };
     vi.mocked(TelemetryConfig.getInstance).mockReturnValue(mockConfig as any);
 
@@ -54,6 +58,8 @@ describe("Telemetry", () => {
       // Mock config to return disabled
       const mockConfig = {
         isEnabled: vi.fn(() => false),
+        isUserEnabled: vi.fn(() => false),
+        setEnabled: vi.fn(),
       };
       vi.mocked(TelemetryConfig.getInstance).mockReturnValue(mockConfig as any);
 
@@ -119,6 +125,8 @@ describe("Telemetry", () => {
         // Mock config to return disabled
         mockConfig = {
           isEnabled: vi.fn(() => false),
+          isUserEnabled: vi.fn(() => false),
+          setEnabled: vi.fn(),
         };
         vi.mocked(TelemetryConfig.getInstance).mockReturnValue(mockConfig);
         disabledTelemetry = Telemetry.create();
@@ -197,6 +205,7 @@ describe("telemetry proxy", () => {
     // to restore default state for other tests
     const mockConfig = {
       isEnabled: vi.fn(() => true),
+      isUserEnabled: vi.fn(() => true),
       setEnabled: vi.fn(),
     };
     vi.mocked(TelemetryConfig.getInstance).mockReturnValue(mockConfig as any);
@@ -207,6 +216,7 @@ describe("telemetry proxy", () => {
     // First, configure mock to return enabled = false when checked
     const mockConfig = {
       isEnabled: vi.fn(() => false),
+      isUserEnabled: vi.fn(() => false),
       setEnabled: vi.fn(),
     };
     vi.mocked(TelemetryConfig.getInstance).mockReturnValue(mockConfig as any);
@@ -223,6 +233,7 @@ describe("telemetry proxy", () => {
     // First, configure mock to return enabled = false
     const mockConfig = {
       isEnabled: vi.fn(() => false),
+      isUserEnabled: vi.fn(() => false),
       setEnabled: vi.fn(),
     };
     vi.mocked(TelemetryConfig.getInstance).mockReturnValue(mockConfig as any);

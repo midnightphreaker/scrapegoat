@@ -528,11 +528,17 @@ export class UploadStagingService {
   // ---------------------------------------------------------------------------
 
   /** Build the import tree for a session. */
-  getImportTree(sessionId: UploadSessionId): ImportTreeNode[] {
+  getImportTree(sessionId: UploadSessionId): {
+    tree: ImportTreeNode[];
+    failedFiles: FailedFileEntry[];
+  } {
     const session = this.requireSession(sessionId);
     const files = Array.from(session.files.values());
     const folders = Array.from(session.folders.values());
-    return this.treeBuilder.buildTree(files, folders);
+    return {
+      tree: this.treeBuilder.buildTree(files, folders),
+      failedFiles: session.failedFiles,
+    };
   }
 
   /** Get aggregate stats for a session. */
