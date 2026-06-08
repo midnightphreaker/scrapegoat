@@ -141,7 +141,7 @@ export const DEFAULT_UPLOAD_CONFIG: UploadConfig = {
   maxFileSizeBytes: 128 * 1024 * 1024,
   maxFiles: 9999,
   sessionTtlSeconds: 3600,
-  maxArchiveEntries: 4999,
+  maxArchiveEntries: 9999,
   maxArchiveUncompressedBytes: 2048 * 1024 * 1024,
   maxArchiveCompressedBytes: 512 * 1024 * 1024,
   maxDepth: 9,
