@@ -102,6 +102,10 @@ set the values you need.
 | `SCRAPEGOAT_SPLITTER_MIN_CHUNK_SIZE` | `500` | Min chunk size (chars) before merging |
 | `SCRAPEGOAT_SPLITTER_PREFERRED_CHUNK_SIZE` | `1500` | Target chunk size |
 | `SCRAPEGOAT_SPLITTER_MAX_CHUNK_SIZE` | `5000` | Hard chunk size limit |
+| `SCRAPEGOAT_SCRAPER_DOCUMENT_MAX_SIZE` | `1048576000` | Maximum PDF/Office/document size before parsing |
+| `SCRAPEGOAT_WEB_IMPORT_MAX_FILES` | `9999` | Maximum files in one WebUI local import or virtual-folder tree |
+| `SCRAPEGOAT_WEB_IMPORT_MAX_ARCHIVE_ENTRIES` | `9999` | Maximum files accepted from one uploaded archive |
+| `SCRAPEGOAT_WEB_IMPORT_MAX_ARCHIVE_UNCOMPRESSED_BYTES` | `2147483648` | Maximum total uncompressed archive size |
 | `SCRAPEGOAT_SEARCH_WEIGHT_VEC` | `1` | Vector weight in hybrid RRF scoring |
 | `SCRAPEGOAT_SEARCH_WEIGHT_FTS` | `1` | Full-text weight in hybrid RRF scoring |
 | `POSTHOG_API_KEY` | _(none)_ | PostHog analytics key (omit to disable) |

@@ -138,6 +138,8 @@ export const DEFAULT_CONFIG = {
     maxFileSizeBytes: 128 * 1024 * 1024,
     maxFiles: 9999,
     sessionTtlSeconds: 3600,
+    maxArchiveEntries: 9999,
+    maxArchiveUncompressedBytes: 2048 * 1024 * 1024,
     maxArchiveCompressedBytes: 512 * 1024 * 1024,
     maxDepth: 9,
     maxFilenameLength: 99,
@@ -375,6 +377,14 @@ export const AppConfigSchema = z.object({
         .number()
         .int()
         .default(DEFAULT_CONFIG.webImport.sessionTtlSeconds),
+      maxArchiveEntries: z.coerce
+        .number()
+        .int()
+        .default(DEFAULT_CONFIG.webImport.maxArchiveEntries),
+      maxArchiveUncompressedBytes: z.coerce
+        .number()
+        .int()
+        .default(DEFAULT_CONFIG.webImport.maxArchiveUncompressedBytes),
       maxArchiveCompressedBytes: z.coerce
         .number()
         .int()
@@ -458,6 +468,10 @@ const configMappings: ConfigMapping[] = [
     cli: "embeddingModel",
   },
   {
+    path: ["scraper", "document", "maxSize"],
+    env: ["SCRAPEGOAT_WEB_IMPORT_MAX_DOCUMENT_SIZE_BYTES"],
+  },
+  {
     path: ["auth", "enabled"],
     env: ["SCRAPEGOAT_AUTH_ENABLED", "DOCS_MCP_AUTH_ENABLED"],
     cli: "authEnabled",
@@ -505,11 +519,28 @@ const configMappings: ConfigMapping[] = [
   },
   {
     path: ["webImport", "maxFiles"],
-    env: ["SCRAPEGOAT_WEBUI_IMPORT_MAX_FILES"],
+    env: [
+      "SCRAPEGOAT_WEB_IMPORT_MAX_VIRTUAL_FOLDER_FILES",
+      "SCRAPEGOAT_WEBUI_IMPORT_MAX_FILES",
+    ],
   },
   {
     path: ["webImport", "sessionTtlSeconds"],
     env: ["SCRAPEGOAT_WEBUI_IMPORT_SESSION_TTL_SECONDS"],
+  },
+  {
+    path: ["webImport", "maxArchiveEntries"],
+    env: [
+      "SCRAPEGOAT_WEB_IMPORT_MAX_ARCHIVE_FILES",
+      "SCRAPEGOAT_WEBUI_IMPORT_MAX_ARCHIVE_FILES",
+    ],
+  },
+  {
+    path: ["webImport", "maxArchiveUncompressedBytes"],
+    env: [
+      "SCRAPEGOAT_WEB_IMPORT_MAX_ARCHIVE_UNCOMPRESSED_SIZE_BYTES",
+      "SCRAPEGOAT_WEBUI_IMPORT_MAX_ARCHIVE_UNCOMPRESSED_SIZE_BYTES",
+    ],
   },
   {
     path: ["webImport", "maxArchiveCompressedBytes"],

@@ -202,6 +202,29 @@ _Note: Scraper settings are often overridden per-job via CLI arguments like `--m
 
 > **Migration Note:** In versions prior to 1.37, `document.maxSize` was a top-level setting. It has been moved to `scraper.document.maxSize`. Update your config files accordingly.
 
+### WebUI Local Import (`webImport`)
+
+Settings controlling local file, folder, virtual-folder, and archive uploads in
+the WebUI.
+
+| Option | Env Var | Default | Description |
+|:-------|:--------|:--------|:------------|
+| `maxFiles` | `SCRAPEGOAT_WEB_IMPORT_MAX_FILES` | `9999` | Maximum files staged in one upload/import session or virtual-folder tree. Alias: `SCRAPEGOAT_WEB_IMPORT_MAX_VIRTUAL_FOLDER_FILES`. |
+| `maxTotalSizeBytes` | `SCRAPEGOAT_WEB_IMPORT_MAX_TOTAL_SIZE_BYTES` | `2147483648` | Maximum total size of all staged files in one upload/import session. |
+| `maxFileSizeBytes` | `SCRAPEGOAT_WEB_IMPORT_MAX_FILE_SIZE_BYTES` | `134217728` | Maximum size of one uploaded file before archive extraction. |
+| `maxArchiveEntries` | `SCRAPEGOAT_WEB_IMPORT_MAX_ARCHIVE_ENTRIES` | `9999` | Maximum number of files accepted from one archive. Alias: `SCRAPEGOAT_WEB_IMPORT_MAX_ARCHIVE_FILES`. |
+| `maxArchiveUncompressedBytes` | `SCRAPEGOAT_WEB_IMPORT_MAX_ARCHIVE_UNCOMPRESSED_BYTES` | `2147483648` | Maximum total uncompressed archive size. Alias: `SCRAPEGOAT_WEB_IMPORT_MAX_ARCHIVE_UNCOMPRESSED_SIZE_BYTES`. |
+| `maxArchiveCompressedBytes` | `SCRAPEGOAT_WEB_IMPORT_MAX_ARCHIVE_COMPRESSED_BYTES` | `536870912` | Maximum compressed archive upload size. |
+| `maxDepth` | `SCRAPEGOAT_WEB_IMPORT_MAX_DEPTH` | `9` | Maximum staged path depth. |
+| `maxFilenameLength` | `SCRAPEGOAT_WEB_IMPORT_MAX_FILENAME_LENGTH` | `99` | Maximum filename length after sanitization. |
+| `maxPathLength` | `SCRAPEGOAT_WEB_IMPORT_MAX_PATH_LENGTH` | `255` | Maximum staged relative path length after sanitization. |
+| `stagingMode` | `SCRAPEGOAT_WEB_IMPORT_STAGING_MODE` | `memory` | Staging storage mode: `memory` or `filesystem`. |
+| `stagingInternalPath` | `SCRAPEGOAT_WEB_IMPORT_STAGING_INTERNAL_PATH` | - | Internal staging directory when `stagingMode` is `filesystem`. |
+
+Document uploads are also checked against `scraper.document.maxSize`, configured
+with `SCRAPEGOAT_SCRAPER_DOCUMENT_MAX_SIZE`. The WebUI alias
+`SCRAPEGOAT_WEB_IMPORT_MAX_DOCUMENT_SIZE_BYTES` sets the same limit.
+
 ### GitHub Authentication
 
 Environment variables for authenticating with GitHub when scraping private repositories.

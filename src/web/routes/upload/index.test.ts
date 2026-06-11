@@ -3,7 +3,8 @@ import Fastify, { type FastifyInstance } from "fastify";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import type { IPipeline } from "../../../pipeline/trpc/interfaces";
 import type { IDocumentManagement } from "../../../store/trpc/interfaces";
-import { registerUploadRoutes } from "./index";
+import { UploadStagingService } from "../../../upload";
+import { registerUploadRoutes, stageArchiveExtractionResult } from "./index";
 
 /** Minimal stub satisfying the IPipeline interface for route registration. */
 function createPipelineStub(): IPipeline {
@@ -161,5 +162,66 @@ describe("Upload routes", () => {
     expect(JSON.stringify(treeBody.tree)).toContain("guide");
     expect(JSON.stringify(treeBody.tree)).toContain("intro.md");
     expect(JSON.stringify(treeBody.tree)).toContain("api.md");
+  });
+
+  it("records archive members that exceed the session file limit in failed files", async () => {
+    const service = new UploadStagingService({
+      stagingMode: "memory",
+      sessionTtlSeconds: 0,
+      maxFiles: 2,
+    });
+    const session = await service.createSession("archive-limit-report-test", "1.0");
+
+    const result = await stageArchiveExtractionResult(service, session.id, "docs.zip", {
+      aborted: false,
+      errors: [],
+      totalExtractedSize: 4,
+      files: [
+        {
+          relativePath: "a.md",
+          content: Buffer.from("a"),
+          size: 1,
+          fromArchive: true,
+        },
+        {
+          relativePath: "b.md",
+          content: Buffer.from("b"),
+          size: 1,
+          fromArchive: true,
+        },
+        {
+          relativePath: "c.md",
+          content: Buffer.from("c"),
+          size: 1,
+          fromArchive: true,
+        },
+        {
+          relativePath: "nested/d.md",
+          content: Buffer.from("d"),
+          size: 1,
+          fromArchive: true,
+        },
+      ],
+    });
+
+    expect(result.stagedFiles.map((file) => file.path)).toEqual(["a.md", "b.md"]);
+    expect(result.errors.map((error) => error.path)).toEqual(["c.md", "nested/d.md"]);
+
+    const { failedFiles } = await service.getImportTree(session.id);
+    expect(failedFiles).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          originalName: "docs.zip",
+          relativePath: "c.md",
+        }),
+        expect.objectContaining({
+          originalName: "docs.zip",
+          relativePath: "nested/d.md",
+        }),
+      ]),
+    );
+
+    await service.destroySession(session.id);
+    service.dispose();
   });
 });

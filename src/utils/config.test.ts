@@ -542,6 +542,8 @@ describe("webImport configuration", () => {
     expect(config.webImport.maxFileSizeBytes).toBe(128 * 1024 * 1024);
     expect(config.webImport.maxFiles).toBe(9999);
     expect(config.webImport.sessionTtlSeconds).toBe(3600);
+    expect(config.webImport.maxArchiveEntries).toBe(9999);
+    expect(config.webImport.maxArchiveUncompressedBytes).toBe(2048 * 1024 * 1024);
     expect(config.webImport.maxArchiveCompressedBytes).toBe(512 * 1024 * 1024);
     expect(config.webImport.maxDepth).toBe(9);
     expect(config.webImport.maxFilenameLength).toBe(99);
@@ -562,21 +564,44 @@ describe("webImport configuration", () => {
 
   it("should allow webImport overrides via auto-generated env vars", () => {
     process.env.SCRAPEGOAT_WEB_IMPORT_MAX_FILES = "200";
+    process.env.SCRAPEGOAT_WEB_IMPORT_MAX_ARCHIVE_ENTRIES = "300";
+    process.env.SCRAPEGOAT_WEB_IMPORT_MAX_ARCHIVE_UNCOMPRESSED_BYTES = "400";
     const configPath = path.join(tmpDir, "webimport-env.yaml");
     fs.writeFileSync(configPath, "");
     const config = loadConfig({ config: configPath });
 
     expect(config.webImport.maxFiles).toBe(200);
+    expect(config.webImport.maxArchiveEntries).toBe(300);
+    expect(config.webImport.maxArchiveUncompressedBytes).toBe(400);
+  });
+
+  it("should allow webImport limit overrides via user-facing env aliases", () => {
+    process.env.SCRAPEGOAT_WEB_IMPORT_MAX_VIRTUAL_FOLDER_FILES = "125";
+    process.env.SCRAPEGOAT_WEB_IMPORT_MAX_ARCHIVE_FILES = "225";
+    process.env.SCRAPEGOAT_WEB_IMPORT_MAX_ARCHIVE_UNCOMPRESSED_SIZE_BYTES = "325";
+    process.env.SCRAPEGOAT_WEB_IMPORT_MAX_DOCUMENT_SIZE_BYTES = "425";
+    const configPath = path.join(tmpDir, "webimport-limit-aliases.yaml");
+    fs.writeFileSync(configPath, "");
+    const config = loadConfig({ config: configPath });
+
+    expect(config.webImport.maxFiles).toBe(125);
+    expect(config.webImport.maxArchiveEntries).toBe(225);
+    expect(config.webImport.maxArchiveUncompressedBytes).toBe(325);
+    expect(config.scraper.document.maxSize).toBe(425);
   });
 
   it("should allow webImport overrides via legacy SCRAPEGOAT_WEBUI_IMPORT_* env vars", () => {
     process.env.SCRAPEGOAT_WEBUI_IMPORT_MAX_FILES = "150";
+    process.env.SCRAPEGOAT_WEBUI_IMPORT_MAX_ARCHIVE_FILES = "250";
+    process.env.SCRAPEGOAT_WEBUI_IMPORT_MAX_ARCHIVE_UNCOMPRESSED_SIZE_BYTES = "350";
     process.env.SCRAPEGOAT_WEBUI_IMPORT_STAGING_MODE = "filesystem";
     const configPath = path.join(tmpDir, "webimport-legacy-env.yaml");
     fs.writeFileSync(configPath, "");
     const config = loadConfig({ config: configPath });
 
     expect(config.webImport.maxFiles).toBe(150);
+    expect(config.webImport.maxArchiveEntries).toBe(250);
+    expect(config.webImport.maxArchiveUncompressedBytes).toBe(350);
     expect(config.webImport.stagingMode).toBe("filesystem");
   });
 });

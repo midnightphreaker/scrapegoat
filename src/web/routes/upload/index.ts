@@ -23,7 +23,6 @@ import type { IPipeline } from "../../../pipeline/trpc/interfaces";
 import type { IDocumentManagement } from "../../../store/trpc/interfaces";
 import { ArchiveExtractor, UploadStagingService } from "../../../upload/index";
 import type { UploadConfig } from "../../../upload/types";
-import { DEFAULT_UPLOAD_CONFIG } from "../../../upload/types";
 import { loadConfig } from "../../../utils/config";
 import { logger } from "../../../utils/logger";
 import { registerUploadPageRoute } from "./page";
@@ -31,6 +30,21 @@ import { registerUploadPageRoute } from "./page";
 let stagingService: UploadStagingService | null = null;
 let pipelineManager: IPipeline | null = null;
 let docService: IDocumentManagement | null = null;
+
+interface UploadFileSummary {
+  id: string;
+  name: string;
+  path: string;
+  size: number;
+  ingestible: boolean;
+  fromArchive: boolean;
+  mimeType: string;
+}
+
+interface UploadErrorSummary {
+  path: string;
+  error: string;
+}
 
 function getStagingService(): UploadStagingService {
   if (!stagingService) {
@@ -44,6 +58,8 @@ function getStagingService(): UploadStagingService {
       maxDocumentSizeBytes: config.scraper.document.maxSize,
       maxFiles: webImport.maxFiles,
       sessionTtlSeconds: webImport.sessionTtlSeconds,
+      maxArchiveEntries: webImport.maxArchiveEntries,
+      maxArchiveUncompressedBytes: webImport.maxArchiveUncompressedBytes,
       maxArchiveCompressedBytes: webImport.maxArchiveCompressedBytes,
       maxDepth: webImport.maxDepth,
       maxFilenameLength: webImport.maxFilenameLength,
@@ -52,6 +68,59 @@ function getStagingService(): UploadStagingService {
     stagingService = new UploadStagingService(stagingConfig);
   }
   return stagingService;
+}
+
+export async function stageArchiveExtractionResult(
+  service: UploadStagingService,
+  sessionId: string,
+  archiveName: string,
+  result: Awaited<ReturnType<ArchiveExtractor["extract"]>>,
+): Promise<{
+  stagedFiles: UploadFileSummary[];
+  errors: UploadErrorSummary[];
+}> {
+  const stagedFiles: UploadFileSummary[] = [];
+  const errors: UploadErrorSummary[] = [];
+
+  for (const e of result.errors) {
+    errors.push(e);
+    service.recordFailedFile(sessionId, {
+      originalName: archiveName,
+      relativePath: e.path,
+      error: e.error,
+    });
+  }
+
+  for (const extracted of result.files) {
+    try {
+      const staged = await service.stageFile(
+        sessionId,
+        extracted.relativePath,
+        extracted.content,
+        true,
+        archiveName,
+      );
+      stagedFiles.push({
+        id: staged.id,
+        name: staged.displayName,
+        path: staged.relativePath,
+        size: staged.size,
+        ingestible: staged.ingestible,
+        fromArchive: staged.fromArchive,
+        mimeType: staged.mimeType,
+      });
+    } catch (err) {
+      const error = err instanceof Error ? err.message : String(err);
+      errors.push({ path: extracted.relativePath, error });
+      service.recordFailedFile(sessionId, {
+        originalName: archiveName,
+        relativePath: extracted.relativePath,
+        error,
+      });
+    }
+  }
+
+  return { stagedFiles, errors };
 }
 
 export async function registerUploadRoutes(
@@ -102,9 +171,10 @@ export async function registerUploadRoutes(
       if (!session) return reply.code(404).send({ error: "Session not found" });
       const stagedFiles = [];
       const errors = [];
+      const config = loadConfig();
       const extractor = new ArchiveExtractor(
-        DEFAULT_UPLOAD_CONFIG.maxArchiveEntries,
-        DEFAULT_UPLOAD_CONFIG.maxArchiveUncompressedBytes,
+        config.webImport.maxArchiveEntries,
+        config.webImport.maxArchiveUncompressedBytes,
       );
       const parts = request.parts();
       for await (const part of parts) {
@@ -115,32 +185,14 @@ export async function registerUploadRoutes(
             if (extractor.isArchiveBuffer(buffer)) {
               const extractDir = `${session.stagingPath}/__extract_${Date.now()}`;
               const result = await extractor.extract(buffer, extractDir);
-              for (const e of result.errors) {
-                errors.push(e);
-                service.recordFailedFile(sessionId, {
-                  originalName: e.path,
-                  relativePath: e.path,
-                  error: e.error,
-                });
-              }
-              for (const extracted of result.files) {
-                const staged = await service.stageFile(
-                  sessionId,
-                  extracted.relativePath,
-                  extracted.content,
-                  true,
-                  fileName,
-                );
-                stagedFiles.push({
-                  id: staged.id,
-                  name: staged.displayName,
-                  path: staged.relativePath,
-                  size: staged.size,
-                  ingestible: staged.ingestible,
-                  fromArchive: staged.fromArchive,
-                  mimeType: staged.mimeType,
-                });
-              }
+              const stagedResult = await stageArchiveExtractionResult(
+                service,
+                sessionId,
+                fileName,
+                result,
+              );
+              errors.push(...stagedResult.errors);
+              stagedFiles.push(...stagedResult.stagedFiles);
               // Flag the session if extraction was truncated
               if (result.aborted) {
                 const lastFile = result.files[result.files.length - 1];
