@@ -15,8 +15,8 @@ interface LibrarySearchCardProps {
  */
 const LibrarySearchCard = ({ library }: LibrarySearchCardProps) => {
   return (
-    <div class="block p-4 bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-300 dark:border-gray-600 mb-4">
-      <h2 class="text-xl font-semibold mb-2 text-gray-900 dark:text-white" safe>
+    <div class="sg-panel mb-4">
+      <h2 class="sg-section-title mb-3" safe>
         Search {library.name} Documentation
       </h2>
       <form
@@ -24,11 +24,11 @@ const LibrarySearchCard = ({ library }: LibrarySearchCardProps) => {
         hx-target="#searchResultsContainer .search-results"
         hx-swap="innerHTML"
         hx-indicator="#searchResultsContainer"
-        class="flex space-x-2"
+        class="grid gap-2 sm:grid-cols-[10rem_1fr_auto]"
       >
         <select
           name="version"
-          class="w-40 bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-gray-500 focus:border-gray-500 block p-2.5 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-gray-500 dark:focus:border-gray-500"
+          class="sg-input w-full"
         >
           <option value="">Latest</option> {/* Default to latest */}
           {library.versions.map((version) => (
@@ -42,11 +42,11 @@ const LibrarySearchCard = ({ library }: LibrarySearchCardProps) => {
           name="query"
           placeholder="Search query..."
           required
-          class="flex-grow bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-gray-500 focus:border-gray-500 block p-2.5 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-gray-500 dark:focus:border-gray-500"
+          class="sg-input w-full"
         />
         <button
           type="submit"
-          class="text-white bg-gray-700 hover:bg-gray-800 focus:ring-4 focus:outline-none focus:ring-gray-300 font-medium rounded-lg text-sm px-5 py-2.5 text-center dark:bg-gray-600 dark:hover:bg-gray-700 dark:focus:ring-gray-800 relative"
+          class="sg-button sg-button-primary relative"
         >
           <span class="search-text">Search</span>
           {/* Spinner for HTMX loading - shown via htmx-indicator class on parent */}

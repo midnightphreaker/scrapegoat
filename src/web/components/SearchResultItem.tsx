@@ -42,13 +42,15 @@ const SearchResultItem = async ({ result }: SearchResultItemProps) => {
     // Sanitize the HTML content
     const safeHtml = purifier.sanitize(rawHtml);
     contentElement = (
-      <div class="format dark:format-invert max-w-none">{safeHtml}</div>
+      <div class="format format-invert max-w-none text-slate-100">
+        {safeHtml}
+      </div>
     );
   } else {
     // For non-markdown content, sanitize and render as preformatted text
     const safeContent = escapeHtml(result.content);
     contentElement = (
-      <div class="format dark:format-invert max-w-none">
+      <div class="format format-invert max-w-none text-slate-100">
         <pre>
           <code>{safeContent}</code>
         </pre>
@@ -57,11 +59,11 @@ const SearchResultItem = async ({ result }: SearchResultItemProps) => {
   }
 
   return (
-    <div class="block px-4 py-2 bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-300 dark:border-gray-600 mb-2">
-      <div class="text-sm text-gray-600 dark:text-gray-400 mb-1 flex items-center gap-2 min-w-0">
+    <div class="sg-search-result mb-3">
+      <div class="mb-2 flex min-w-0 items-center gap-2 text-sm sg-muted">
         {result.url.startsWith("file://") ? (
           <span
-            class="underline underline-offset-4 flex-1 truncate decoration-gray-400 dark:decoration-gray-500 cursor-default"
+            class="flex-1 truncate underline decoration-white/30 underline-offset-4 cursor-default"
             title="Local file path (not navigable in browser)"
             safe
           >
@@ -72,7 +74,7 @@ const SearchResultItem = async ({ result }: SearchResultItemProps) => {
             href={result.url}
             target="_blank"
             rel="noopener noreferrer"
-            class="underline underline-offset-4 flex-1 truncate"
+            class="flex-1 truncate underline decoration-cyan-300/40 underline-offset-4 hover:text-cyan-200"
             title={result.url}
             safe
           >
@@ -80,7 +82,7 @@ const SearchResultItem = async ({ result }: SearchResultItemProps) => {
           </a>
         )}
         {result.sourceMimeType || result.mimeType ? (
-          <span class="text-xs opacity-75 font-mono" safe>
+          <span class="sg-badge font-mono" safe>
             {result.sourceMimeType || result.mimeType}
           </span>
         ) : null}

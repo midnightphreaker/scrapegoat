@@ -16,6 +16,7 @@ describe("SearchResultItem", () => {
     );
 
     expect(html).toContain("text/html");
+    expect(html).toContain("sg-search-result");
     expect(html).not.toContain("text/markdown</span>");
   });
 
@@ -32,5 +33,6 @@ describe("SearchResultItem", () => {
     );
 
     expect(html).toContain("text/x-typescript");
+    expect(html).toContain("sg-search-result");
   });
 });

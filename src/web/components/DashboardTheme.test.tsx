@@ -8,8 +8,11 @@ import JobItem from "./JobItem";
 import LibraryDetailCard from "./LibraryDetailCard";
 import LibraryItem from "./LibraryItem";
 import LibraryList from "./LibraryList";
+import LibrarySearchCard from "./LibrarySearchCard";
 import PrimaryButton from "./PrimaryButton";
 import ProgressBar from "./ProgressBar";
+import SearchResultList from "./SearchResultList";
+import SearchResultSkeletonItem from "./SearchResultSkeletonItem";
 import StatusBadge from "./StatusBadge";
 import VersionBadge from "./VersionBadge";
 
@@ -143,5 +146,48 @@ describe("dashboard themed components", () => {
     expect(detailHtml).toContain(
       ": 'sg-button sg-button-ghost min-h-0 min-w-6 h-6 p-1 text-rose-300 border-rose-400/35 hover:bg-rose-500/10'",
     );
+  });
+
+  it("renders library search surfaces with dark glass primitives", async () => {
+    const library = {
+      name: "pdf-test2",
+      versions: [
+        {
+          version: "2",
+          documentCount: 278,
+          uniqueUrlCount: 1,
+          indexedAt: "2026-06-12T00:00:00.000Z",
+          status: VersionStatus.COMPLETED,
+          sourceUrl: "file:///import/pdf-test2/2/",
+        },
+      ],
+    };
+
+    const searchCardHtml = String(await LibrarySearchCard({ library }));
+    const resultListHtml = String(
+      await SearchResultList({
+        results: [
+          {
+            url: "file:///import/pdf-test2/2/manual.pdf",
+            content: "# Memory\nInstall memory modules in matched pairs.",
+            score: 0.82,
+            mimeType: "text/markdown",
+            sourceMimeType: "application/pdf",
+          },
+        ],
+      }),
+    );
+    const skeletonHtml = String(await SearchResultSkeletonItem());
+
+    expect(searchCardHtml).toContain("sg-panel");
+    expect(searchCardHtml).toContain("sg-input");
+    expect(searchCardHtml).toContain("sg-button-primary");
+    expect(searchCardHtml).toContain(
+      'hx-target="#searchResultsContainer .search-results"',
+    );
+    expect(resultListHtml).toContain("sg-search-result");
+    expect(resultListHtml).toContain("application/pdf");
+    expect(skeletonHtml).toContain("sg-card");
+    expect(skeletonHtml).toContain("animate-pulse");
   });
 });
