@@ -7,6 +7,7 @@ describe("web dark glass theme", () => {
 
     for (const token of [
       "--sg-bg: #020406;",
+      "--sg-surface-header:",
       "--sg-surface-glass:",
       "--sg-cyan: #22d3ee;",
       "--sg-border-cyan:",

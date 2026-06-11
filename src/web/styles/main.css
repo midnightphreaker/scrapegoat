@@ -58,6 +58,7 @@
     --sg-bg: #020406;
     --sg-bg-elevated: #071014;
     --sg-surface: rgba(7, 16, 20, 0.86);
+    --sg-surface-header: rgba(2, 7, 10, 0.985);
     --sg-surface-glass: rgba(8, 13, 18, 0.72);
     --sg-surface-strong: rgba(12, 20, 26, 0.92);
     --sg-text: #e5f7fb;
@@ -132,8 +133,11 @@
   }
 
   .sg-header {
+    background: var(--sg-surface-header);
     padding: 1.5rem;
     border-color: var(--sg-border-cyan);
+    box-shadow: 0 18px 60px rgba(0, 0, 0, 0.58),
+      0 1px 0 rgba(103, 232, 249, 0.16) inset;
   }
 
   .sg-panel {
