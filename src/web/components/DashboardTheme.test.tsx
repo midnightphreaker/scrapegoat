@@ -86,9 +86,22 @@ describe("dashboard themed components", () => {
 
   it("renders JobItem with row primitive and Alpine state", async () => {
     const html = String(await JobItem({ job: runningJob }));
+    const rootClasses =
+      html.match(/id="job-item-job-1" class="([^"]+)"/)?.[1]?.split(/\s+/) ??
+      [];
+    const stopButtonClasses =
+      html
+        .match(/<button type="button" class="([^"]+)" title="Stop this job"/)?.[1]
+        ?.split(/\s+/) ?? [];
 
     expect(html).toContain('id="job-item-job-1"');
-    expect(html).toContain("sg-row");
+    expect(rootClasses).toContain("sg-row");
+    expect(rootClasses).not.toContain("block");
     expect(html).toContain("x-data=");
+    expect(stopButtonClasses).not.toContain("sg-button");
+    expect(stopButtonClasses).not.toContain("sg-button-ghost");
+    expect(stopButtonClasses).not.toContain("sg-button-danger");
+    expect(html).toContain("confirming ? 'sg-button sg-button-danger");
+    expect(html).toContain(": 'sg-button sg-button-ghost");
   });
 });

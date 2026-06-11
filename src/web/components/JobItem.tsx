@@ -56,7 +56,7 @@ const JobItem = ({ job }: JobItemProps) => {
   return (
     <div
       id={`job-item-${job.id}`}
-      class="sg-row block rounded-lg border border-slate-700/70 bg-slate-950/45 p-3"
+      class="sg-row rounded-lg border border-slate-700/70 bg-slate-950/45 p-3"
       data-job-id={job.id}
       x-data="{ jobId: $el.dataset.jobId, confirming: $el.dataset.confirming === 'true', isStopping: false }"
     >
@@ -114,7 +114,7 @@ const JobItem = ({ job }: JobItemProps) => {
             {isActiveJob && (
               <button
                 type="button"
-                class="sg-button sg-button-ghost min-h-0 px-2 py-1 text-xs text-center transition-colors duration-150 ease-in-out"
+                class="font-medium rounded-lg text-xs p-1 text-center inline-flex items-center transition-colors duration-150 ease-in-out"
                 title="Stop this job"
                 x-bind:class={`confirming ? '${confirmingStateClasses}' : '${defaultStateClasses}'`}
                 x-on:click="
