@@ -25,6 +25,7 @@ import { ArchiveExtractor, UploadStagingService } from "../../../upload/index";
 import type { UploadConfig } from "../../../upload/types";
 import { loadConfig } from "../../../utils/config";
 import { logger } from "../../../utils/logger";
+import { detectZipBackedDocumentFormat } from "../../../utils/zipBackedDocument";
 import { registerUploadPageRoute } from "./page";
 
 let stagingService: UploadStagingService | null = null;
@@ -182,7 +183,26 @@ export async function registerUploadRoutes(
           const buffer = await part.toBuffer();
           const fileName = part.filename;
           try {
-            if (extractor.isArchiveBuffer(buffer)) {
+            const zipBackedDocument = await detectZipBackedDocumentFormat(buffer);
+            if (zipBackedDocument) {
+              const staged = await service.stageFile(
+                sessionId,
+                fileName,
+                buffer,
+                false,
+                undefined,
+                zipBackedDocument.mimeType,
+              );
+              stagedFiles.push({
+                id: staged.id,
+                name: staged.displayName,
+                path: staged.relativePath,
+                size: staged.size,
+                ingestible: staged.ingestible,
+                fromArchive: staged.fromArchive,
+                mimeType: staged.mimeType,
+              });
+            } else if (extractor.isArchiveBuffer(buffer)) {
               const extractDir = `${session.stagingPath}/__extract_${Date.now()}`;
               const result = await extractor.extract(buffer, extractDir);
               const stagedResult = await stageArchiveExtractionResult(

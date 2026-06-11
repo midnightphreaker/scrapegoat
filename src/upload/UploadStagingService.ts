@@ -131,15 +131,17 @@ export class UploadStagingService {
     content: Buffer,
     fromArchive = false,
     archiveSource?: string,
+    detectedMimeType?: string,
   ): Promise<StagedFile> {
     const session = this.requireActiveSession(sessionId);
 
     // Validate sizes
     validateFileSize(content.length, this.config.maxFileSizeBytes, fileName);
-    const detectedMimeType = mime.getType(fileName) ?? "application/octet-stream";
+    const mimeType =
+      detectedMimeType ?? mime.getType(fileName) ?? "application/octet-stream";
     if (
       this.config.maxDocumentSizeBytes !== undefined &&
-      MimeTypeUtils.isSupportedDocument(detectedMimeType) &&
+      MimeTypeUtils.isSupportedDocument(mimeType) &&
       content.length > this.config.maxDocumentSizeBytes
     ) {
       throw new Error(
@@ -194,9 +196,6 @@ export class UploadStagingService {
     // Write the file
     await fs.writeFile(absolutePath, content);
 
-    // Detect MIME type
-    const mimeType = mime.getType(safeName) ?? "application/octet-stream";
-
     const staged: StagedFile = {
       id: fileId,
       originalName: fileName,
@@ -207,7 +206,8 @@ export class UploadStagingService {
       mimeType,
       fromArchive,
       archiveSource,
-      ingestible: isIngestibleFileType(safeName),
+      ingestible:
+        isIngestibleFileType(safeName) || MimeTypeUtils.isSupportedDocument(mimeType),
     };
 
     // Check for rename

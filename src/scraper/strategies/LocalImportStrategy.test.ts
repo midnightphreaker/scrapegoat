@@ -1,3 +1,4 @@
+import archiver from "archiver";
 import { vol } from "memfs";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { loadConfig } from "../../utils/config";
@@ -7,6 +8,21 @@ import { LocalImportStrategy } from "./LocalImportStrategy";
 
 vi.mock("node:fs/promises", () => ({ default: vol.promises }));
 vi.mock("node:fs");
+
+async function createZipBuffer(entries: Record<string, string>): Promise<Buffer> {
+  const archive = archiver("zip", { zlib: { level: 9 } });
+  const chunks: Buffer[] = [];
+
+  archive.on("data", (chunk: Buffer) => chunks.push(chunk));
+
+  for (const [name, content] of Object.entries(entries)) {
+    archive.append(content, { name });
+  }
+
+  await archive.finalize();
+
+  return Buffer.concat(chunks);
+}
 
 describe("LocalImportStrategy", () => {
   const appConfig = loadConfig();
@@ -128,6 +144,41 @@ describe("LocalImportStrategy", () => {
           currentUrl: "file:///import/mylib/1.0/guides/intro.md",
           result: expect.objectContaining({
             url: "file:///import/mylib/1.0/guides/intro.md",
+          }),
+        }),
+      );
+    });
+
+    it("routes a DOCX payload with a .zip extension to document processing", async () => {
+      const strategy = new LocalImportStrategy(appConfig);
+      const stagingPath = "/tmp/staging/mylib/1.0";
+      const progress = vi.fn();
+      const docxBuffer = await createZipBuffer({
+        "[Content_Types].xml": "<Types></Types>",
+        "word/document.xml": "<w:document><w:t>Hello document</w:t></w:document>",
+      });
+
+      vol.fromJSON({}, "/");
+      vol.mkdirSync(stagingPath, { recursive: true });
+      vol.writeFileSync(`${stagingPath}/misnamed.zip`, docxBuffer);
+
+      const options: ScraperOptions = {
+        url: "file:///import/mylib/1.0/misnamed.zip",
+        library: "mylib",
+        version: "1.0",
+        maxPages: 10,
+        maxDepth: 0,
+        localImportStagingPath: stagingPath,
+      };
+
+      await strategy.scrape(options, progress);
+
+      expect(progress).toHaveBeenCalledWith(
+        expect.objectContaining({
+          currentUrl: "file:///import/mylib/1.0/misnamed.zip",
+          result: expect.objectContaining({
+            sourceContentType:
+              "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
           }),
         }),
       );

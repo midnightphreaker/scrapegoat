@@ -14,6 +14,7 @@ import type { AppConfig } from "../../utils/config";
 import { ScraperError } from "../../utils/errors";
 import { logger } from "../../utils/logger";
 import { MimeTypeUtils } from "../../utils/mimeTypeUtils";
+import { detectZipBackedDocumentFormat } from "../../utils/zipBackedDocument";
 import { FileFetcher } from "../fetcher";
 import { FetchStatus, type RawContent } from "../fetcher/types";
 import { PipelineFactory } from "../pipelines/PipelineFactory";
@@ -148,10 +149,12 @@ export class LocalImportStrategy extends BaseScraperStrategy {
     }
 
     // Process as a file — read content and run through pipeline
-    const mimeType =
-      MimeTypeUtils.detectMimeTypeFromPath(resolvedPath) ?? "application/octet-stream";
-
     const contentBuffer = await fs.readFile(resolvedPath);
+    const zipBackedDocument = await detectZipBackedDocumentFormat(contentBuffer);
+    const mimeType =
+      zipBackedDocument?.mimeType ??
+      MimeTypeUtils.detectMimeTypeFromPath(resolvedPath) ??
+      "application/octet-stream";
     const rawContent: RawContent = {
       source: item.url,
       content: contentBuffer,

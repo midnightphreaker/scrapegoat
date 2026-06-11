@@ -156,12 +156,25 @@ const INGESTIBLE_EXTENSIONS = new Set([
   ".md",
   ".markdown",
   ".txt",
+  ".pdf",
+  ".doc",
+  ".docx",
+  ".xls",
+  ".xlsx",
+  ".ppt",
+  ".pptx",
+  ".odt",
+  ".ods",
+  ".odp",
+  ".rtf",
+  ".epub",
+  ".fb2",
+  ".ipynb",
   // Archive formats (extracted, not ingested directly, but accepted for upload)
   ".zip",
   ".tar",
   ".tar.gz",
   ".tgz",
-  ".tar.bz2",
 ]);
 
 /**
@@ -175,7 +188,7 @@ export function isIngestibleFileType(fileName: string): boolean {
   const lower = fileName.toLowerCase();
 
   // Check compound extensions first
-  if (lower.endsWith(".tar.gz") || lower.endsWith(".tar.bz2")) {
+  if (lower.endsWith(".tar.gz")) {
     return true;
   }
 
