@@ -120,9 +120,6 @@ export class LocalImportStrategy extends BaseScraperStrategy {
       return { url: item.url, links: [], status: FetchStatus.NOT_FOUND };
     }
 
-    const { library, version } = parsed;
-    const urlPrefix = `file:///import/${encodeURIComponent(library)}/${encodeURIComponent(version)}/`;
-
     // Check if path is a directory — return links to children
     let stats: Awaited<ReturnType<typeof fs.stat>> | null = null;
     try {
@@ -138,10 +135,11 @@ export class LocalImportStrategy extends BaseScraperStrategy {
       const entries = await fs.readdir(resolvedPath, {
         withFileTypes: true,
       });
+      const directoryUrl = item.url.endsWith("/") ? item.url : `${item.url}/`;
       const links = entries
         .map((entry) => {
           const encodedName = encodeURIComponent(entry.name);
-          return `${urlPrefix}${entry.isDirectory() ? `${encodedName}/` : encodedName}`;
+          return `${directoryUrl}${entry.isDirectory() ? `${encodedName}/` : encodedName}`;
         })
         .filter((url) => this.shouldProcessUrl(url, options));
 

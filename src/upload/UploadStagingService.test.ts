@@ -300,4 +300,44 @@ describe("UploadStagingService", () => {
       expect(stats.renamedFiles).toBe(0);
     });
   });
+
+  describe("document size validation", () => {
+    it("rejects document files that exceed the configured document size limit", async () => {
+      const limitedService = new UploadStagingService({
+        stagingMode: "filesystem",
+        stagingPath: tmpBase,
+        sessionTtlSeconds: 0,
+        maxFileSizeBytes: 1024,
+        maxDocumentSizeBytes: 10,
+      });
+      const session = await limitedService.createSession("doc-size-test", "1.0");
+
+      await expect(
+        limitedService.stageFile(session.id, "oversized.pdf", Buffer.alloc(11)),
+      ).rejects.toThrow("exceeds maximum document size limit");
+
+      const stats = limitedService.getSessionStats(session.id);
+      expect(stats.fileCount).toBe(0);
+
+      limitedService.dispose();
+    });
+
+    it("allows non-document files above the document limit when upload limit allows them", async () => {
+      const limitedService = new UploadStagingService({
+        stagingMode: "filesystem",
+        stagingPath: tmpBase,
+        sessionTtlSeconds: 0,
+        maxFileSizeBytes: 1024,
+        maxDocumentSizeBytes: 10,
+      });
+      const session = await limitedService.createSession("text-size-test", "1.0");
+
+      await limitedService.stageFile(session.id, "large.md", Buffer.alloc(11));
+
+      const stats = limitedService.getSessionStats(session.id);
+      expect(stats.fileCount).toBe(1);
+
+      limitedService.dispose();
+    });
+  });
 });

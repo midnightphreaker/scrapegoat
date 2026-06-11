@@ -123,20 +123,15 @@ describe("ArchiveExtractor", () => {
       expect(entryError).toBeDefined();
     });
 
-    it("returns files extracted before abort", async () => {
+    it("does not return partially extracted files when entry count aborts", async () => {
       const maxEntries = 3;
       const extractor = new ArchiveExtractor(maxEntries, 10 * 1024 * 1024);
       const zipBuf = await createZipBuffer(10);
 
       const result = await extractor.extract(zipBuf, extractDir);
 
-      // Files before the limit should have been extracted
-      expect(result.files.length).toBeGreaterThan(0);
-      // Each extracted file should have valid content
-      for (const file of result.files) {
-        expect(file.content.length).toBeGreaterThan(0);
-        expect(file.fromArchive).toBe(true);
-      }
+      expect(result.aborted).toBe(true);
+      expect(result.files).toHaveLength(0);
     });
   });
 

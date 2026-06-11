@@ -97,4 +97,40 @@ describe("LocalImportStrategy", () => {
       }
     });
   });
+
+  describe("directory traversal", () => {
+    it("preserves nested directory paths when discovering local import files", async () => {
+      const strategy = new LocalImportStrategy(appConfig);
+      const stagingPath = "/tmp/staging/mylib/1.0";
+      const progress = vi.fn();
+
+      vol.fromJSON(
+        {
+          "/tmp/staging/mylib/1.0/guides/intro.md": "# Intro",
+        },
+        "/",
+      );
+
+      const options: ScraperOptions = {
+        url: "file:///import/mylib/1.0/",
+        library: "mylib",
+        version: "1.0",
+        maxPages: 10,
+        maxDepth: 3,
+        maxConcurrency: 1,
+        localImportStagingPath: stagingPath,
+      };
+
+      await strategy.scrape(options, progress);
+
+      expect(progress).toHaveBeenCalledWith(
+        expect.objectContaining({
+          currentUrl: "file:///import/mylib/1.0/guides/intro.md",
+          result: expect.objectContaining({
+            url: "file:///import/mylib/1.0/guides/intro.md",
+          }),
+        }),
+      );
+    });
+  });
 });

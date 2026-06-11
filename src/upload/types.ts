@@ -116,6 +116,8 @@ export interface UploadConfig {
   maxTotalSizeBytes: number;
   /** Maximum single file size in bytes (default: 512MB) */
   maxFileSizeBytes: number;
+  /** Maximum binary document size in bytes before document parsing */
+  maxDocumentSizeBytes?: number;
   /** Maximum number of files per session */
   maxFiles: number;
   /** Session TTL in seconds before auto-cleanup (default: 3600) */
@@ -139,6 +141,7 @@ export const DEFAULT_UPLOAD_CONFIG: UploadConfig = {
   stagingMode: "memory",
   maxTotalSizeBytes: 2048 * 1024 * 1024,
   maxFileSizeBytes: 128 * 1024 * 1024,
+  maxDocumentSizeBytes: undefined,
   maxFiles: 9999,
   sessionTtlSeconds: 3600,
   maxArchiveEntries: 9999,

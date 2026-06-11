@@ -14,9 +14,11 @@ import fs from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import mime from "mime";
+import { MimeTypeUtils } from "../utils/mimeTypeUtils";
 import { ImportTreeBuilder } from "./ImportTreeBuilder";
 import {
   ensureWithinBase,
+  formatBytes,
   isIngestibleFileType,
   sanitizeFileName,
   validateFileSize,
@@ -134,6 +136,16 @@ export class UploadStagingService {
 
     // Validate sizes
     validateFileSize(content.length, this.config.maxFileSizeBytes, fileName);
+    const detectedMimeType = mime.getType(fileName) ?? "application/octet-stream";
+    if (
+      this.config.maxDocumentSizeBytes !== undefined &&
+      MimeTypeUtils.isSupportedDocument(detectedMimeType) &&
+      content.length > this.config.maxDocumentSizeBytes
+    ) {
+      throw new Error(
+        `File "${fileName}" exceeds maximum document size limit (${formatBytes(this.config.maxDocumentSizeBytes)}): ${formatBytes(content.length)}`,
+      );
+    }
     const currentTotal = this.totalSessionSize(session);
     validateTotalSize(currentTotal, content.length, this.config.maxTotalSizeBytes);
 

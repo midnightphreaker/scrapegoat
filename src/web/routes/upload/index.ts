@@ -41,6 +41,7 @@ function getStagingService(): UploadStagingService {
       stagingPath: webImport.stagingInternalPath || undefined,
       maxTotalSizeBytes: webImport.maxTotalSizeBytes,
       maxFileSizeBytes: webImport.maxFileSizeBytes,
+      maxDocumentSizeBytes: config.scraper.document.maxSize,
       maxFiles: webImport.maxFiles,
       sessionTtlSeconds: webImport.sessionTtlSeconds,
       maxArchiveCompressedBytes: webImport.maxArchiveCompressedBytes,
