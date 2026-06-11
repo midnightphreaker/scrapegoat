@@ -42,21 +42,21 @@ const ProgressBar = ({ progress, showText = true }: ProgressBarProps) => {
   return (
     <div class="w-full">
       {showText && (
-        <div class="flex justify-between text-xs text-gray-600 dark:text-gray-400 mb-1">
+        <div class="flex justify-between text-xs sg-muted mb-1">
           <span>Progress</span>
           <span safe>{getProgressText()}</span>
         </div>
       )}
-      <div class="w-full bg-gray-200 rounded-full h-2 dark:bg-gray-700">
+      <div class="sg-progress-track">
         {isIndeterminate ? (
           // Indeterminate progress bar with animation
           <div
-            class="bg-gray-600 h-2 rounded-full animate-pulse"
+            class="sg-progress-fill animate-pulse"
             style="width: 30%"
           ></div>
         ) : (
           <div
-            class="bg-gray-600 h-2 rounded-full transition-all duration-300"
+            class="sg-progress-fill transition-all duration-300"
             style={`width: ${percentage}%`}
           ></div>
         )}

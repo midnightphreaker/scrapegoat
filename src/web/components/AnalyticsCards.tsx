@@ -30,48 +30,36 @@ const AnalyticsCards = ({
   activeVersions,
   indexedPages,
 }: AnalyticsCardsProps) => (
-  <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-4 animate-[fadeSlideIn_0.2s_ease-out]">
+  <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-4 animate-[fadeSlideIn_0.2s_ease-out]">
     {/* Knowledge Base Card */}
-    <div class="p-4 bg-white rounded-lg shadow dark:bg-gray-800 border border-gray-300 dark:border-gray-600">
-      <div class="flex items-center">
-        <div>
-          <p class="text-sm font-medium text-gray-500 dark:text-gray-400">
-            Total Knowledge Base
-          </p>
-          <p class="text-xl font-semibold text-gray-900 dark:text-white" safe>
-            {formatNumber(totalChunks)} Chunks
-          </p>
-        </div>
+    <div class="sg-card">
+      <div class="space-y-2">
+        <p class="sg-label">Total Knowledge Base</p>
+        <p class="text-xl font-semibold text-white" safe>
+          {formatNumber(totalChunks)} Chunks
+        </p>
       </div>
     </div>
 
     {/* Active Libraries Card */}
-    <div class="p-4 bg-white rounded-lg shadow dark:bg-gray-800 border border-gray-300 dark:border-gray-600">
-      <div class="flex items-center">
-        <div>
-          <p class="text-sm font-medium text-gray-500 dark:text-gray-400">
-            Libraries / Versions
-          </p>
-          <p class="text-xl font-semibold text-gray-900 dark:text-white">
-            {activeLibraries}
-            {" / "}
-            {activeVersions}
-          </p>
-        </div>
+    <div class="sg-card">
+      <div class="space-y-2">
+        <p class="sg-label">Libraries / Versions</p>
+        <p class="text-xl font-semibold text-white">
+          {activeLibraries}
+          {" / "}
+          {activeVersions}
+        </p>
       </div>
     </div>
 
     {/* Indexed Pages Card */}
-    <div class="p-4 bg-white rounded-lg shadow dark:bg-gray-800 border border-gray-300 dark:border-gray-600">
-      <div class="flex items-center">
-        <div>
-          <p class="text-sm font-medium text-gray-500 dark:text-gray-400">
-            Indexed Pages
-          </p>
-          <p class="text-xl font-semibold text-gray-900 dark:text-white" safe>
-            {formatNumber(indexedPages)}
-          </p>
-        </div>
+    <div class="sg-card">
+      <div class="space-y-2">
+        <p class="sg-label">Indexed Pages</p>
+        <p class="text-xl font-semibold text-white" safe>
+          {formatNumber(indexedPages)}
+        </p>
       </div>
     </div>
   </div>

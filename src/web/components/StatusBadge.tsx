@@ -14,23 +14,20 @@ interface StatusBadgeProps {
  * Get CSS classes for status badge based on status type.
  */
 function getStatusClasses(status: VersionStatus): string {
-  const baseClasses = "px-1.5 py-0.5 text-xs font-medium rounded";
-
   switch (status) {
     case VersionStatus.COMPLETED:
-      return `${baseClasses} bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-300`;
+      return "sg-badge sg-badge-success";
     case VersionStatus.RUNNING:
     case VersionStatus.UPDATING:
-      return `${baseClasses} bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-300`;
+      return "sg-badge sg-badge-cyan";
     case VersionStatus.QUEUED:
-      return `${baseClasses} bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-300`;
+      return "sg-badge sg-badge-warning";
     case VersionStatus.FAILED:
-      return `${baseClasses} bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-300`;
+      return "sg-badge sg-badge-danger";
     case VersionStatus.CANCELLED:
-      return `${baseClasses} bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-300`;
     case VersionStatus.NOT_INDEXED:
     default:
-      return `${baseClasses} bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400`;
+      return "sg-badge";
   }
 }
 

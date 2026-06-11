@@ -22,9 +22,9 @@ const JobList = ({ jobs }: JobListProps) => {
         {hasJobs ? (
           jobs.map((job) => <JobItem job={job} />)
         ) : (
-          <p class="text-center text-gray-500 dark:text-gray-400">
+          <div class="rounded-lg border border-dashed border-slate-700/70 bg-slate-950/40 px-4 py-6 text-center text-sm sg-muted">
             No pending jobs.
-          </p>
+          </div>
         )}
       </div>
       {/* Out-of-band swap for the Clear Completed Jobs button */}

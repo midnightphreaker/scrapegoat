@@ -13,6 +13,28 @@ interface JobItemProps {
   job: JobInfo;
 }
 
+function getPipelineStatusClasses(
+  status: PipelineJobStatus,
+  hasError: boolean,
+): string {
+  if (hasError || status === PipelineJobStatus.FAILED) {
+    return "sg-badge sg-badge-danger";
+  }
+
+  switch (status) {
+    case PipelineJobStatus.COMPLETED:
+      return "sg-badge sg-badge-success";
+    case PipelineJobStatus.RUNNING:
+    case PipelineJobStatus.CANCELLING:
+      return "sg-badge sg-badge-cyan";
+    case PipelineJobStatus.QUEUED:
+      return "sg-badge sg-badge-warning";
+    case PipelineJobStatus.CANCELLED:
+    default:
+      return "sg-badge";
+  }
+}
+
 /**
  * Renders a single job item with its details and status.
  * @param props - Component props including the job information.
@@ -27,26 +49,26 @@ const JobItem = ({ job }: JobItemProps) => {
 
   // Define state-specific button classes for Alpine toggling
   const defaultStateClasses =
-    "border border-gray-300 bg-white text-red-600 hover:bg-red-50 focus:ring-4 focus:outline-none focus:ring-red-100 dark:border-gray-600 dark:bg-gray-800 dark:text-red-400 dark:hover:bg-gray-700 dark:focus:ring-red-900";
+    "sg-button sg-button-ghost min-h-0 px-2 py-1 text-xs";
   const confirmingStateClasses =
-    "bg-red-600 text-white border-red-600 focus:ring-4 focus:outline-none focus:ring-red-300 dark:bg-red-700 dark:border-red-700 dark:focus:ring-red-800";
+    "sg-button sg-button-danger min-h-0 px-2 py-1 text-xs";
 
   return (
     <div
       id={`job-item-${job.id}`}
-      class="block p-3 bg-gray-50 dark:bg-gray-700 rounded-lg border border-gray-200 dark:border-gray-600"
+      class="sg-row block rounded-lg border border-slate-700/70 bg-slate-950/45 p-3"
       data-job-id={job.id}
       x-data="{ jobId: $el.dataset.jobId, confirming: $el.dataset.confirming === 'true', isStopping: false }"
     >
-      <div class="flex items-start justify-between">
+      <div class="flex items-start justify-between gap-4">
         <div class="flex-1">
-          <p class="text-sm font-medium text-gray-900 dark:text-white">
+          <p class="text-sm font-medium text-white">
             <span safe>{job.library}</span>{" "}
             <VersionBadge version={job.version} />
           </p>
 
           {/* Timestamps */}
-          <div class="text-xs text-gray-500 dark:text-gray-400 mt-1">
+          <div class="text-xs sg-muted mt-1">
             {job.startedAt ? (
               <div>
                 Last Indexed:{" "}
@@ -64,11 +86,11 @@ const JobItem = ({ job }: JobItemProps) => {
 
           {/* Error message display */}
           {job.errorMessage || job.error ? (
-            <div class="mt-2 p-2 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded text-xs">
-              <div class="font-medium text-red-800 dark:text-red-300 mb-1">
+            <div class="mt-2 rounded-lg border border-rose-500/30 bg-rose-950/40 p-2 text-xs">
+              <div class="font-medium text-rose-200 mb-1">
                 Error:
               </div>
-              <div safe class="text-red-700 dark:text-red-400">
+              <div safe class="text-rose-300">
                 {job.errorMessage || job.error}
               </div>
             </div>
@@ -82,13 +104,7 @@ const JobItem = ({ job }: JobItemProps) => {
               <StatusBadge status={job.dbStatus} />
             ) : (
               <span
-                class={`px-1.5 py-0.5 text-xs font-medium rounded ${
-                  job.status === PipelineJobStatus.COMPLETED
-                    ? "bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-300"
-                    : job.error
-                      ? "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-300"
-                      : "bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-300"
-                }`}
+                class={getPipelineStatusClasses(job.status, Boolean(job.error))}
               >
                 {job.status}
               </span>
@@ -98,7 +114,7 @@ const JobItem = ({ job }: JobItemProps) => {
             {isActiveJob && (
               <button
                 type="button"
-                class="font-medium rounded-lg text-xs p-1 text-center inline-flex items-center transition-colors duration-150 ease-in-out"
+                class="sg-button sg-button-ghost min-h-0 px-2 py-1 text-xs text-center transition-colors duration-150 ease-in-out"
                 title="Stop this job"
                 x-bind:class={`confirming ? '${confirmingStateClasses}' : '${defaultStateClasses}'`}
                 x-on:click="
@@ -148,7 +164,7 @@ const JobItem = ({ job }: JobItemProps) => {
           </div>
           {job.error ? (
             // Keep the error badge for clarity if an error occurred
-            <span class="bg-red-100 text-red-800 text-xs font-medium px-1.5 py-0.5 rounded dark:bg-red-900 dark:text-red-300">
+            <span class="sg-badge sg-badge-danger">
               Error
             </span>
           ) : null}
