@@ -13,6 +13,10 @@ describe("Layout", () => {
 
     expect(html).toContain('src="/ScrapeGoat-Banner.svg"');
     expect(html).toContain('alt="ScrapeGoat"');
+    expect(html).toContain('content="#020406"');
+    expect(html).toContain('class="sg-shell"');
+    expect(html).toContain('class="sg-header sticky top-0 z-30"');
+    expect(html).toContain('class="sg-page"');
     expect(html).not.toContain("phrk</span>");
     expect(html).not.toContain("v2.4.0");
   });

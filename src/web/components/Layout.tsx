@@ -119,7 +119,7 @@ const Layout = ({
         <link rel="manifest" href="/manifest.json" />
         <meta name="msapplication-TileColor" content="#ffffff" />
         <meta name="msapplication-TileImage" content="/ms-icon-144x144.png" />
-        <meta name="theme-color" content="#ffffff" />
+        <meta name="theme-color" content="#020406" />
         {/* Bundled CSS (includes Tailwind and Flowbite) */}
         <link rel="stylesheet" href="/assets/main.css" />
         {/* Add style for htmx-indicator behavior (needed globally) */}
@@ -149,17 +149,17 @@ const Layout = ({
           `}
         </style>
       </head>
-      <body class="bg-gray-50 dark:bg-gray-900" hx-ext="morph">
+      <body class="sg-shell" hx-ext="morph">
         {/* Toast notification component */}
         <Toast />
 
         {/* Full-width header with ScrapeGoat branding */}
         <header
-          class="bg-white border-b border-gray-200 dark:bg-gray-950 dark:border-gray-800"
+          class="sg-header sticky top-0 z-30"
           x-data={versionInitializer}
           x-init="queueCheck()"
         >
-          <div class="container max-w-2xl mx-auto px-4 py-3">
+          <div class="sg-page py-3">
             <div class="flex items-center justify-between gap-4">
               <a href="/" class="block shrink-0" aria-label="ScrapeGoat home">
                 <img
@@ -171,18 +171,18 @@ const Layout = ({
               <span
                 x-show="hasUpdate"
                 x-cloak
-                class="inline-flex items-center gap-2 rounded-full bg-gray-100 dark:bg-gray-800 px-3 py-1.5 text-sm font-medium text-gray-700 dark:text-gray-300 border border-gray-200 dark:border-gray-700"
+                class="sg-badge sg-badge-cyan gap-2"
                 role="status"
                 aria-live="polite"
               >
-                <span class="flex h-4 w-4 items-center justify-center rounded-full bg-gray-500 text-white text-xs font-bold">
+                <span class="flex h-4 w-4 items-center justify-center rounded-full bg-cyan-300 text-[10px] font-bold text-slate-950">
                   !
                 </span>
                 <a
                   x-bind:href="latestReleaseUrl"
                   target="_blank"
                   rel="noopener noreferrer"
-                  class="hover:text-gray-900 dark:hover:text-white transition-colors"
+                  class="hover:text-white transition-colors"
                 >
                   <span class="mr-1">Update available</span>
                 </a>
@@ -191,7 +191,7 @@ const Layout = ({
           </div>
         </header>
 
-        <div class="container max-w-2xl mx-auto px-4 py-6">
+        <div class="sg-page">
           <main>{children}</main>
         </div>
 
