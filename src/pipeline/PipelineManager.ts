@@ -688,6 +688,8 @@ export class PipelineManager implements IPipeline {
     const { id: jobId, abortController } = job;
     const signal = abortController.signal; // Get signal for error checking
     let errorCount = 0;
+    let processedDocumentCount = 0;
+    const erroredDocumentUrls = new Set<string>();
 
     // Instantiate a worker for this job.
     // Dependencies (store, scraperService) are held by the manager.
@@ -699,9 +701,15 @@ export class PipelineManager implements IPipeline {
       await worker.executeJob(job, {
         onJobProgress: async (internalJob, progress) => {
           await this.updateJobProgress(internalJob, progress);
+          if (progress.result) {
+            processedDocumentCount++;
+          }
         },
         onJobError: async (internalJob, error, document) => {
           errorCount++;
+          if (document?.url) {
+            erroredDocumentUrls.add(document.url);
+          }
           logger.warn(
             `⚠️  Job ${internalJob.id} error (${errorCount} total) ${document ? `on document ${document.url}` : ""}: ${error.message}`,
           );
@@ -717,9 +725,12 @@ export class PipelineManager implements IPipeline {
       // After worker completes without throwing, decide final status
       if (errorCount > 0) {
         const totalPages = job.progressMaxPages ?? 0;
-        // If error count equals or exceeds total pages, all docs failed
-        if (totalPages > 0 && errorCount >= totalPages) {
-          const errorMessage = `Job failed: ${errorCount}/${totalPages} documents could not be processed`;
+        const failedDocumentCount = erroredDocumentUrls.size || errorCount;
+        const totalDocuments = processedDocumentCount || totalPages;
+        // If every processed document errored, fail the job. totalPages may include
+        // virtual folder/root entries, so prefer actual PipelineResult counts.
+        if (totalDocuments > 0 && failedDocumentCount >= totalDocuments) {
+          const errorMessage = `Job failed: ${failedDocumentCount}/${totalDocuments} documents could not be processed`;
           await this.updateJobStatus(job, PipelineJobStatus.FAILED, errorMessage);
           job.error = new Error(errorMessage);
           job.finishedAt = new Date();
@@ -730,7 +741,7 @@ export class PipelineManager implements IPipeline {
         } else {
           // Partial success — some documents failed but not all
           logger.warn(
-            `⚠️  Job ${jobId} completed with ${errorCount} document errors out of ${totalPages} total pages`,
+            `⚠️  Job ${jobId} completed with ${failedDocumentCount} document errors out of ${totalDocuments} processed documents`,
           );
           await this.updateJobStatus(job, PipelineJobStatus.COMPLETED);
           job.finishedAt = new Date();

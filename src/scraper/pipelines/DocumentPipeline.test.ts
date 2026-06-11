@@ -292,6 +292,28 @@ describe("DocumentPipeline", () => {
       expect(result.chunks).toHaveLength(0);
     });
 
+    it("should include safe converter error details when conversion fails", async () => {
+      const extractBytesMock = vi.mocked(extractBytes);
+      extractBytesMock.mockRejectedValueOnce(
+        new Error("pdf backend failed: invalid xref table"),
+      );
+
+      const rawContent = createRawContent(
+        "sample.pdf",
+        "application/pdf",
+        Buffer.from("%PDF-invalid"),
+      );
+
+      const result = await pipeline.process(rawContent, baseOptions);
+
+      expect(result.errors).toHaveLength(1);
+      expect(result.errors![0].message).toContain(
+        "pdf backend failed: invalid xref table",
+      );
+      expect(result.textContent).toBeNull();
+      expect(result.chunks).toHaveLength(0);
+    });
+
     it("should process PDF with any source URL since Kreuzberg uses MIME type directly", async () => {
       const content = loadFixture("sample.pdf");
       const rawContent: RawContent = {

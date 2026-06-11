@@ -1354,6 +1354,57 @@ describe("PipelineManager", () => {
       expect(job?.status).toBe(PipelineJobStatus.FAILED);
       expect(job?.error?.message).toMatch(/0 of \d+ files were successfully processed/);
     });
+
+    it("should mark job as FAILED when every processed document reports errors even if a virtual folder was discovered", async () => {
+      mockWorkerInstance.executeJob.mockImplementation(async (job, callbacks) => {
+        await callbacks.onJobProgress?.(job, {
+          pagesScraped: 0,
+          totalPages: 2,
+          currentUrl: "file:///import/pdftest/123/",
+          depth: 0,
+          maxDepth: 3,
+          totalDiscovered: 2,
+          result: null,
+        });
+
+        const pdfResult = {
+          url: "file:///import/pdftest/123/manual.pdf",
+          title: "manual.pdf",
+          sourceContentType: "application/pdf",
+          contentType: "application/pdf",
+          textContent: null,
+          links: [],
+          errors: [new Error("Failed to convert document: pdf backend failed")],
+          chunks: [],
+        };
+
+        await callbacks.onJobProgress?.(job, {
+          pagesScraped: 1,
+          totalPages: 2,
+          currentUrl: pdfResult.url,
+          depth: 1,
+          maxDepth: 3,
+          totalDiscovered: 2,
+          result: pdfResult,
+        });
+        await callbacks.onJobError?.(job, pdfResult.errors[0], pdfResult);
+      });
+
+      const options = {
+        url: "file:///import/pdftest/123/",
+        library: "pdftest",
+        version: "123",
+        localImportStagingPath: "/tmp/staging-pdftest",
+      };
+      const jobId = await manager.enqueueScrapeJob("pdftest", "123", options);
+      await manager.start();
+      await vi.advanceTimersByTimeAsync(1);
+      await manager.waitForJobCompletion(jobId).catch(() => {});
+
+      const job = await manager.getJob(jobId);
+      expect(job?.status).toBe(PipelineJobStatus.FAILED);
+      expect(job?.error?.message).toContain("1/1 documents could not be processed");
+    });
   });
 
   // --- DB Status Update Retry Tests ---

@@ -131,8 +131,7 @@ export class DocumentPipeline extends BasePipeline {
       };
     } catch (error) {
       // Log a safe error message to avoid potential binary data in the logs
-      const errorName = error instanceof Error ? error.name : "UnknownError";
-      const safeMessage = `Failed to convert document: ${errorName}`;
+      const safeMessage = this.formatConversionError(error);
 
       logger.warn(`${safeMessage} for ${rawContent.source}`);
 
@@ -145,6 +144,21 @@ export class DocumentPipeline extends BasePipeline {
         chunks: [],
       };
     }
+  }
+
+  private formatConversionError(error: unknown): string {
+    const fallback = "Unknown error";
+    const rawDetail =
+      error instanceof Error
+        ? error.message.trim() || error.name || fallback
+        : String(error || fallback);
+    const detailWithoutControlChars = Array.from(rawDetail, (char) => {
+      const code = char.charCodeAt(0);
+      return code < 32 || code === 127 ? " " : char;
+    }).join("");
+    const safeDetail = detailWithoutControlChars.replace(/\s+/g, " ").trim();
+
+    return `Failed to convert document: ${safeDetail.slice(0, 500) || fallback}`;
   }
 
   /**
