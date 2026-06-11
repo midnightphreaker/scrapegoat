@@ -51,7 +51,7 @@ export function registerIndexRoute(
                 <button
                   id="clear-completed-btn"
                   type="button"
-                  class="sg-button sg-button-secondary px-3 py-1.5 text-xs"
+                  class="sg-button sg-button-ghost px-3 py-1.5 text-xs"
                   title="Clear all completed, cancelled, and failed jobs"
                   hx-post="/web/jobs/clear-completed"
                   hx-trigger="click"

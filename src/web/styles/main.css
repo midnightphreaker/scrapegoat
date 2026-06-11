@@ -247,6 +247,44 @@
     box-shadow: 0 12px 34px rgba(248, 113, 113, 0.2);
   }
 
+  .sg-button:disabled,
+  .sg-button-primary:disabled,
+  .sg-button-secondary:disabled,
+  .sg-button-ghost:disabled,
+  .sg-button-danger:disabled,
+  .sg-button[aria-disabled="true"],
+  .sg-button-primary[aria-disabled="true"],
+  .sg-button-secondary[aria-disabled="true"],
+  .sg-button-ghost[aria-disabled="true"],
+  .sg-button-danger[aria-disabled="true"] {
+    cursor: not-allowed;
+    opacity: 0.55;
+    transform: none;
+    box-shadow: none;
+  }
+
+  .sg-button:disabled:hover,
+  .sg-button-primary:disabled:hover,
+  .sg-button-secondary:disabled:hover,
+  .sg-button-ghost:disabled:hover,
+  .sg-button-danger:disabled:hover,
+  .sg-button[aria-disabled="true"]:hover,
+  .sg-button-primary[aria-disabled="true"]:hover,
+  .sg-button-secondary[aria-disabled="true"]:hover,
+  .sg-button-ghost[aria-disabled="true"]:hover,
+  .sg-button-danger[aria-disabled="true"]:hover {
+    transform: none;
+  }
+
+  .sg-button-ghost:disabled,
+  .sg-button-ghost:disabled:hover,
+  .sg-button-ghost[aria-disabled="true"],
+  .sg-button-ghost[aria-disabled="true"]:hover {
+    color: var(--sg-muted);
+    background: transparent;
+    border-color: transparent;
+  }
+
   .sg-input {
     width: 100%;
     color: var(--sg-text);
