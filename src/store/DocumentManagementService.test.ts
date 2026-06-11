@@ -363,6 +363,24 @@ describe("DocumentManagementService", () => {
         expect(defaultResult).toEqual({ bestMatch: "3.0.0", hasUnversioned: false });
       });
 
+      it("should return loose numeric versions for latest search", async () => {
+        mockStore.queryUniqueVersions.mockResolvedValue(["2"]);
+        mockStore.checkDocumentExists.mockResolvedValue(false);
+
+        const result = await docService.findBestVersion(library, "latest");
+
+        expect(result).toEqual({ bestMatch: "2", hasUnversioned: false });
+      });
+
+      it("should match an exact loose numeric target version", async () => {
+        mockStore.queryUniqueVersions.mockResolvedValue(["2"]);
+        mockStore.checkDocumentExists.mockResolvedValue(false);
+
+        const result = await docService.findBestVersion(library, "2");
+
+        expect(result).toEqual({ bestMatch: "2", hasUnversioned: false });
+      });
+
       it("should return best match and hasUnversioned=true when both exist", async () => {
         mockStore.queryUniqueVersions.mockResolvedValue(["1.0.0", "1.1.0"]); // Fix: Use mockStoreInstance
         mockStore.checkDocumentExists.mockResolvedValue(true); // Unversioned exists // Fix: Use mockStoreInstance

@@ -291,17 +291,20 @@ export class DocumentManagementService {
     const libraryAndVersion = `${library}${targetVersion ? `@${targetVersion}` : ""}`;
     logger.info(`🔍 Finding best version for ${libraryAndVersion}`);
 
-    // Check if unversioned documents exist *before* filtering for valid semver
+    // Check if unversioned documents exist *before* filtering version candidates
     const hasUnversioned = await this.store.checkDocumentExists(library, "");
-    const versionStrings = await this.listVersions(library);
+    const rawVersionStrings = await this.store.queryUniqueVersions(library);
+    const versionStrings = sortVersionsDescending(
+      rawVersionStrings.filter((version) => version !== ""),
+    );
 
     if (versionStrings.length === 0) {
       if (hasUnversioned) {
         logger.info(`ℹ️ Unversioned documents exist for ${library}`);
         return { bestMatch: null, hasUnversioned: true };
       }
-      // Throw error only if NO versions (semver or unversioned) exist
-      logger.warn(`⚠️  No valid versions found for ${library}`);
+      // Throw error only if NO versioned or unversioned documents exist
+      logger.warn(`⚠️  No indexed versions found for ${library}`);
       // The next line should usually throw
       await this.validateLibraryExists(library);
       // Fallback, should not reach here
@@ -311,24 +314,35 @@ export class DocumentManagementService {
     let bestMatch: string | null = null;
 
     if (!targetVersion || targetVersion === "latest") {
-      bestMatch = semver.maxSatisfying(versionStrings, "*");
+      bestMatch = versionStrings[0] ?? null;
     } else {
-      const versionRegex = /^(\d+)(?:\.(?:x(?:\.x)?|\d+(?:\.(?:x|\d+))?))?$|^$/;
-      if (!semver.valid(targetVersion) && !versionRegex.test(targetVersion)) {
-        logger.warn(`⚠️  Invalid target version format: ${targetVersion}`);
-        // Don't throw yet, maybe unversioned exists
+      const exactMatch = versionStrings.find((version) => version === targetVersion);
+      if (exactMatch) {
+        bestMatch = exactMatch;
       } else {
-        // Restore the previous logic with fallback
-        let range = targetVersion;
-        if (!semver.validRange(targetVersion)) {
-          // If it's not a valid range (like '1.2' or '1'), treat it like a tilde range
-          range = `~${targetVersion}`;
-        } else if (semver.valid(targetVersion)) {
-          // If it's an exact version, allow matching it OR any older version
-          range = `${range} || <=${targetVersion}`;
+        const versionRegex = /^(\d+)(?:\.(?:x(?:\.x)?|\d+(?:\.(?:x|\d+))?))?$|^$/;
+        if (!semver.valid(targetVersion) && !versionRegex.test(targetVersion)) {
+          logger.warn(`⚠️  Invalid target version format: ${targetVersion}`);
+          // Don't throw yet, maybe unversioned exists
+        } else {
+          // Restore the previous logic with fallback
+          let range = targetVersion;
+          if (!semver.validRange(targetVersion)) {
+            // If it's not a valid range (like '1.2' or '1'), treat it like a tilde range
+            range = `~${targetVersion}`;
+          } else if (semver.valid(targetVersion)) {
+            // If it's an exact version, allow matching it OR any older version
+            range = `${range} || <=${targetVersion}`;
+          }
+          // If it was already a valid range (like '1.x'), use it directly.
+          // Match using coerced semver values but return the stored version string.
+          bestMatch =
+            versionStrings.find((version) => {
+              const candidate =
+                semver.valid(version) ?? semver.valid(semver.coerce(version));
+              return candidate ? semver.satisfies(candidate, range) : false;
+            }) ?? null;
         }
-        // If it was already a valid range (like '1.x'), use it directly
-        bestMatch = semver.maxSatisfying(versionStrings, range);
       }
     }
 
