@@ -20,18 +20,19 @@ const LibraryDetailCard = ({ library }: LibraryDetailCardProps) => {
   const versions = library.versions || [];
   const latestVersion = versions[0];
   return (
-    <div class="block p-4 bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-300 dark:border-gray-600 mb-4">
-      <div class="flex justify-between items-start mb-1">
+    <div class="sg-panel mb-4">
+      <div class="mb-1">
         <div class="min-w-0">
-          <h3 class="text-lg font-medium text-gray-900 dark:text-white">
+          <div class="sg-label">Library</div>
+          <h1 class="text-2xl font-semibold text-white">
             <span safe>{library.name}</span>
-          </h3>
+          </h1>
           {latestVersion?.sourceUrl ? (
-            <div class="text-sm text-gray-500 dark:text-gray-400 truncate">
+            <div class="mt-1 truncate text-sm sg-muted">
               <a
                 href={latestVersion.sourceUrl}
                 target="_blank"
-                class="hover:underline"
+                class="hover:text-cyan-200 hover:underline"
                 title={latestVersion.sourceUrl}
                 safe
               >

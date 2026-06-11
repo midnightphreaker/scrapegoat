@@ -43,7 +43,7 @@ const LibraryList = ({ libraries }: LibraryListProps) => {
   return (
     <div
       id="library-list"
-      class="space-y-2 animate-[fadeSlideIn_0.2s_ease-out]"
+      class="grid gap-3 animate-[fadeSlideIn_0.2s_ease-out]"
     >
       {libraries.map((library) => (
         <LibraryItem library={library} />

@@ -5,6 +5,9 @@ import type { JobInfo } from "../../tools/GetJobInfoTool";
 import Alert from "./Alert";
 import AnalyticsCards from "./AnalyticsCards";
 import JobItem from "./JobItem";
+import LibraryDetailCard from "./LibraryDetailCard";
+import LibraryItem from "./LibraryItem";
+import LibraryList from "./LibraryList";
 import PrimaryButton from "./PrimaryButton";
 import ProgressBar from "./ProgressBar";
 import StatusBadge from "./StatusBadge";
@@ -103,5 +106,33 @@ describe("dashboard themed components", () => {
     expect(stopButtonClasses).not.toContain("sg-button-danger");
     expect(html).toContain("confirming ? 'sg-button sg-button-danger");
     expect(html).toContain(": 'sg-button sg-button-ghost");
+  });
+
+  it("renders library list and detail surfaces with dark glass primitives", async () => {
+    const library = {
+      name: "pdf-test2",
+      versions: [
+        {
+          version: "2",
+          documentCount: 278,
+          uniqueUrlCount: 1,
+          indexedAt: "2026-06-12T00:00:00.000Z",
+          status: VersionStatus.COMPLETED,
+          sourceUrl: "file:///import/pdf-test2/2/",
+        },
+      ],
+    };
+
+    const listHtml = String(await LibraryList({ libraries: [library] }));
+    const itemHtml = String(await LibraryItem({ library }));
+    const detailHtml = String(await LibraryDetailCard({ library }));
+
+    expect(listHtml).toContain('id="library-list"');
+    expect(listHtml).toContain("sg-card");
+    expect(itemHtml).toContain("sg-card");
+    expect(itemHtml).toContain("pdf-test2");
+    expect(detailHtml).toContain("sg-panel");
+    expect(detailHtml).toContain('id="version-list"');
+    expect(detailHtml).toContain('hx-trigger="library-change from:body"');
   });
 });

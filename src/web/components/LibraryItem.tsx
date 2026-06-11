@@ -19,32 +19,37 @@ const LibraryItem = ({ library }: LibraryItemProps) => {
   const versions = library.versions || [];
   const latestVersion = versions[0];
   return (
-    // Use Flowbite Card structure with updated padding and border, and white background
-    <div
-      id={`library-item-${library.name}`}
-      class="block px-4 py-2 bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-300 dark:border-gray-600"
-    >
-      <h3 class="text-lg font-medium text-gray-900 dark:text-white">
-        <a
-          href={`/libraries/${encodeURIComponent(library.name)}`}
-          class="hover:underline"
-        >
-          <span safe>{library.name}</span>
-        </a>
-      </h3>
-      {latestVersion?.sourceUrl ? (
-        <div class="text-sm text-gray-500 dark:text-gray-400 overflow-hidden h-5 @container">
-          <a
-            href={latestVersion.sourceUrl}
-            target="_blank"
-            class="inline-block whitespace-nowrap hover:underline hover:animate-[scrollText_2s_ease-in-out_forwards]"
-            title={latestVersion.sourceUrl}
-            safe
-          >
-            {latestVersion.sourceUrl}
-          </a>
+    <div id={`library-item-${library.name}`} class="sg-card">
+      <div class="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
+        <div class="min-w-0">
+          <h3 class="min-w-0 text-lg font-semibold text-white">
+            <a
+              href={`/libraries/${encodeURIComponent(library.name)}`}
+              class="hover:text-cyan-200"
+            >
+              <span safe>{library.name}</span>
+            </a>
+          </h3>
+          {latestVersion?.sourceUrl ? (
+            <div class="mt-1 h-5 overflow-hidden text-sm sg-muted @container">
+              <a
+                href={latestVersion.sourceUrl}
+                target="_blank"
+                class="inline-block whitespace-nowrap hover:text-cyan-200 hover:underline hover:animate-[scrollText_2s_ease-in-out_forwards]"
+                title={latestVersion.sourceUrl}
+                safe
+              >
+                {latestVersion.sourceUrl}
+              </a>
+            </div>
+          ) : null}
         </div>
-      ) : null}
+        {latestVersion ? (
+          <span class="sg-badge shrink-0" safe>
+            {versions.length} {versions.length === 1 ? "version" : "versions"}
+          </span>
+        ) : null}
+      </div>
       {/* Container for version rows */}
       <div class="mt-2">
         {versions.length > 0 ? (

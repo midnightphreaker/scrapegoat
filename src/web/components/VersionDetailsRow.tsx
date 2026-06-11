@@ -42,15 +42,15 @@ const VersionDetailsRow = ({
 
   // Define state-specific button classes for Alpine toggling
   const defaultStateClasses =
-    "text-red-700 border border-red-700 hover:bg-red-700 hover:text-white focus:ring-4 focus:outline-none focus:ring-red-300 dark:border-red-500 dark:text-red-500 dark:hover:text-white dark:focus:ring-red-800 dark:hover:bg-red-500";
+    "sg-button sg-button-danger min-w-6 h-6 p-1";
   const confirmingStateClasses =
-    "bg-red-600 text-white border-red-600 focus:ring-4 focus:outline-none focus:ring-red-300 dark:bg-red-700 dark:border-red-700 dark:focus:ring-red-800";
+    "sg-button sg-button-danger min-w-6 h-6 bg-rose-500/25 px-2 py-1";
 
   return (
     // Use flexbox for layout, add border between rows
     <div
       id={rowId}
-      class="flex justify-between items-center py-1 border-b border-gray-200 dark:border-gray-600 last:border-b-0"
+      class="flex flex-col gap-2 border-b border-white/10 py-2 last:border-b-0 sm:flex-row sm:items-center sm:justify-between"
       data-library-name={libraryName}
       data-version-param={versionParam}
       data-is-refreshing={initialIsRefreshing ? "true" : "false"}
@@ -86,18 +86,18 @@ const VersionDetailsRow = ({
     >
       {/* Version Label */}
       <span
-        class="text-sm text-gray-900 dark:text-white w-1/4 truncate"
+        class="min-w-0 text-sm text-white sm:w-1/4"
         title={versionLabel}
       >
         {version.ref.version ? (
           <VersionBadge version={version.ref.version} />
         ) : (
-          <span class="text-gray-600 dark:text-gray-400">Latest</span>
+          <span class="sg-muted">Latest</span>
         )}
       </span>
 
       {/* Stats Group */}
-      <div class="flex space-x-2 text-sm text-gray-600 dark:text-gray-400 w-3/4 justify-end items-center">
+      <div class="flex flex-wrap gap-x-3 gap-y-1 text-sm sg-muted sm:w-3/4 sm:justify-end">
         <span title="Number of unique pages indexed">
           Pages:{" "}
           <span class="font-semibold" safe>
@@ -127,7 +127,7 @@ const VersionDetailsRow = ({
             <template x-if="!isRefreshing">
               <button
                 type="button"
-                class="font-medium rounded-lg text-sm p-1 w-6 h-6 text-center inline-flex items-center justify-center transition-colors duration-150 ease-in-out text-gray-500 border border-gray-300 hover:bg-gray-100 hover:text-gray-700 focus:ring-4 focus:outline-none focus:ring-gray-200 dark:border-gray-600 dark:text-gray-400 dark:hover:text-white dark:focus:ring-gray-700 dark:hover:bg-gray-600"
+                class="sg-button sg-button-ghost h-6 w-6 p-1"
                 title="Refresh this version (re-scrape changed pages)"
                 x-on:click="
                   isRefreshing = true;
@@ -160,7 +160,7 @@ const VersionDetailsRow = ({
             <template x-if="isRefreshing">
               <button
                 type="button"
-                class="font-medium rounded-lg text-sm p-1 w-6 h-6 text-center inline-flex items-center justify-center transition-colors duration-150 ease-in-out text-gray-500 border border-gray-300 dark:border-gray-600 dark:text-gray-400"
+                class="sg-button sg-button-ghost h-6 w-6 p-1"
                 title="Refresh in progress..."
                 disabled
               >
@@ -182,7 +182,7 @@ const VersionDetailsRow = ({
         {showDelete && (
           <button
             type="button"
-            class="font-medium rounded-lg text-sm p-1 min-w-6 h-6 text-center inline-flex items-center justify-center transition-colors duration-150 ease-in-out"
+            class="inline-flex items-center justify-center"
             title="Remove this version"
             x-bind:class={`confirming ? '${confirmingStateClasses}' : '${defaultStateClasses}'`}
             x-bind:disabled="isDeleting"
