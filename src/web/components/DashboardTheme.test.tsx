@@ -134,5 +134,14 @@ describe("dashboard themed components", () => {
     expect(detailHtml).toContain("sg-panel");
     expect(detailHtml).toContain('id="version-list"');
     expect(detailHtml).toContain('hx-trigger="library-change from:body"');
+    expect(detailHtml).toContain(
+      'class="sg-button sg-button-ghost min-h-0 h-6 w-6 p-1"',
+    );
+    expect(detailHtml).toContain(
+      "confirming ? 'sg-button sg-button-danger min-h-0 min-w-6 h-6 bg-rose-500/25 px-2 py-1'",
+    );
+    expect(detailHtml).toContain(
+      ": 'sg-button sg-button-ghost min-h-0 min-w-6 h-6 p-1 text-rose-300 border-rose-400/35 hover:bg-rose-500/10'",
+    );
   });
 });

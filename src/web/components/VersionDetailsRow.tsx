@@ -42,9 +42,9 @@ const VersionDetailsRow = ({
 
   // Define state-specific button classes for Alpine toggling
   const defaultStateClasses =
-    "sg-button sg-button-danger min-w-6 h-6 p-1";
+    "sg-button sg-button-ghost min-h-0 min-w-6 h-6 p-1 text-rose-300 border-rose-400/35 hover:bg-rose-500/10";
   const confirmingStateClasses =
-    "sg-button sg-button-danger min-w-6 h-6 bg-rose-500/25 px-2 py-1";
+    "sg-button sg-button-danger min-h-0 min-w-6 h-6 bg-rose-500/25 px-2 py-1";
 
   return (
     // Use flexbox for layout, add border between rows
@@ -127,7 +127,7 @@ const VersionDetailsRow = ({
             <template x-if="!isRefreshing">
               <button
                 type="button"
-                class="sg-button sg-button-ghost h-6 w-6 p-1"
+                class="sg-button sg-button-ghost min-h-0 h-6 w-6 p-1"
                 title="Refresh this version (re-scrape changed pages)"
                 x-on:click="
                   isRefreshing = true;
@@ -160,7 +160,7 @@ const VersionDetailsRow = ({
             <template x-if="isRefreshing">
               <button
                 type="button"
-                class="sg-button sg-button-ghost h-6 w-6 p-1"
+                class="sg-button sg-button-ghost min-h-0 h-6 w-6 p-1"
                 title="Refresh in progress..."
                 disabled
               >
