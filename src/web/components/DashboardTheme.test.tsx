@@ -3,6 +3,7 @@ import { PipelineJobStatus } from "../../pipeline/types";
 import { VersionStatus } from "../../store/types";
 import type { JobInfo } from "../../tools/GetJobInfoTool";
 import Alert from "./Alert";
+import AddJobButton from "./AddJobButton";
 import AnalyticsCards from "./AnalyticsCards";
 import JobItem from "./JobItem";
 import LibraryDetailCard from "./LibraryDetailCard";
@@ -41,6 +42,16 @@ describe("dashboard themed components", () => {
     const html = String(await PrimaryButton({ children: "Save" }));
 
     expect(html).toContain('class="sg-button sg-button-primary w-full"');
+  });
+
+  it("renders AddJobButton with secondary resting state and hover modifier", async () => {
+    const html = String(await AddJobButton());
+
+    expect(html).toContain(
+      'class="sg-button sg-button-secondary sg-button-add-document w-full"',
+    );
+    expect(html).toContain('hx-get="/web/jobs/source-selection"');
+    expect(html).not.toContain("sg-button-primary");
   });
 
   it("renders success Alert with panel and success badge primitives", async () => {

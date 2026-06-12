@@ -23,6 +23,7 @@ describe("web dark glass theme", () => {
       ".sg-card",
       ".sg-button-primary",
       ".sg-button-secondary",
+      ".sg-button-add-document:hover",
       ".sg-button-ghost",
       ".sg-button-danger",
       ".sg-input",
