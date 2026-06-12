@@ -21,18 +21,18 @@ const SourceSelectionModal = () => {
         "x-on:keydown.escape": closeModal,
         "x-on:click.self": closeModal,
       }}
-      class="fixed inset-0 z-50 flex items-center justify-center bg-gray-900/60 backdrop-blur-sm transition-opacity duration-200"
+      class="fixed inset-0 z-50 flex items-center justify-center bg-black/75 p-4 backdrop-blur-md transition-opacity duration-200"
     >
       {/* Modal card */}
       <div
-        class="relative w-full max-w-lg mx-4 p-6 bg-white dark:bg-gray-800 rounded-xl shadow-2xl border border-gray-200 dark:border-gray-700 animate-[fadeSlideIn_0.2s_ease-out]"
+        class="sg-panel relative w-full max-w-2xl animate-[fadeSlideIn_0.2s_ease-out]"
         tabindex="0"
       >
         {/* Close button */}
         <button
           type="button"
           x-on:click={closeModal}
-          class="absolute top-3 right-3 p-1.5 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 rounded-full hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors duration-150"
+          class="sg-button sg-button-ghost absolute top-3 right-3 min-h-0 h-8 w-8 p-1.5"
           title="Close"
           aria-label="Close"
         >
@@ -54,11 +54,11 @@ const SourceSelectionModal = () => {
 
         <h3
           id="modal-title"
-          class="text-xl font-semibold text-gray-900 dark:text-white mb-1 pr-8"
+          class="mb-1 pr-8 text-xl font-semibold text-white"
         >
           Documentation Source Selection
         </h3>
-        <p class="text-sm text-gray-500 dark:text-gray-400 mb-5">
+        <p class="mb-5 text-sm sg-muted">
           Choose where your documentation source is located.
         </p>
 
@@ -68,13 +68,13 @@ const SourceSelectionModal = () => {
             type="button"
             x-on:click="selectedSource = 'remote'"
             x-bind:aria-pressed="selectedSource === 'remote'"
-            x-bind:class="selectedSource === 'remote' ? 'border-primary-500 dark:border-primary-400 shadow-md bg-primary-50 dark:bg-primary-900/20' : 'border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900'"
-            class="group p-4 border-2 rounded-lg hover:border-primary-500 dark:hover:border-primary-400 hover:shadow-md focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2 dark:focus:ring-offset-gray-800 transition-all duration-200 text-left cursor-pointer"
+            x-bind:class="selectedSource === 'remote' ? 'border-cyan-300/80 bg-cyan-400/10 shadow-[0_0_28px_rgba(34,211,238,0.18)]' : 'border-white/10 bg-slate-950/40'"
+            class="sg-card group cursor-pointer text-left transition-all duration-200 hover:border-cyan-300/70 hover:bg-cyan-400/5 focus:outline-none focus:ring-2 focus:ring-cyan-300/60"
           >
             <div class="flex items-center mb-2">
               <svg
-                x-bind:class="selectedSource === 'remote' ? 'text-primary-600 dark:text-primary-400' : 'text-gray-500 dark:text-gray-400'"
-                class="w-6 h-6 group-hover:text-primary-600 dark:group-hover:text-primary-400 transition-colors"
+                x-bind:class="selectedSource === 'remote' ? 'text-cyan-200' : 'sg-muted'"
+                class="w-6 h-6 group-hover:text-cyan-200 transition-colors"
                 fill="none"
                 stroke="currentColor"
                 viewBox="0 0 24 24"
@@ -88,13 +88,13 @@ const SourceSelectionModal = () => {
                 />
               </svg>
               <span
-                x-bind:class="selectedSource === 'remote' ? 'text-primary-600 dark:text-primary-400' : 'text-gray-900 dark:text-white'"
-                class="ml-2 text-base font-semibold group-hover:text-primary-600 dark:group-hover:text-primary-400 transition-colors"
+                x-bind:class="selectedSource === 'remote' ? 'text-cyan-100' : 'text-white'"
+                class="ml-2 text-base font-semibold group-hover:text-cyan-100 transition-colors"
               >
                 Remote URL
               </span>
             </div>
-            <p class="text-sm text-gray-600 dark:text-gray-300">
+            <p class="text-sm sg-muted">
               Use this for websites and remote documents accessible via HTTP/HTTPS.
             </p>
           </button>
@@ -104,13 +104,13 @@ const SourceSelectionModal = () => {
             type="button"
             x-on:click="selectedSource = 'local'"
             x-bind:aria-pressed="selectedSource === 'local'"
-            x-bind:class="selectedSource === 'local' ? 'border-primary-500 dark:border-primary-400 shadow-md bg-primary-50 dark:bg-primary-900/20' : 'border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900'"
-            class="group p-4 border-2 rounded-lg hover:border-primary-500 dark:hover:border-primary-400 hover:shadow-md focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2 dark:focus:ring-offset-gray-800 transition-all duration-200 text-left cursor-pointer"
+            x-bind:class="selectedSource === 'local' ? 'border-cyan-300/80 bg-cyan-400/10 shadow-[0_0_28px_rgba(34,211,238,0.18)]' : 'border-white/10 bg-slate-950/40'"
+            class="sg-card group cursor-pointer text-left transition-all duration-200 hover:border-cyan-300/70 hover:bg-cyan-400/5 focus:outline-none focus:ring-2 focus:ring-cyan-300/60"
           >
             <div class="flex items-center mb-2">
               <svg
-                x-bind:class="selectedSource === 'local' ? 'text-primary-600 dark:text-primary-400' : 'text-gray-500 dark:text-gray-400'"
-                class="w-6 h-6 group-hover:text-primary-600 dark:group-hover:text-primary-400 transition-colors"
+                x-bind:class="selectedSource === 'local' ? 'text-cyan-200' : 'sg-muted'"
+                class="w-6 h-6 group-hover:text-cyan-200 transition-colors"
                 fill="none"
                 stroke="currentColor"
                 viewBox="0 0 24 24"
@@ -124,13 +124,13 @@ const SourceSelectionModal = () => {
                 />
               </svg>
               <span
-                x-bind:class="selectedSource === 'local' ? 'text-primary-600 dark:text-primary-400' : 'text-gray-900 dark:text-white'"
-                class="ml-2 text-base font-semibold group-hover:text-primary-600 dark:group-hover:text-primary-400 transition-colors"
+                x-bind:class="selectedSource === 'local' ? 'text-cyan-100' : 'text-white'"
+                class="ml-2 text-base font-semibold group-hover:text-cyan-100 transition-colors"
               >
                 Local Documentation
               </span>
             </div>
-            <p class="text-sm text-gray-600 dark:text-gray-300">
+            <p class="text-sm sg-muted">
               Upload documents, folders, or archives from your current device.
             </p>
           </button>
@@ -141,7 +141,7 @@ const SourceSelectionModal = () => {
           type="button"
           x-on:click={proceed}
           x-bind:disabled="selectedSource === null"
-          class="mt-5 w-full flex justify-center py-2 px-3 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-primary-600 hover:bg-primary-700 disabled:bg-gray-300 disabled:text-gray-500 disabled:cursor-not-allowed dark:disabled:bg-gray-700 dark:disabled:text-gray-500 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500 transition-colors duration-150"
+          class="sg-button sg-button-primary mt-5 w-full disabled:cursor-not-allowed disabled:opacity-45"
         >
           Proceed
         </button>

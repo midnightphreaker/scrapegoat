@@ -56,12 +56,12 @@ const JobItem = ({ job }: JobItemProps) => {
   return (
     <div
       id={`job-item-${job.id}`}
-      class="sg-row rounded-lg border border-slate-700/70 bg-slate-950/45 p-3"
+      class="sg-row w-full rounded-lg border border-slate-700/70 bg-slate-950/45 p-3"
       data-job-id={job.id}
       x-data="{ jobId: $el.dataset.jobId, confirming: $el.dataset.confirming === 'true', isStopping: false }"
     >
-      <div class="flex items-start justify-between gap-4">
-        <div class="flex-1">
+      <div class="flex w-full min-w-0 flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+        <div class="min-w-0 flex-1">
           <p class="text-sm font-medium text-white">
             <span safe>{job.library}</span>{" "}
             <VersionBadge version={job.version} />
@@ -79,25 +79,25 @@ const JobItem = ({ job }: JobItemProps) => {
 
           {/* Progress bar for active jobs */}
           {job.progress && job.progress.totalPages > 0 && isActiveJob ? (
-            <div class="mt-2">
+            <div class="mt-2 w-full">
               <ProgressBar progress={job.progress} />
             </div>
           ) : null}
 
           {/* Error message display */}
           {job.errorMessage || job.error ? (
-            <div class="mt-2 rounded-lg border border-rose-500/30 bg-rose-950/40 p-2 text-xs">
+            <div class="mt-2 w-full rounded-lg border border-rose-500/30 bg-rose-950/40 p-2 text-xs">
               <div class="font-medium text-rose-200 mb-1">
                 Error:
               </div>
-              <div safe class="text-rose-300">
+              <div safe class="break-words text-rose-300">
                 {job.errorMessage || job.error}
               </div>
             </div>
           ) : null}
         </div>
 
-        <div class="flex flex-col items-end gap-2 ml-4">
+        <div class="flex shrink-0 flex-col items-start gap-2 sm:items-end">
           {/* Status badge */}
           <div class="flex items-center gap-2">
             {job.dbStatus ? (

@@ -30,7 +30,7 @@ const Tooltip = ({ text, position = "top" }: TooltipProps) => {
     >
       <button
         type="button"
-        class="text-gray-400 hover:text-gray-500 dark:text-gray-500 dark:hover:text-gray-400 focus:outline-none flex items-center"
+        class="flex items-center text-cyan-200/65 transition-colors hover:text-cyan-100 focus:outline-none focus:ring-2 focus:ring-cyan-300/60"
         aria-label="Help"
         x-on:mouseenter="isVisible = true"
         x-on:mouseleave="isVisible = false"
@@ -56,7 +56,7 @@ const Tooltip = ({ text, position = "top" }: TooltipProps) => {
       <div
         x-show="isVisible"
         x-cloak
-        class={`absolute z-10 w-64 p-2 text-sm text-gray-500 bg-white border border-gray-200 rounded-lg shadow-sm dark:bg-gray-800 dark:border-gray-600 dark:text-gray-400 ${positionClasses[position]}`}
+        class={`absolute z-10 w-64 rounded-lg border border-cyan-300/20 bg-slate-950/95 p-2 text-sm text-slate-100 shadow-[0_18px_60px_rgba(0,0,0,0.5)] ${positionClasses[position]}`}
       >
         {text as "safe"}
       </div>

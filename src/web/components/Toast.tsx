@@ -1,5 +1,5 @@
 /**
- * Toast notification component using Flowbite styling and Alpine.js for state management.
+ * Toast notification component using ScrapeGoat dark glass styling and Alpine.js for state management.
  * Displays floating notifications for success, error, warning, and info messages.
  */
 const Toast = () => {
@@ -17,17 +17,17 @@ const Toast = () => {
       style="display: none;"
     >
       <div
-        class="flex items-center w-full max-w-xs p-4 text-gray-500 bg-white rounded-lg shadow dark:text-gray-400 dark:bg-gray-800"
+        class="sg-panel flex w-full max-w-xs items-center p-4"
         role="alert"
       >
         {/* Icon based on type */}
         <div
           class="inline-flex items-center justify-center shrink-0 w-8 h-8 rounded-lg"
           x-bind:class="{
-            'text-gray-500 bg-gray-100 dark:bg-gray-800 dark:text-gray-200': $store.toast.type === 'success',
-            'text-red-500 bg-red-100 dark:bg-red-800 dark:text-red-200': $store.toast.type === 'error',
-            'text-gray-500 bg-gray-100 dark:bg-gray-700 dark:text-gray-200': $store.toast.type === 'warning',
-            'text-gray-500 bg-gray-100 dark:bg-gray-800 dark:text-gray-200': $store.toast.type === 'info'
+            'bg-emerald-400/12 text-emerald-200': $store.toast.type === 'success',
+            'bg-rose-500/14 text-rose-200': $store.toast.type === 'error',
+            'bg-yellow-300/14 text-yellow-100': $store.toast.type === 'warning',
+            'bg-cyan-400/12 text-cyan-100': $store.toast.type === 'info'
           }"
         >
           {/* Success icon */}
@@ -77,13 +77,13 @@ const Toast = () => {
         </div>
         {/* Message */}
         <div
-          class="ml-3 text-sm font-normal"
+          class="ml-3 min-w-0 flex-1 text-sm font-normal text-white"
           x-text="$store.toast.message"
         ></div>
         {/* Close button */}
         <button
           type="button"
-          class="ml-auto -mx-1.5 -my-1.5 bg-white text-gray-400 hover:text-gray-900 rounded-lg focus:ring-2 focus:ring-gray-300 p-1.5 hover:bg-gray-100 inline-flex items-center justify-center h-8 w-8 dark:text-gray-500 dark:hover:text-white dark:bg-gray-800 dark:hover:bg-gray-700"
+          class="sg-button sg-button-ghost ml-auto min-h-0 h-8 w-8 p-1.5"
           x-on:click="$store.toast.hide()"
           aria-label="Close"
         >

@@ -2,7 +2,7 @@
  * LocalUploadPanel — upload local files/archives for documentation import.
  *
  * Uses HTMX for file upload and Alpine.js for local state management.
- * Flowbite-styled to match the existing ScrapeGoat WebUI.
+ * Styled with the ScrapeGoat dark glass primitives.
  */
 
 interface LocalUploadPanelProps {
@@ -11,19 +11,23 @@ interface LocalUploadPanelProps {
 }
 
 const LocalUploadPanel = ({ library, version }: LocalUploadPanelProps) => {
+  const actionButton = "sg-button sg-button-secondary min-h-0 px-3 py-2 text-sm";
+  const ghostButton = "sg-button sg-button-ghost min-h-0 px-3 py-2 text-sm";
+  const iconButton = "sg-button sg-button-ghost min-h-0 h-7 w-7 p-1";
+
   return (
     <div
       x-data={`localUpload('${library}', '${version || ""}')`}
-      class="bg-white border border-gray-200 rounded-lg shadow-sm dark:bg-gray-800 dark:border-gray-700"
+      class="sg-panel animate-[fadeSlideIn_0.2s_ease-out]"
     >
       {/* Header */}
-      <div class="px-6 py-4 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between">
-        <h3 class="text-lg font-semibold text-gray-900 dark:text-white">
+      <div class="flex items-center justify-between border-b border-white/10 pb-4">
+        <h3 class="text-lg font-semibold text-white">
           Add Local Documentation Source
         </h3>
         <button
           type="button"
-          class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors"
+          class="sg-button sg-button-ghost min-h-0 h-8 w-8 p-1.5"
           x-on:click="closePanel()"
           title="Close"
         >
@@ -34,23 +38,23 @@ const LocalUploadPanel = ({ library, version }: LocalUploadPanelProps) => {
       </div>
 
       {/* Library / Version fields */}
-      <div class="px-6 pt-5 grid grid-cols-2 gap-4">
+      <div class="grid grid-cols-1 gap-4 pt-5 sm:grid-cols-2">
         <div>
           <label
             for="upload-library"
-            class="block mb-2 text-sm font-medium text-gray-900 dark:text-white"
+            class="sg-label mb-2"
           >
             Library Name *
           </label>
           <input
             id="upload-library"
             type="text"
-            class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-gray-500 focus:border-gray-500 block w-full p-2.5 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-gray-500 dark:focus:border-gray-500"
+            class="sg-input w-full"
             x-model="library"
             required
           />
           <template x-if="!sessionId && !library">
-            <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">
+            <p class="mt-1 text-xs sg-muted">
               Enter a Library Name to begin
             </p>
           </template>
@@ -58,14 +62,14 @@ const LocalUploadPanel = ({ library, version }: LocalUploadPanelProps) => {
         <div>
           <label
             for="upload-version"
-            class="block mb-2 text-sm font-medium text-gray-900 dark:text-white"
+            class="sg-label mb-2"
           >
             Version *
           </label>
           <input
             id="upload-version"
             type="text"
-            class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-gray-500 focus:border-gray-500 block w-full p-2.5 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-gray-500 dark:focus:border-gray-500"
+            class="sg-input w-full"
             x-model="version"
             required
             placeholder="e.g., 1.0.0"
@@ -74,9 +78,9 @@ const LocalUploadPanel = ({ library, version }: LocalUploadPanelProps) => {
       </div>
 
       {/* Upload area */}
-      <div class="p-6">
+      <div class="pt-5">
         {/* Add File / Add Folder / Add Virtual Folder buttons */}
-        <div class="flex gap-2">
+        <div class="flex flex-wrap gap-2">
           <input
             x-ref="fileInput"
             type="file"
@@ -86,14 +90,14 @@ const LocalUploadPanel = ({ library, version }: LocalUploadPanelProps) => {
           />
           <button
             type="button"
-            class="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 dark:bg-gray-800 dark:text-gray-400 dark:border-gray-600 dark:hover:text-white dark:hover:bg-gray-700"
+            class={actionButton}
             x-on:click="$refs.fileInput.click()"
           >
             Add File
           </button>
           <button
             type="button"
-            class="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 dark:bg-gray-800 dark:text-gray-400 dark:border-gray-600 dark:hover:text-white dark:hover:bg-gray-700"
+            class={actionButton}
             x-on:click="$refs.folderInput.click()"
           >
             Add Folder
@@ -107,7 +111,7 @@ const LocalUploadPanel = ({ library, version }: LocalUploadPanelProps) => {
           />
           <button
             type="button"
-            class="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 dark:bg-gray-800 dark:text-gray-400 dark:border-gray-600 dark:hover:text-white dark:hover:bg-gray-700"
+            class={actionButton}
             x-on:click="createVirtualFolder()"
           >
             Add Virtual Folder
@@ -118,17 +122,17 @@ const LocalUploadPanel = ({ library, version }: LocalUploadPanelProps) => {
         <template x-if="uploading">
           <div class="mt-4">
             <div class="flex items-center justify-between mb-1">
-              <span class="text-sm font-medium text-gray-700 dark:text-gray-400">
+              <span class="text-sm font-medium sg-muted">
                 Uploading files...
               </span>
               <span
-                class="text-sm font-medium text-gray-700 dark:text-gray-400"
+                class="text-sm font-medium sg-muted"
                 x-text="uploadProgress + '%'"
               />
             </div>
-            <div class="w-full bg-gray-200 rounded-full h-2.5 dark:bg-gray-700">
+            <div class="sg-progress-track">
               <div
-                class="bg-gray-600 h-2.5 rounded-full transition-all duration-300"
+                class="sg-progress-fill transition-all duration-300"
                 x-bind:style="'width: ' + uploadProgress + '%'"
               />
             </div>
@@ -137,11 +141,11 @@ const LocalUploadPanel = ({ library, version }: LocalUploadPanelProps) => {
 
         {/* Upload errors */}
         <template x-if="uploadErrors.length > 0">
-          <div class="mt-4 p-4 bg-red-50 border border-red-200 rounded-lg dark:bg-red-900/20 dark:border-red-800">
-            <h4 class="text-sm font-medium text-red-800 dark:text-red-400 mb-2">
+          <div class="mt-4 rounded-lg border border-rose-500/30 bg-rose-950/40 p-4">
+            <h4 class="mb-2 text-sm font-medium text-rose-200">
               Some files failed to upload:
             </h4>
-            <ul class="text-sm text-red-700 dark:text-red-300 list-disc list-inside">
+            <ul class="list-inside list-disc text-sm text-rose-300">
               <template x-for="err in uploadErrors" x-bind:key="err.path">
                 <li>
                   <span x-text="err.path" /> — <span x-text="err.error" />
@@ -153,13 +157,13 @@ const LocalUploadPanel = ({ library, version }: LocalUploadPanelProps) => {
 
         {/* Failed files */}
         <template x-if="failedFiles && failedFiles.length > 0">
-          <div class="mt-4 p-4 bg-amber-50 border border-amber-200 rounded-lg dark:bg-amber-900/20 dark:border-amber-800">
+          <div class="mt-4 rounded-lg border border-yellow-300/30 bg-yellow-950/30 p-4">
             <div class="flex items-center justify-between mb-2">
-              <h4 class="text-sm font-medium text-amber-800 dark:text-amber-400">
+              <h4 class="text-sm font-medium text-yellow-200">
                 <span x-text="failedFiles.length" /> file(s) failed to upload:
               </h4>
             </div>
-            <ul class="text-sm text-amber-700 dark:text-amber-300 list-disc list-inside max-h-32 overflow-auto">
+            <ul class="max-h-32 list-inside list-disc overflow-auto text-sm text-yellow-100/85">
               <template x-for="f in failedFiles" x-bind:key="f.relativePath">
                 <li>
                   <span x-text="f.relativePath" /> — <span x-text="f.error" />
@@ -171,16 +175,16 @@ const LocalUploadPanel = ({ library, version }: LocalUploadPanelProps) => {
 
         {/* Extraction aborted warning */}
         <template x-if="stats && stats.extractionAborted">
-          <div class="mt-4 p-4 bg-orange-50 border border-orange-300 rounded-lg dark:bg-orange-900/20 dark:border-orange-700">
+          <div class="mt-4 rounded-lg border border-yellow-300/30 bg-yellow-950/30 p-4">
             <div class="flex items-start gap-3">
-              <svg class="w-5 h-5 text-orange-500 shrink-0 mt-0.5" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+              <svg class="w-5 h-5 text-yellow-200 shrink-0 mt-0.5" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
                 <path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126ZM12 15.75h.007v.008H12v-.008Z" />
               </svg>
               <div>
-                <h4 class="text-sm font-medium text-orange-800 dark:text-orange-300">
+                <h4 class="text-sm font-medium text-yellow-200">
                   Archive extraction was incomplete
                 </h4>
-                <p class="mt-1 text-sm text-orange-700 dark:text-orange-400">
+                <p class="mt-1 text-sm text-yellow-100/85">
                   Some files from the archive were not extracted (e.g. entry limit exceeded). The import tree below only shows files verified on disk.
                 </p>
               </div>
@@ -191,9 +195,9 @@ const LocalUploadPanel = ({ library, version }: LocalUploadPanelProps) => {
         {/* Staged files count — uses backend stats when available */}
         <template x-if="hasStagedFiles">
           <div class="mt-4 flex items-center justify-between">
-            <span class="text-sm text-gray-600 dark:text-gray-400">
+            <span class="text-sm sg-muted">
               <span
-                class="font-semibold text-gray-900 dark:text-white"
+                class="font-semibold text-white"
                 x-text="authoritativeFileCount"
               />{" "}
               file(s) staged
@@ -205,13 +209,13 @@ const LocalUploadPanel = ({ library, version }: LocalUploadPanelProps) => {
         <template x-if="tree">
           <div class="mt-4">
             <div class="flex items-center justify-between mb-3">
-              <h4 class="text-sm font-semibold text-gray-900 dark:text-white">
+              <h4 class="text-sm font-semibold text-white">
                 Import Tree
               </h4>
               <div class="flex gap-2">
                 <button
                   type="button"
-                  class="px-3 py-1 text-xs font-medium text-gray-700 bg-gray-100 border border-gray-200 rounded-lg hover:bg-gray-200 dark:bg-gray-900/30 dark:text-gray-400 dark:border-gray-800 dark:hover:bg-gray-900/50"
+                  class="sg-button sg-button-ghost min-h-0 px-3 py-1 text-xs"
                   x-on:click="refreshTree()"
                 >
                   Refresh
@@ -220,18 +224,18 @@ const LocalUploadPanel = ({ library, version }: LocalUploadPanelProps) => {
             </div>
             <div
               id="import-tree"
-              class="border border-gray-200 rounded-lg dark:border-gray-700 overflow-auto max-h-80"
+              class="max-h-80 overflow-auto rounded-lg border border-white/10 bg-slate-950/35"
             >
               <template x-for="node in flatNodes" x-bind:key="node.id">
                 <div
-                  class="flex items-center gap-2 px-3 py-2 border-b border-gray-100 last:border-0 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700/50"
+                  class="flex items-center gap-2 border-b border-white/10 px-3 py-2 last:border-0 hover:bg-cyan-400/5"
                   x-bind:style="'padding-left: ' + (node.depth * 20 + 12) + 'px'"
                   x-on:click="selectNode(node)"
                 >
                   {/* File/folder icon */}
                   <svg
                     x-show="node.type === 'folder'"
-                    class="w-4 h-4 text-gray-500 shrink-0"
+                    class="w-4 h-4 text-cyan-200 shrink-0"
                     aria-hidden="true"
                     xmlns="http://www.w3.org/2000/svg"
                     fill="currentColor"
@@ -241,7 +245,7 @@ const LocalUploadPanel = ({ library, version }: LocalUploadPanelProps) => {
                   </svg>
                   <svg
                     x-show="node.type === 'file'"
-                    class="w-4 h-4 text-gray-500 shrink-0"
+                    class="w-4 h-4 sg-muted shrink-0"
                     aria-hidden="true"
                     xmlns="http://www.w3.org/2000/svg"
                     fill="currentColor"
@@ -252,14 +256,14 @@ const LocalUploadPanel = ({ library, version }: LocalUploadPanelProps) => {
 
                   {/* Name */}
                   <span
-                    class="text-sm text-gray-900 dark:text-white flex-1 truncate"
+                    class="flex-1 truncate text-sm text-white"
                     x-text="node.name"
                   />
 
                   {/* Size */}
                   <span
                     x-show="node.size"
-                    class="text-xs text-gray-500 dark:text-gray-400 shrink-0"
+                    class="shrink-0 text-xs sg-muted"
                     x-text="formatSize(node.size)"
                   />
 
@@ -267,7 +271,7 @@ const LocalUploadPanel = ({ library, version }: LocalUploadPanelProps) => {
                   <div x-show="node.type === 'file'" class="flex gap-1 shrink-0">
                     <button
                       type="button"
-                      class="p-1 text-gray-400 hover:text-gray-600 dark:hover:text-gray-400"
+                      class={iconButton}
                       title="Rename"
                       x-on:click="$event.stopPropagation(); startRename(node)"
                     >
@@ -277,7 +281,7 @@ const LocalUploadPanel = ({ library, version }: LocalUploadPanelProps) => {
                     </button>
                     <button
                       type="button"
-                      class="p-1 text-gray-400 hover:text-gray-600 dark:hover:text-gray-400"
+                      class={iconButton}
                       title="Move"
                       x-on:click="$event.stopPropagation(); moveNode(node)"
                     >
@@ -287,7 +291,7 @@ const LocalUploadPanel = ({ library, version }: LocalUploadPanelProps) => {
                     </button>
                     <button
                       type="button"
-                      class="p-1 text-gray-400 hover:text-red-600 dark:hover:text-red-400"
+                      class="sg-button sg-button-ghost min-h-0 h-7 w-7 p-1 text-rose-300 hover:bg-rose-500/10"
                       title="Remove"
                       x-on:click="$event.stopPropagation(); removeNode(node)"
                     >
@@ -303,7 +307,7 @@ const LocalUploadPanel = ({ library, version }: LocalUploadPanelProps) => {
             {/* Source path preview */}
             <div
               x-show="selectedNode"
-              class="mt-2 px-3 py-2 text-xs text-gray-500 dark:text-gray-400 bg-gray-50 dark:bg-gray-700/50 rounded-lg font-mono truncate"
+              class="mt-2 truncate rounded-lg border border-white/10 bg-slate-950/35 px-3 py-2 font-mono text-xs sg-muted"
               x-text="sourcePathPreview"
             >
             </div>
@@ -313,26 +317,26 @@ const LocalUploadPanel = ({ library, version }: LocalUploadPanelProps) => {
         {/* Stats */}
         <template x-if="stats">
           <div class="mt-4 grid grid-cols-3 gap-3">
-            <div class="text-center p-3 bg-gray-50 rounded-lg dark:bg-gray-700">
+            <div class="sg-card text-center">
               <div
-                class="text-lg font-semibold text-gray-900 dark:text-white"
+                class="text-lg font-semibold text-white"
                 x-text="stats.fileCount"
               />
-              <div class="text-xs text-gray-500 dark:text-gray-400">Files</div>
+              <div class="text-xs sg-muted">Files</div>
             </div>
-            <div class="text-center p-3 bg-gray-50 rounded-lg dark:bg-gray-700">
+            <div class="sg-card text-center">
               <div
-                class="text-lg font-semibold text-gray-900 dark:text-white"
+                class="text-lg font-semibold text-white"
                 x-text="formatSize(stats.totalSize)"
               />
-              <div class="text-xs text-gray-500 dark:text-gray-400">Total Size</div>
+              <div class="text-xs sg-muted">Total Size</div>
             </div>
-            <div class="text-center p-3 bg-gray-50 rounded-lg dark:bg-gray-700">
+            <div class="sg-card text-center">
               <div
-                class="text-lg font-semibold text-gray-900 dark:text-white"
+                class="text-lg font-semibold text-white"
                 x-text="stats.folderCount || 0"
               />
-              <div class="text-xs text-gray-500 dark:text-gray-400">Folders</div>
+              <div class="text-xs sg-muted">Folders</div>
             </div>
           </div>
         </template>
@@ -341,7 +345,7 @@ const LocalUploadPanel = ({ library, version }: LocalUploadPanelProps) => {
         <div class="mt-6 flex items-center gap-3">
           <button
             type="button"
-            class="px-5 py-2.5 text-sm font-medium text-white bg-gray-700 rounded-lg hover:bg-gray-800 focus:ring-4 focus:ring-gray-300 dark:bg-gray-600 dark:hover:bg-gray-700 dark:focus:ring-gray-800 disabled:opacity-50 disabled:cursor-not-allowed"
+            class="sg-button sg-button-primary disabled:cursor-not-allowed disabled:opacity-50"
             x-bind:disabled="!sessionId || !hasStagedFiles || committing || !library"
             x-on:click="commitImport()"
             x-text="committing ? 'Importing...' : 'Accept & Submit'"
@@ -350,7 +354,7 @@ const LocalUploadPanel = ({ library, version }: LocalUploadPanelProps) => {
           </button>
           <button
             type="button"
-            class="px-5 py-2.5 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 dark:bg-gray-800 dark:text-gray-400 dark:border-gray-600 dark:hover:text-white dark:hover:bg-gray-700"
+            class={ghostButton}
             x-on:click="cancelImport()"
             x-show="hasStagedFiles"
           >

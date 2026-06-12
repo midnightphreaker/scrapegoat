@@ -17,6 +17,10 @@ describe("Layout", () => {
     expect(html).toContain('class="sg-shell"');
     expect(html).toContain('class="sg-header sticky top-0 z-30"');
     expect(html).toContain('class="sg-page"');
+    expect(html).toContain('class="sg-panel flex w-full max-w-xs items-center p-4"');
+    expect(html).toContain("sg-button sg-button-ghost ml-auto");
+    expect(html).not.toContain("bg-white");
+    expect(html).not.toContain("dark:bg-gray");
     expect(html).not.toContain("phrk</span>");
     expect(html).not.toContain("v2.4.0");
   });

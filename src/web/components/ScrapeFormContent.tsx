@@ -82,15 +82,23 @@ const ScrapeFormContent = ({
     ? "#add-version-form-container"
     : "#addJobForm";
 
-  const title = isAddVersionMode ? "Add Remote Documentation Version" : "Add Remote Documentation Source";
+  const title = isAddVersionMode
+    ? "Add Remote Documentation Version"
+    : "Add Remote Documentation Source";
+  const labelClass = "sg-label";
+  const inputClass = "sg-input mt-1 w-full";
+  const narrowInputClass = `${inputClass} max-w-sm`;
+  const helperClass = "mt-1 text-xs sg-muted";
+  const checkboxClass =
+    "h-4 w-4 rounded border-slate-600 bg-slate-950 text-cyan-300 focus:ring-cyan-300";
 
   return (
-    <div class="mt-4 p-4 bg-white dark:bg-gray-800 rounded-lg shadow border border-gray-300 dark:border-gray-600 relative animate-[fadeSlideIn_0.2s_ease-out]">
+    <div class="sg-panel relative mt-4 animate-[fadeSlideIn_0.2s_ease-out]">
       {/* Close button */}
       <button
         type="button"
         {...closeButtonAttrs}
-        class="absolute top-3 right-3 p-1 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 rounded-full hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors duration-150"
+        class="sg-button sg-button-ghost absolute top-3 right-3 min-h-0 h-8 w-8 p-1.5"
         title="Close"
       >
         <svg
@@ -108,14 +116,14 @@ const ScrapeFormContent = ({
           />
         </svg>
       </button>
-      <h3 class="text-xl font-semibold text-gray-900 dark:text-white mb-2 pr-8">
+      <h3 class="mb-3 pr-8 text-xl font-semibold text-white">
         {title}
       </h3>
       <form
         hx-post="/web/jobs/scrape"
         hx-target={formTarget}
         hx-swap="innerHTML"
-        class="space-y-2"
+        class="space-y-3"
         data-initial-url={urlValue}
         data-initial-headers={headersJson}
         x-data="{
@@ -143,7 +151,7 @@ const ScrapeFormContent = ({
           <div class="flex items-center">
             <label
               for="url"
-              class="block text-sm font-medium text-gray-700 dark:text-gray-300"
+              class={labelClass}
             >
               URL
             </label>
@@ -173,7 +181,7 @@ const ScrapeFormContent = ({
             x-on:input="checkUrlPath"
             x-on:paste="$nextTick(() => checkUrlPath())"
             placeholder="https://docs.example.com/library/"
-            class="mt-0.5 block w-full px-2 py-1 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+            class={inputClass}
           />
           <div
             x-show="hasPath && !(url.startsWith('file://'))"
@@ -193,7 +201,7 @@ const ScrapeFormContent = ({
           <div class="flex items-center">
             <label
               for="library"
-              class="block text-sm font-medium text-gray-700 dark:text-gray-300"
+              class={labelClass}
             >
               Library Name
             </label>
@@ -202,7 +210,7 @@ const ScrapeFormContent = ({
           {isAddVersionMode ? (
             <>
               <input type="hidden" name="library" value={libraryValue} />
-              <div class="mt-0.5 px-2 py-1 text-sm text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-700 rounded-md border border-gray-300 dark:border-gray-600">
+              <div class="sg-input mt-1 cursor-not-allowed opacity-80">
                 <span safe>{libraryValue}</span>
               </div>
             </>
@@ -214,7 +222,7 @@ const ScrapeFormContent = ({
               required
               value={libraryValue}
               placeholder="e.g. react, vue, express"
-              class="mt-0.5 block w-full px-2 py-1 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+              class={inputClass}
             />
           )}
         </div>
@@ -222,7 +230,7 @@ const ScrapeFormContent = ({
           <div class="flex items-center">
             <label
               for="version"
-              class="block text-sm font-medium text-gray-700 dark:text-gray-300"
+              class={labelClass}
             >
               Version (optional)
             </label>
@@ -233,13 +241,13 @@ const ScrapeFormContent = ({
             name="version"
             id="version"
             placeholder="e.g. 2.0.0 or leave empty for latest"
-            class="mt-0.5 block w-full max-w-sm px-2 py-1 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+            class={narrowInputClass}
           />
         </div>
 
         {/* Advanced Options with slide animation */}
         <div
-          class="bg-gray-50 dark:bg-gray-900 p-2 rounded-md"
+          class="sg-card bg-slate-950/35"
           data-should-open={
             isAddVersionMode &&
             (maxPagesValue ||
@@ -256,7 +264,7 @@ const ScrapeFormContent = ({
         >
           <button
             type="button"
-            class="w-full flex items-center gap-1.5 cursor-pointer text-sm font-medium text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200 transition-colors"
+            class="flex w-full cursor-pointer items-center gap-1.5 text-sm font-medium sg-muted transition-colors hover:text-white"
             x-on:click="open = !open"
           >
             <svg
@@ -280,7 +288,7 @@ const ScrapeFormContent = ({
               <div class="flex items-center">
                 <label
                   for="maxPages"
-                  class="block text-sm font-medium text-gray-700 dark:text-gray-300"
+                  class={labelClass}
                 >
                   Max Pages
                 </label>
@@ -295,14 +303,14 @@ const ScrapeFormContent = ({
                 min="1"
                 placeholder={scraperConfig?.maxPages?.toString() || "1000"}
                 value={maxPagesValue}
-                class="mt-0.5 block w-full max-w-sm px-2 py-1 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                class={narrowInputClass}
               />
             </div>
             <div>
               <div class="flex items-center">
                 <label
                   for="maxDepth"
-                  class="block text-sm font-medium text-gray-700 dark:text-gray-300"
+                  class={labelClass}
                 >
                   Max Depth
                 </label>
@@ -317,14 +325,14 @@ const ScrapeFormContent = ({
                 min="0"
                 placeholder={scraperConfig?.maxDepth?.toString() || "3"}
                 value={maxDepthValue}
-                class="mt-0.5 block w-full max-w-sm px-2 py-1 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                class={narrowInputClass}
               />
             </div>
             <div>
               <div class="flex items-center">
                 <label
                   for="scope"
-                  class="block text-sm font-medium text-gray-700 dark:text-gray-300"
+                  class={labelClass}
                 >
                   Scope
                 </label>
@@ -352,7 +360,7 @@ const ScrapeFormContent = ({
               <select
                 name="scope"
                 id="scope"
-                class="mt-0.5 block w-full max-w-sm pl-2 pr-10 py-1 text-base border border-gray-300 dark:border-gray-600 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                class={narrowInputClass}
               >
                 <option value="subpages" selected={scopeValue === "subpages"}>
                   Subpages (Default)
@@ -369,7 +377,7 @@ const ScrapeFormContent = ({
               <div class="flex items-center">
                 <label
                   for="includePatterns"
-                  class="block text-sm font-medium text-gray-700 dark:text-gray-300"
+                  class={labelClass}
                 >
                   Include Patterns
                 </label>
@@ -380,7 +388,7 @@ const ScrapeFormContent = ({
                 id="includePatterns"
                 rows="2"
                 placeholder="e.g. docs/* or /api\/v1.*/"
-                class="mt-0.5 block w-full max-w-sm px-2 py-1 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                class={narrowInputClass}
                 safe
               >
                 {includePatternsValue}
@@ -390,7 +398,7 @@ const ScrapeFormContent = ({
               <div class="flex items-center">
                 <label
                   for="excludePatterns"
-                  class="block text-sm font-medium text-gray-700 dark:text-gray-300"
+                  class={labelClass}
                 >
                   Exclude Patterns
                 </label>
@@ -401,11 +409,11 @@ const ScrapeFormContent = ({
                 id="excludePatterns"
                 rows="5"
                 safe
-                class="mt-0.5 block w-full max-w-sm px-2 py-1 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-white font-mono text-xs"
+                class={`${narrowInputClass} font-mono text-xs`}
               >
                 {excludePatternsText}
               </textarea>
-              <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">
+              <p class={helperClass}>
                 {isAddVersionMode
                   ? "Patterns from previous version. Edit as needed."
                   : "Default patterns are pre-filled. Edit to customize or clear to exclude nothing."}
@@ -415,7 +423,7 @@ const ScrapeFormContent = ({
               <div class="flex items-center">
                 <label
                   for="scrapeMode"
-                  class="block text-sm font-medium text-gray-700 dark:text-gray-300"
+                  class={labelClass}
                 >
                   Scrape Mode
                 </label>
@@ -440,7 +448,7 @@ const ScrapeFormContent = ({
               <select
                 name="scrapeMode"
                 id="scrapeMode"
-                class="mt-0.5 block w-full max-w-sm pl-2 pr-10 py-1 text-base border border-gray-300 dark:border-gray-600 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                class={narrowInputClass}
               >
                 <option
                   value={ScrapeMode.Auto}
@@ -464,7 +472,7 @@ const ScrapeFormContent = ({
             </div>
             <div>
               <div class="flex items-center mb-1">
-                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                <label class={labelClass}>
                   Custom HTTP Headers
                 </label>
                 <Tooltip text="Add custom HTTP headers (e.g., for authentication). These will be sent with every HTTP request." />
@@ -472,25 +480,25 @@ const ScrapeFormContent = ({
               <div>
                 {/* AlpineJS dynamic header rows */}
                 <template x-for="(header, idx) in headers">
-                  <div class="flex space-x-2 mb-1">
+                  <div class="mb-2 grid gap-2 sm:grid-cols-[1fr_auto_1.4fr_auto] sm:items-center">
                     <input
                       type="text"
-                      class="w-1/3 px-2 py-1 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-xs"
+                      class="sg-input text-xs"
                       placeholder="Header Name"
                       x-model="header.name"
                       required
                     />
-                    <span class="text-gray-500">:</span>
+                    <span class="hidden sg-muted sm:inline">:</span>
                     <input
                       type="text"
-                      class="w-1/2 px-2 py-1 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-xs"
+                      class="sg-input text-xs"
                       placeholder="Header Value"
                       x-model="header.value"
                       required
                     />
                     <button
                       type="button"
-                      class="text-red-500 hover:text-red-700 text-xs"
+                      class="sg-button sg-button-ghost min-h-0 px-2 py-1 text-xs text-rose-300 hover:bg-rose-500/10"
                       x-on:click="headers.splice(idx, 1)"
                     >
                       Remove
@@ -504,7 +512,7 @@ const ScrapeFormContent = ({
                 </template>
                 <button
                   type="button"
-                  class="mt-1 px-2 py-0.5 bg-primary-100 dark:bg-primary-900 text-primary-700 dark:text-primary-200 rounded text-xs"
+                  class="sg-button sg-button-secondary mt-1 min-h-0 px-2 py-1 text-xs"
                   x-on:click="headers.push({ name: '', value: '' })"
                 >
                   + Add Header
@@ -517,11 +525,11 @@ const ScrapeFormContent = ({
                 name="followRedirects"
                 type="checkbox"
                 checked={followRedirectsValue}
-                class="h-4 w-4 text-primary-600 focus:ring-primary-500 border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700"
+                class={checkboxClass}
               />
               <label
                 for="followRedirects"
-                class="ml-1 block text-sm text-gray-900 dark:text-gray-300"
+                class="ml-2 block text-sm text-white"
               >
                 Follow Redirects
               </label>
@@ -532,11 +540,11 @@ const ScrapeFormContent = ({
                 name="ignoreErrors"
                 type="checkbox"
                 checked={ignoreErrorsValue}
-                class="h-4 w-4 text-primary-600 focus:ring-primary-500 border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700"
+                class={checkboxClass}
               />
               <label
                 for="ignoreErrors"
-                class="ml-1 block text-sm text-gray-900 dark:text-gray-300"
+                class="ml-2 block text-sm text-white"
               >
                 Ignore Errors During Scraping
               </label>
@@ -547,7 +555,7 @@ const ScrapeFormContent = ({
         <div>
           <button
             type="submit"
-            class="w-full flex justify-center py-1.5 px-3 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-primary-600 hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500"
+            class="sg-button sg-button-primary w-full"
           >
             Start Indexing
           </button>

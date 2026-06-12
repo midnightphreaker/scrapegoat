@@ -9,10 +9,13 @@ import LibraryDetailCard from "./LibraryDetailCard";
 import LibraryItem from "./LibraryItem";
 import LibraryList from "./LibraryList";
 import LibrarySearchCard from "./LibrarySearchCard";
+import LocalUploadPanel from "./upload/LocalUploadPanel";
 import PrimaryButton from "./PrimaryButton";
+import ScrapeFormContent from "./ScrapeFormContent";
 import ProgressBar from "./ProgressBar";
 import SearchResultList from "./SearchResultList";
 import SearchResultSkeletonItem from "./SearchResultSkeletonItem";
+import SourceSelectionModal from "./SourceSelectionModal";
 import StatusBadge from "./StatusBadge";
 import VersionBadge from "./VersionBadge";
 
@@ -102,7 +105,11 @@ describe("dashboard themed components", () => {
 
     expect(html).toContain('id="job-item-job-1"');
     expect(rootClasses).toContain("sg-row");
+    expect(rootClasses).toContain("w-full");
     expect(rootClasses).not.toContain("block");
+    expect(html).toContain('class="flex w-full min-w-0 flex-col gap-3');
+    expect(html).toContain('class="min-w-0 flex-1"');
+    expect(html).toContain('class="mt-2 w-full"');
     expect(html).toContain("x-data=");
     expect(stopButtonClasses).not.toContain("sg-button");
     expect(stopButtonClasses).not.toContain("sg-button-ghost");
@@ -189,5 +196,28 @@ describe("dashboard themed components", () => {
     expect(resultListHtml).toContain("application/pdf");
     expect(skeletonHtml).toContain("sg-card");
     expect(skeletonHtml).toContain("animate-pulse");
+  });
+
+  it("renders source and upload forms with dark glass primitives", async () => {
+    const sourceModalHtml = String(await SourceSelectionModal());
+    const scrapeFormHtml = String(await ScrapeFormContent({}));
+    const uploadPanelHtml = String(
+      await LocalUploadPanel({ library: "pdf-test2", version: "2" }),
+    );
+
+    for (const html of [sourceModalHtml, scrapeFormHtml, uploadPanelHtml]) {
+      expect(html).toContain("sg-panel");
+      expect(html).toContain("sg-button");
+      expect(html).not.toContain("bg-white");
+      expect(html).not.toContain("dark:bg-gray");
+    }
+
+    expect(sourceModalHtml).toContain("sg-card");
+    expect(sourceModalHtml).toContain("bg-black/75");
+    expect(scrapeFormHtml).toContain("sg-input");
+    expect(scrapeFormHtml).toContain("Advanced Options");
+    expect(uploadPanelHtml).toContain("sg-input");
+    expect(uploadPanelHtml).toContain("sg-progress-track");
+    expect(uploadPanelHtml).toContain("import-tree");
   });
 });
